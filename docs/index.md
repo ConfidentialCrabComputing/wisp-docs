@@ -19,3 +19,11 @@ It is driven two ways, and they are the same Runtime:
 
 Start with the [quickstart](./quickstart.md): install, start, run, connect — about ten
 minutes on a machine with nothing on it.
+
+Then, depending on which side of it you are on:
+
+- Writing something that calls a Runtime — [the adapter contract](./adapter-contract.md),
+  [deploying an agent](./deploy-an-agent.md), and [a worked example](./incident-bot.md) you
+  can run.
+- Running one — [runs and restarts](./runs-and-restarts.md),
+  [states and the runbook](./runbook.md), and [security](./security.md).

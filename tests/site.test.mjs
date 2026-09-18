@@ -28,6 +28,43 @@ test("/quickstart goes from a machine with nothing installed to an answered run"
   assert.match(quickstart, /wisp connectors enable/);
 });
 
+test("/adapter-contract says what phase 1 gives and what it does not", () => {
+  const contract = page("adapter-contract/index.html");
+  // The three moves, and the calls behind them.
+  assert.match(contract, /externalKey/);
+  assert.match(contract, /POST \/v1\/sessions\/\{id\}\/runs/);
+  assert.match(contract, /idempotencyKey/);
+  // Read on its own, it has to say where a missing feature falls.
+  assert.match(contract, /does not give you/i);
+  assert.match(contract, /phase 2/);
+});
+
+test("/incident-bot is a walkthrough against the CLI, not an illustration", () => {
+  const example = page("incident-bot/index.html");
+  for (const command of [/wisp connectors enable/, /wisp permissions allow-connector/, /wisp run/, /wisp audit/]) {
+    assert.match(example, command);
+  }
+});
+
+test("the operator pages name every state, reason and code a phase-1 operator meets", () => {
+  const runbook = page("runbook/index.html");
+  for (const state of ["ready", "booting", "login_required", "proxy_failed", "attestation_failed"]) {
+    assert.match(runbook, new RegExp(state));
+  }
+  for (const reason of [
+    "attestation_blocked", "stream_stalled", "context_overflow", "step_ceiling", "shutdown",
+    "quota_exhausted", "not_entitled", "billing_unavailable", "rate_limit", "server_error",
+    "network", "internal",
+  ]) {
+    assert.match(runbook, new RegExp(reason));
+  }
+  assert.match(runbook, /78/);
+  // The window, where it is configured, and the unit it has to agree with.
+  const restarts = page("runs-and-restarts/index.html");
+  assert.match(restarts, /SHUTDOWN_DRAIN_TIMEOUT_MS/);
+  assert.match(restarts, /TimeoutStopSec/);
+});
+
 test("the look is Infima variables and the landing's fonts, with nothing ejected", () => {
   const home = page("index.html");
   const stylesheet = home.match(/href=(\/assets\/css\/[^\s>"]+\.css)/)?.[1];
