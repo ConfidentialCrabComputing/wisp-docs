@@ -1,43 +1,24 @@
-# Website
+# wisp-docs
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+The public documentation of the [Wisp Runtime](https://usewisp.io), served at
+**docs.usewisp.io**. A [Docusaurus](https://docusaurus.io/) site; every page is Markdown
+under `docs/`.
 
-## Installation
+The repository is public on purpose: the site is what `usewisp.io` serves, and
+`wisp-agent`'s CI clones this repository with no credential to check that every route,
+subcommand and exit code it ships is named here.
 
-```bash
-npm install
+```sh
+npm ci
+npm start      # dev server on localhost:3000
+npm run build  # static site into build/
+npm test       # build, then check the built site
+npm run typecheck
 ```
 
-**Note**: feel free to use the package manager of your choice.
+`npm test` asserts what the site cannot be wrong about: that it is built for
+`docs.usewisp.io` with no path prefix in its asset URLs, that `/quickstart` still takes a
+reader from an empty machine to an answered `wisp run`, and that the look is Infima
+variables with no ejected theme component under `src/theme/`.
 
-## Local Development
-
-```bash
-npm run start
-```
-
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-## Build
-
-```bash
-npm run build
-```
-
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-## Deployment
-
-Using SSH:
-
-```bash
-USE_SSH=true npm run deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> npm run deploy
-```
-
-If you are using GitHub Pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+Deployment is a Vercel project on this repository — a push to `main` publishes.
