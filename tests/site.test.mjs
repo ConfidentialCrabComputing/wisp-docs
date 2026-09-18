@@ -18,3 +18,12 @@ test("the site names docs.usewisp.io and serves its assets from the root", () =>
     assert.match(url, /^\/assets\//, `${url} carries a path prefix`);
   }
 });
+
+test("/quickstart goes from a machine with nothing installed to an answered run", () => {
+  const quickstart = page("quickstart/index.html");
+  assert.match(quickstart, /curl -fsSL https:\/\/usewisp\.io\/install\.sh \| sh/);
+  assert.match(quickstart, /wisp serve/);
+  assert.match(quickstart, /wisp login/);
+  assert.match(quickstart, /wisp run/);
+  assert.match(quickstart, /wisp connectors enable/);
+});
