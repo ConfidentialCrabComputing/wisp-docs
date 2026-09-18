@@ -31,6 +31,7 @@ test("/quickstart goes from a machine with nothing installed to an answered run"
 test("the look is Infima variables and the landing's fonts, with nothing ejected", () => {
   const home = page("index.html");
   const stylesheet = home.match(/href=(\/assets\/css\/[^\s>"]+\.css)/)?.[1];
+  assert.ok(stylesheet, "the page loads no stylesheet");
   const css = page(stylesheet.slice(1));
   // The landing's paper and its dark surface, both painted through Infima's
   // own variables rather than by overriding the theme's rules.

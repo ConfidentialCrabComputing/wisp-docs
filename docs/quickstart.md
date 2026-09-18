@@ -19,7 +19,9 @@ release key signs, unpacks it into `~/.wisp/versions/<version>` and links `~/.wi
 at it. It also adds `~/.wisp/bin` to your `PATH` in your shell's rc file — open a new shell,
 or run the `export` line it prints.
 
-Set `WISP_HOME` to install somewhere other than `~/.wisp`. Install `minisign` first
+To install somewhere other than `~/.wisp`, set `WISP_HOME` on the shell that runs the
+script — `curl -fsSL https://usewisp.io/install.sh | WISP_HOME=/srv/wisp sh`, not in front
+of `curl`, which is a different process. Install `minisign` first
 (`apt install minisign`) if you want the manifest's signature verified rather than skipped:
 without it the install still checks TLS and the archive's SHA-256, and says that it did not
 check the signature.
@@ -51,7 +53,7 @@ is why none of them takes a flag. Leave it running and open a second shell:
 
 ```sh
 wisp status
-# login_required (wisp 1.4.0, serve)
+# login_required (wisp 0.1.0, serve)
 ```
 
 <details>
@@ -61,7 +63,7 @@ Re-run the installer with `WISP_SERVICE=1` and it writes a **user** unit, enable
 starts it — no root anywhere:
 
 ```sh
-WISP_SERVICE=1 curl -fsSL https://usewisp.io/install.sh | sh
+curl -fsSL https://usewisp.io/install.sh | WISP_SERVICE=1 sh
 systemctl --user restart wisp   # after writing runtime.json
 journalctl --user -u wisp -f
 ```
@@ -89,7 +91,7 @@ Then:
 
 ```sh
 wisp status
-# ready (wisp 1.4.0, serve)
+# ready (wisp 0.1.0, serve)
 ```
 
 Without `--manual` the Runtime opens a browser on **its own** host and the command waits for
@@ -109,7 +111,7 @@ The answer goes to stdout; the Session's id goes to stderr, so a pipe gets the a
 Continue that Session by naming it:
 
 ```sh
-wisp run 01JB… "now write a README for it"
+wisp run 6b4f2a7e-… "now write a README for it"
 ```
 
 The command waits for the Run and exits **0** when it completed, **1** when it failed or was
@@ -117,8 +119,8 @@ cancelled, **2** on a bad command line, **4** when no Runtime answered and **5**
 token was refused. `--json` prints the whole outcome as one JSON document instead.
 
 ```sh
-wisp sessions list        # the Sessions this folder has
-wisp cancel 01JB…         # stop what a Session is running
+wisp sessions list      # the Sessions this folder has
+wisp cancel 6b4f2a7e-…  # stop what a Session is running
 ```
 
 ## 6. Connect one thing
