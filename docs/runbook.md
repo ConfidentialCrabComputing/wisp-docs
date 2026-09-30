@@ -43,6 +43,7 @@ Every client command — `wisp run`, `wisp sessions`, `wisp permissions`, and th
 | `2` | the command line could not be acted on |
 | `4` | no Runtime answered where the lock file or the flags said one would |
 | `5` | the token was refused |
+| `130` | Ctrl-C at a prompt — a login's redirect URL, or a secret read from the terminal |
 
 `wisp serve` has one of its own: **78** (`EX_CONFIG`). It exits before serving anything and
 says which of these it was:
@@ -70,6 +71,7 @@ conversation.
 | `stream_stalled` | the model produced nothing for `llmStallTimeoutMs` (five minutes) | retry; the Run was cut rather than left hanging |
 | `context_overflow` | the turn did not fit its context window even after compaction | a prompt or a Project problem, not a host one |
 | `step_ceiling` | the graph hit `graphRecursionLimit` or `toolCallLimit` | same |
+| `confirmation_pending` | the Session still waits on a tool confirmation asked in the desktop, so the Run was refused before it started | answer it there, then send again |
 | `shutdown` | the Runtime stopped under it | retry with the same key once health is `ready` |
 | `quota_exhausted` | the account's plan is used up | account, not host |
 | `not_entitled` | the account may not use what was asked for | account, not host |
