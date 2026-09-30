@@ -39,8 +39,9 @@ The shape of a retry: on a dropped connection, wait until `GET /v1/health` says 
 
 ## What a stop does
 
-A stop request — `SIGTERM` on Linux and macOS; on Windows the service stop, which WinSW
-delivers as Ctrl+C and Node raises as `SIGINT` — starts a drain:
+A stop request — `SIGTERM` on Linux and macOS, or Ctrl+C, which Node raises as `SIGINT`
+(a Windows service, whose stop WinSW will deliver as that Ctrl+C, is not installable yet) —
+starts a drain:
 
 1. every **queued** Run settles at once, `failed` with `failure.reason: shutdown`, so
    nothing is left waiting on a connection the Runtime has already walked away from;

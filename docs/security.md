@@ -54,9 +54,10 @@ shows what actually resolves, and which step decided it.
 It baselines to `ask`, so under `policy` it is denied until a Rule allows it, per Project.
 Two things to know before writing that Rule:
 
-- It needs an OS sandbox and fails closed without one — bubblewrap on Linux
-  (`apt install bubblewrap`), and on Windows there is no backend yet, so every call there
-  returns that error.
+- On Linux and macOS it needs an OS sandbox and fails closed without one — bubblewrap on
+  Linux (`apt install bubblewrap`), `sandbox-exec` on macOS. On Windows there is no sandbox
+  backend yet, and a command runs on the host **without isolation**, so a Rule that allows
+  `bash_run` there allows the host itself.
 - The sandbox confines the filesystem, not the network. An allowed `bash_run` has the host's
   full network, so that Rule is the decision to allow egress, and it stays deny by default
   for exactly that reason.
