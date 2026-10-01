@@ -1,9 +1,9 @@
 ---
-sidebar_position: 7
-description: Health states, exit codes, why a Run failed, and what the attestation gate promises.
+sidebar_label: Troubleshooting
+description: Health states, exit codes, why a Run failed, attestation, the audit and logs.
 ---
 
-# States and the runbook
+# Troubleshooting
 
 ## Is it up?
 
@@ -12,109 +12,115 @@ wisp status
 # ready (wisp 0.1.0, serve)
 ```
 
-That is `GET /v1/health`, which always answers `200` — the probe's question is "is the
-process up", and the state is the body: `status`, `version`, `kind`, and `update` when a
-newer release exists. It is the one route exempt from the bearer token, so an init system can
-read it before anything holds one.
+The answer is the state, the version, and which Runtime answered: `serve` for `wisp serve`
+or the service, `desktop` for Wisp Desktop's. It comes from `GET /v1/health`, which also
+reports `update` when a newer release exists. `GET /v1/health` without a token answers `200`
+with an empty body, so a liveness probe needs no token, but only a request with the token
+sees the state.
 
-`GET /v1/ready` is the boolean an orchestrator gates on: `ready`, alongside `proxyResolved`,
-`proxyFailed` and `attestationFailed`.
+`GET /v1/ready` is a yes/no for whether a Run would be accepted now, along with
+`proxyResolved`, `proxyFailed` and `attestationFailed`.
 
 ### The five states
 
-| `status` | what it means | what to do |
+| State | Meaning | What to do |
 | --- | --- | --- |
-| `booting` | up, still resolving the login, the proxy and the first attestation | wait; if it never leaves, read the journal |
-| `ready` | Runs will run | — |
-| `login_required` | no Account Login, or it was lost — the process is up but cut off from the proxy | `wisp login --manual`, on any machine with a browser |
-| `proxy_failed` | there is a login, the proxy did not answer (or its catalog fetch failed) | check egress from this host to the proxy; Runs fail `network` or `server_error` |
-| `attestation_failed` | attestation produced a verdict that is not usable, so the LLM channel is shut | nothing local fixes a bad verdict — see below |
+| `booting` | starting: checking the login, the proxy and the attestation | wait; if it never leaves this state, read the [log](#logs) |
+| `ready` | Runs will run | nothing |
+| `login_required` | not signed in, or the login was lost | `wisp login` (or `wisp login --manual` on a server) |
+| `proxy_failed` | signed in, but the Wisp proxy did not answer | check that this machine can reach the internet; Runs fail with `network` or `server_error` |
+| `attestation_failed` | the model's environment could not be verified, so Wisp will not send it anything | nothing to fix locally; see [attestation](#attestation) |
 
-`login_required` is never merely "unready": it is the one state that needs a person.
+`login_required` is the only state that needs a person.
 
 ## Exit codes
 
-Every client command — `wisp run`, `wisp sessions`, `wisp permissions`, and the rest:
+Every `wisp` command except `wisp serve`:
 
-| code | meaning |
+| Code | Meaning |
 | --- | --- |
-| `0` | completed |
-| `1` | the Run failed or was cancelled, or a command was answered with a no |
-| `2` | the command line could not be acted on |
-| `4` | no Runtime answered where the lock file or the flags said one would |
-| `5` | the token was refused |
-| `130` | Ctrl-C at a prompt — a login's redirect URL, or a secret read from the terminal |
+| `0` | done: the Run completed, or the command succeeded |
+| `1` | the Run failed or was cancelled, or the request was refused |
+| `2` | the command line was wrong; the message shows the right usage |
+| `4` | no Runtime is running, or none answered where `runtime.lock`, `--url` or `WISP_URL` said |
+| `5` | the Runtime refused the token |
+| `130` | Ctrl-C while the command was waiting for you to paste something |
 
-`wisp serve` has one of its own: **78** (`EX_CONFIG`). It exits before serving anything and
-says which of these it was:
+`wisp serve` has one more: **78**, a configuration problem. It exits before serving
+anything and says which of these it is:
 
-- `agentToken` missing, or under 32 characters;
-- `runtime.json` is not valid JSON, is not an object, or holds a key the schema does not
-  know — a typo that silently fell back to a default is exactly what this exists for;
-- `runtime.json` is owned by another user;
-- `wispHome` appears in a file that was itself found through `WISP_HOME`;
-- the data directory is **already served** by another Runtime. The message names that
-  Runtime's kind and pid: stop it, or give this one its own `WISP_HOME`. One data directory
-  is one Runtime, and the desktop's sidecar is a Runtime like any other.
+- no `agentToken`, or one shorter than 32 characters;
+- `runtime.json` is not valid JSON, is not an object, or has a key that is not a known
+  setting (usually a typo; see the [Reference](./reference.md#configuration));
+- `runtime.json` belongs to another user;
+- `wispHome` is set inside a `runtime.json` that was itself found through `WISP_HOME`;
+- the port is already taken;
+- **another Runtime already uses this data directory.** The message says which one and its
+  process id. Usually it is Wisp Desktop, or a `wisp serve` you forgot. Stop it, or give
+  this one its own `WISP_HOME`.
 
-None of it is retryable, which is why the service unit carries
-`RestartPreventExitStatus=78`.
+Restarting does not fix any of these, which is why the systemd service does not restart
+after a 78.
 
 ## Why a Run failed
 
-A failed Run carries `failure.reason` from a closed set, and a message that never quotes the
-conversation.
+A failed Run has `failure.reason`, one of the values below, and a message that never quotes
+the conversation. `wisp run` prints both on stderr.
 
-| `reason` | what happened | operator's move |
+| Reason | What happened | What to do |
 | --- | --- | --- |
-| `attestation_blocked` | the attestation gate is shut | a Blackout; retry policy is the only answer |
-| `stream_stalled` | the model produced nothing for `llmStallTimeoutMs` (five minutes) | retry; the Run was cut rather than left hanging |
-| `context_overflow` | the turn did not fit its context window even after compaction | a prompt or a Project problem, not a host one |
-| `step_ceiling` | the graph hit `graphRecursionLimit` or `toolCallLimit` | same |
-| `confirmation_pending` | the Session still waits on a tool confirmation asked in the desktop, so the Run was refused before it started | answer it there, then send again |
-| `shutdown` | the Runtime stopped under it | retry with the same key once health is `ready` |
-| `quota_exhausted` | the account's plan is used up | account, not host |
-| `not_entitled` | the account may not use what was asked for | account, not host |
-| `billing_unavailable` | entitlement could not be checked | transient; retry |
-| `rate_limit` | throttled, and the retries ran out | back off, then retry |
+| `attestation_blocked` | the model's environment is not verified right now | retry later; see [attestation](#attestation) |
+| `stream_stalled` | the model sent nothing for `llmStallTimeoutMs` (5 minutes) | retry |
+| `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
+| `step_ceiling` | the Run hit `graphRecursionLimit` or `toolCallLimit` | split the task, or raise the limit |
+| `confirmation_pending` | the Session is waiting for a tool approval in Wisp Desktop | answer it in the app, then send again |
+| `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
+| `quota_exhausted` | the account's plan is used up | check your account |
+| `not_entitled` | the account's plan does not include what was asked for | check your account |
+| `billing_unavailable` | the plan could not be checked | retry |
+| `rate_limit` | throttled, and the retries ran out | wait, then retry |
 | `server_error` | the model side kept failing | retry |
-| `network` | the model call kept failing to connect | check egress, then retry |
-| `internal` | anything else | the message is content-free on purpose; the cause is in diagnostics |
+| `network` | could not connect to the model | check the internet connection, then retry |
+| `internal` | anything else | the message is deliberately generic; report it |
 
-Under `policy` there is no `confirmation_timeout`, because no Run ever waits on a person.
+A tool refused by [Permissions](./permissions.md) is not a failure: the Run completes with
+that call marked `ok: false`.
 
-## The attestation gate, and the honest SLA
+## A tool was refused
 
-The Runtime is the proxy's data plane, and the gate is enforced per request. A Transport
-Failure — the collateral could not be fetched — is graced and retried
-(`reAttestTransientGrace`). A Cryptographic Verdict — a quote that does not verify — blocks
-immediately and is Sticky: the channel stays shut until an attestation succeeds again.
+Check `wisp audit <session>`. A row with `error` and `ask` is a call refused because no Rule
+allowed it. Run `wisp permissions get --project <folder>` to see the decisions, then allow
+what the agent needs. See [Permissions](./permissions.md).
 
-Which means, plainly: **a Runtime's availability is bounded by the proxy's attested
-availability, and there is no local override.** Your retry policy is where availability is
-bought. During a Blackout, Runs fail `attestation_blocked` and everything that is not the
-model — Sessions, history, connectors, audit — keeps working.
+If the agent says a connector is not enabled, run the `wisp connectors enable` command it
+gives you.
+
+## Attestation
+
+Before Wisp sends anything to the model, it verifies that the model runs in a genuine
+trusted execution environment, and it keeps checking.
+
+- **The verification service could not be reached:** Wisp keeps using the last good result
+  for a grace period and retries.
+- **The verification failed:** Wisp stops sending to the model at once, and stays stopped
+  until a verification succeeds again.
+
+While it is stopped, Runs fail with `attestation_blocked`. Everything else keeps working:
+Sessions, history, connectors and the audit. There is no local override, so when the
+model's environment cannot be verified, Wisp's model is unavailable. Build your retry policy
+around that.
 
 ```sh
-curl -sS "$URL/v1/attestation" -H "Authorization: Bearer $TOKEN"        # the current verdict and mode
-curl -sS -X POST "$URL/v1/attestation/refresh" -H "Authorization: Bearer $TOKEN"
+curl -sS "$URL/v1/attestation" -H "Authorization: Bearer $TOKEN"              # the current result
+curl -sS -X POST "$URL/v1/attestation/refresh" -H "Authorization: Bearer $TOKEN" # check again now
 ```
-
-## The audit
-
-```sh
-wisp audit <session>
-# 2026-09-18T11:04:22Z  mcp__chatstore__read_thread  ok     380ms  allow
-# 2026-09-18T11:04:23Z  mcp__chatstore__post_message error    1ms  ask
-```
-
-Newest first: when, which tool, whether it succeeded, how long it took, and the Decision the
-Rules produced — `ask` above, because under `policy` an `ask` is a deny. `GET /v1/audit` is
-the Runtime-wide listing behind it, narrowed with `sessionId`, paged with `limit` and
-`cursor`. No row carries what a tool sent or received.
 
 ## Logs
 
-`journalctl --user -u wisp -f` when the installer wrote the service unit. Logs carry no
-conversation content, so they are safe to read and to forward. Structured JSON logs and a
-metrics endpoint are phase 2.
+| Running as | Log |
+| --- | --- |
+| systemd service | `journalctl --user -u wisp -f` |
+| launchd service | `~/.wisp/logs/serve.log` |
+| `wisp serve` | the terminal it runs in |
+
+Logs never contain conversation content, so they are safe to read and to share.

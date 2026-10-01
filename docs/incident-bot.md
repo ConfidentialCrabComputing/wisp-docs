@@ -1,17 +1,17 @@
 ---
-sidebar_position: 5
-description: The adapter contract as a walkthrough you can run — one Session per incident, one Run per signal.
+description: The adapter contract as a walkthrough you can run, with one Session per incident and one Run per alert.
 ---
 
-# A worked example: the incident bot
+# Example: an incident bot
 
-An on-call bot. Alerts land in the team's own systems; one Session holds one incident; every
-signal becomes a Run whose input is the delta. The agent reads the SOP, looks things up
-through the team's connectors, and drafts the operator message it is not allowed to send.
-Nothing in it needs the Runtime to know what Slack or Telegram is.
+An on-call assistant. Alerts arrive in your own systems. Each incident gets one Session, and
+each new alert on it becomes a Run whose input is what changed. The agent reads the
+procedure, looks things up through your connectors, and drafts the message for the
+operators, which it is not allowed to send itself. Nothing here requires Wisp to know about
+Slack or Telegram.
 
-Ten minutes against a Runtime that is already running — the [quickstart](./quickstart.md) if
-it is not.
+You need a Runtime that is running and signed in. If you do not have one, start with the
+[Quickstart](./quickstart.md).
 
 ## 1. The Project folder
 
@@ -43,19 +43,24 @@ and draft the first operator message.
 MD
 ```
 
-## 2. The connectors, and the Rules that let them run
+## 2. The connector, and what it may do
 
 ```sh
 wisp connectors add chatstore --http https://chat.internal/mcp/ --header-stdin Authorization
 wisp connectors enable chatstore --project .
-wisp permissions allow-connector chatstore --project .
+
+# allow the read tools only
+wisp permissions set mcp__chatstore__read_thread allow --project .
+wisp permissions set mcp__chatstore__search allow --project .
 wisp permissions get --project .
 ```
 
-The read tools are now silent. Leave every send-class tool alone: with no Rule of its own,
-under `policy`, it is refused — which is the behaviour the SOP above depends on.
+The tools that read now run without asking. `mcp__chatstore__post_message` is left at its
+default, `ask`, so in an unattended Run it is refused. That is exactly what step 3 of the
+SOP relies on. (`wisp permissions allow-connector chatstore` would have allowed posting
+too.)
 
-## 3. The first signal, from the CLI
+## 3. The first alert, from the CLI
 
 ```sh
 wisp run --skill open-case "$(cat alert.json)" --json > case.json
@@ -63,42 +68,41 @@ SESSION=$(jq -r .sessionId case.json)
 jq -r .output.text case.json
 ```
 
-Without `--json` the answer goes to stdout and the Session's id to stderr, so a pipe gets
-the answer alone.
+Without `--json`, `wisp run` prints `session <id>` on stderr and the answer on stdout.
 
-## 4. The next signal is another Run on the same Session
+## 4. The next alert is another Run on the same Session
 
 ```sh
 wisp run "$SESSION" "the error rate dropped to 2% after the rollback" --key "incident-4711:evt-8823"
 ```
 
-`--key` is the signal's own id. When the thing that called you retries — and an at-least-once
-caller will — the repeat meets the Run it already started instead of running the turn twice.
+`--key` is the alert's own id. If whatever calls you delivers the same alert twice, the
+second call gets the first Run's answer instead of running the turn again.
 
-## 5. The same thing, the way the adapter does it
+## 5. The same thing, the way an adapter does it
 
-Your adapter does not shell out. It reads the Runtime's address and token where the CLI
-reads them, and makes two calls per signal:
+Your adapter does not shell out to `wisp`. It reads the address and token where the CLI
+does, and makes two calls per alert:
 
 ```sh
 URL=$(jq -r .url ~/.wisp/runtime.lock)
 TOKEN=$(jq -r .token ~/.wisp/runtime.lock)
 
-# origin → externalKey → Session: every signal for this incident lands on one Session
+# conversation → Session: every alert for this incident lands on one Session
 SESSION=$(curl -sS "$URL/v1/sessions" \
   -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d "{\"projectRoot\":\"$HOME/agents/incidents\",\"origin\":\"cli\",\"externalKey\":\"incident:4711\",\"title\":\"incident 4711\"}" \
   | jq -r .id)
 
-# message → Run: the connection is held until the Run ends
+# message → Run: the connection stays open until the Run ends
 curl -sS "$URL/v1/sessions/$SESSION/runs" \
   -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d '{"input":"grafana: latency p99 back under 400ms for 10 minutes","idempotencyKey":"incident-4711:evt-8824"}' \
   | jq
 ```
 
-The first call answers `201` the first time and `200` for every signal after. The second
-answers the outcome:
+The first call answers `201` the first time and `200` for every alert after it. The second
+returns the Run's outcome:
 
 ```json
 { "runId": "…",
@@ -110,9 +114,9 @@ answers the outcome:
   "artifacts": [] }
 ```
 
-`outcome → send`: the draft is in `output.text`, and your adapter posts it, as the side that
-owns the channel. The refused `post_message` is the design working rather than a fault — no
-Rule allows it, so the `ask` became a deny, the agent was told, and it drafted instead.
+The draft is in `output.text`, and your adapter posts it, because your side owns the
+channel. The refused `post_message` is the design working: no Rule allows it, so the agent
+drafted instead.
 
 ## 6. What an operator sees afterwards
 
@@ -121,17 +125,17 @@ wisp sessions list          # the Sessions this folder has
 wisp audit "$SESSION"       # every tool call: when, which, ok, how long, and the decision
 ```
 
-The audit rows never carry what a tool sent or received, which is what makes them safe to
-read and to ship somewhere else.
+Audit rows never contain what a tool sent or received, so they are safe to read and to ship
+elsewhere.
 
 ## 7. A restart in the middle
 
-Stop the Runtime while a Run is live and the caller's connection closes: there is no durable
-Run record in phase 1. The Session's history is on disk, so nothing is lost but the answer —
-resend the signal with the same key once `wisp status` says `ready`. After a restart the key
-map is empty, so that resend starts a new Run; that is the at-most-once promise stated
-honestly, and [Runs and restarts](./runs-and-restarts.md) has the rest of it.
+If the Runtime stops while a Run is going, the caller's connection closes and that Run's
+answer is lost. The Session's history is on disk, so nothing else is. Once `wisp status`
+says `ready`, send the alert again with the same key. After a restart the Runtime has
+forgotten its keys, so this starts a new Run; [Runs and restarts](./runs-and-restarts.md)
+explains why.
 
-What stayed on your side throughout: the alert source, the incident id, the retry, the
-sending. What stayed on the Runtime's: the Session, the SOP, the tools, the Rules and the
+What stayed on your side the whole time: the alert source, the incident id, the retry and
+the sending. What stayed on Wisp's: the Session, the SOP, the tools, the Rules and the
 audit.

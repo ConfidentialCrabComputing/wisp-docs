@@ -1,143 +1,150 @@
 ---
-sidebar_position: 2
-description: From a machine with nothing installed to an agent that answers.
+description: Install Wisp, sign in, and get a first answer, in about five minutes.
 ---
 
 # Quickstart
 
-A fresh Linux box, about ten minutes, and one answered Run. Every command here is one the
-Runtime ships today.
+From a Mac or a Linux machine with nothing installed to an agent that answers.
 
 ## 1. Install
 
 ```sh
-curl -fsSL https://usewisp.io/install.sh | sh
+curl -fsSL https://usewisp.io/runtime/install.sh | sh
 ```
 
-The installer downloads the release for your platform, checks it against the manifest the
-release key signs, unpacks it into `~/.wisp/versions/<version>` and links `~/.wisp/bin/wisp`
-at it. It also adds `~/.wisp/bin` to your `PATH` in your shell's rc file — open a new shell,
-or run the `export` line it prints.
+The installer asks one question:
 
-To install somewhere other than `~/.wisp`, set `WISP_HOME` on the shell that runs the
-script — `curl -fsSL https://usewisp.io/install.sh | WISP_HOME=/srv/wisp sh`, not in front
-of `curl`, which is a different process. Install `minisign` first
-(`apt install minisign`) if you want the manifest's signature verified rather than skipped:
-without it the install still checks TLS and the archive's SHA-256, and says that it did not
-check the signature.
-
-## 2. Give it a token
-
-Everything reaches the Runtime over HTTP on loopback, and every request carries a bearer
-token. The token is yours to pick; write it into `$WISP_HOME/runtime.json` before the first
-start:
-
-```sh
-mkdir -p ~/.wisp
-printf '{"agentToken":"%s"}\n' "$(openssl rand -base64 32)" > ~/.wisp/runtime.json
-chmod 600 ~/.wisp/runtime.json
+```
+Start the Runtime in the background now and at every login? [Y/n]
 ```
 
-At least 32 characters, or the Runtime refuses to start. Nothing else goes in the file for
-now — the release already knows where to reach the model and where you sign in. A file it
-cannot load, or one owned by another user, exits **78** and says what is wrong.
+Press **Enter**. Wisp then runs as a background service (a launchd agent on a Mac, a
+systemd user service on Linux), so you never have to start it by hand.
 
-## 3. Start it
+The installer does everything else for you: it downloads and verifies the release, puts the
+`wisp` command in `~/.wisp/bin`, adds that folder to your `PATH`, and creates
+`~/.wisp/runtime.json` with a random access token. You do not need to configure anything.
 
-```sh
-wisp serve
-```
-
-It writes `$WISP_HOME/runtime.lock` — the address and token every other command reads, which
-is why none of them takes a flag. Leave it running and open a second shell:
+Open a new terminal so the `PATH` change takes effect, then check:
 
 ```sh
 wisp status
 # login_required (wisp 0.1.0, serve)
 ```
 
-<details>
-<summary>Or let systemd keep it up</summary>
+`login_required` is expected: the Runtime is up and waiting for you to sign in.
 
-Re-run the installer with `WISP_SERVICE=1` and it writes a **user** unit, enables it and
-starts it — no root anywhere:
+:::note[Linux]
+On Linux the installer needs `minisign` or OpenSSL 3 to verify the release signature, and
+stops if neither is installed. The agent's `bash_run` tool also needs bubblewrap. On
+Debian or Ubuntu: `sudo apt install minisign bubblewrap`.
+:::
+
+<details>
+<summary>Answered "no", or there was no terminal to ask on?</summary>
+
+Then nothing is running yet. Start the Runtime yourself and keep that terminal open:
 
 ```sh
-curl -fsSL https://usewisp.io/install.sh | WISP_SERVICE=1 sh
-systemctl --user restart wisp   # after writing runtime.json
-journalctl --user -u wisp -f
+wisp serve
 ```
 
-A user service stops when you log out until you grant lingering:
-`loginctl enable-linger "$(id -un)"`.
+Run the remaining commands in a second terminal. To get the background service later, see
+[Install, update, uninstall](./install.md#run-it-as-a-service).
 
 </details>
 
-On Linux the agent's `bash_run` tool needs bubblewrap and refuses to run commands without
-it: `apt install bubblewrap`.
+<details>
+<summary>Already use Wisp Desktop on this Mac?</summary>
 
-## 4. Sign in
+Then the installer does not offer the service, because the app already runs a Runtime on
+the same data. Keep the app open: `wisp` commands talk to the Runtime inside it, and you are
+already signed in. See [Install, update, uninstall](./install.md#next-to-wisp-desktop).
 
-The Runtime reaches the model through your account, so a fresh install sits at
-`login_required` until somebody signs in. A server has no browser, so sign in on whatever
-machine does:
+</details>
+
+## 2. Sign in
+
+The Runtime reaches the model through your Wisp account.
+
+```sh
+wisp login
+```
+
+This opens a browser, waits for you to sign in, and prints `ready`.
+
+On a server without a browser, use `--manual`. It prints a URL: open it on any device, sign
+in, then copy the address the browser ends up on (something like
+`127.0.0.1:49873/callback?code=…`; the page itself will not load, and that is fine) and paste
+it back into the terminal.
 
 ```sh
 wisp login --manual
 ```
-
-It prints a URL. Open it anywhere, sign in, and paste back the URL you were redirected to.
-Then:
 
 ```sh
 wisp status
 # ready (wisp 0.1.0, serve)
 ```
 
-Without `--manual` the Runtime opens a browser on **its own** host and the command waits for
-the login to land.
+## 3. Ask something
 
-## 5. Run something
-
-`cd` into the folder the agent should work in — that folder becomes the Session's Project,
-and the agent's tools are confined to it:
+`cd` into the folder the agent should work in. That folder becomes the Session's
+**Project**, and the agent's file tools can only reach inside it.
 
 ```sh
 cd ~/projects/thing
 wisp run "read the source and tell me what this project does"
 ```
 
-The answer goes to stdout; the Session's id goes to stderr, so a pipe gets the answer alone.
-Continue that Session by naming it:
+The first line, `session 6b4f2a7e-…`, goes to stderr; the answer goes to stdout. To keep
+talking in the same conversation, pass that id:
 
 ```sh
 wisp run 6b4f2a7e-… "now write a README for it"
 ```
 
-The command waits for the Run and exits **0** when it completed, **1** when it failed or was
-cancelled, **2** on a bad command line, **4** when no Runtime answered and **5** when the
-token was refused. `--json` prints the whole outcome as one JSON document instead.
+Some useful commands to go with it:
 
 ```sh
-wisp sessions list      # the Sessions this folder has
-wisp cancel 6b4f2a7e-…  # stop what a Session is running
+wisp sessions list      # this folder's Sessions
+wisp cancel 6b4f2a7e-…  # stop a Run that is taking too long
+wisp models             # models you can pick with: wisp run --model <id>
 ```
 
-## 6. Connect one thing
+## 4. Connect a service
 
-The agent's own tools are built in. Everything else arrives as an MCP connector — added
-once, then enabled per Project:
+The agent has file, shell and web tools built in. Anything else comes from a
+**connector**, an MCP server you add once and then enable for each Project. For example,
+GitHub:
 
 ```sh
 wisp connectors add github --http https://api.githubcopilot.com/mcp/ --header-stdin Authorization
-# paste: Bearer <your GitHub token>
+# paste: Bearer <your GitHub token>, then press Enter
+
 wisp connectors enable github --project .
-wisp connectors list
-# github  http  connected  38
+wisp permissions allow-connector github --project .
 ```
 
-`--header-stdin` asks for the secret on the terminal so it never lands in your shell
-history. A server that signs you in with OAuth instead takes `wisp connectors auth github`,
-which prints a URL and takes the redirect the same way `wisp login --manual` does.
+The three commands do three different things:
 
-That is the whole loop: install, start, sign in, run, connect.
+1. `add` stores the connector and its secret. `--header-stdin` reads the secret from the
+   terminal, so it never ends up in your shell history.
+2. `enable` makes its tools visible to the agent in this folder.
+3. `allow-connector` lets those tools run. Nobody is watching a CLI Run to approve a tool
+   call, so a tool with no Rule that allows it is refused. This command allows every
+   GitHub tool in this folder. To allow only some of them, see [Permissions](./permissions.md).
+
+```sh
+wisp connectors list
+# github  connected
+
+wisp run "list my open pull requests"
+```
+
+## Next
+
+- [Using the CLI](./cli.md): everything `wisp run` and friends can do.
+- [Connectors](./connectors.md): OAuth sign-in, local MCP servers, Telegram.
+- [Deploying an agent](./deploy-an-agent.md): turn a folder into an agent you can ship to a
+  server.
