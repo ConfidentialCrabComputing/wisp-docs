@@ -1,97 +1,74 @@
 ---
-sidebar_position: 6
-description: A Run is at-most-once; the idempotency key is what makes it effectively-once.
+description: What happens to a Run when the connection drops or the Runtime restarts, and how idempotency keys make retries safe.
 ---
 
-# Runs, restarts and the key
+# Runs and restarts
 
-## A Run is at-most-once
+## A Run happens at most once
 
-The Runtime never repeats a Run of its own accord, and it never persists one. The outcome is
-the response to the request that started the Run; a Run belongs to the Runtime that started
-it, and a Runtime that stops takes every Run it had in flight with it. The Session's history
-stays — it is on disk — but the answer to a lost connection is gone, even where the turn
-itself finished and was written.
+Wisp never retries a Run on its own, and it does not save Runs to disk. A Run's answer is
+the response to the request that started it. If that connection drops, or the Runtime
+stops, the answer is gone. The Session's history is on disk and survives, even when the
+turn itself finished.
 
-So repeating is the caller's decision, always. The idempotency key is what makes repeating
+So retrying is always the caller's decision. The idempotency key is what makes a retry
 safe.
 
 ## The key
 
-`idempotencyKey` on the Run body, `--key` on `wisp run`, at most 256 characters. Beside each
-key the Runtime keeps a fingerprint of the request — the Session, the input (or the expanded
-skill line) and the model preference — and then:
+Set `idempotencyKey` in the Run's body, or `--key` on `wisp run`. At most 256 characters.
+The Runtime remembers each key together with what was asked (the Session, the input or
+Skill, and the model preference). Then:
 
-- a repeat **while the Run is live** joins it and waits on the same outcome: two requests,
-  one Run, one `runId`;
-- a repeat **after it ended** gets the stored outcome, with no second turn in the Session's
-  history;
-- the same key with a **different** request is `409` and starts nothing.
+- **a repeat while the Run is still going** joins it: two requests, one Run, the same
+  answer;
+- **a repeat after it ended** gets the stored answer, and the Session's history does not
+  get a second turn;
+- **the same key with a different request** is refused with `409`, and nothing runs.
 
-Keys live for `idempotencyTtlMs` — 24 hours — in a bounded in-memory map whose oldest
-entries are evicted first. **After a restart that map is empty**, and a repeat starts a new
-Run. That is the contract rather than an oversight: at-most-once from the Runtime's side,
-effectively-once when the Integrator names its Runs. Durable Run records and keys arrive in
-phase 2.
+Keys are kept in memory for `idempotencyTtlMs` (24 hours), and the oldest are dropped first
+when there are many. **A restart forgets every key**, so a repeat after a restart starts a
+new Run.
 
-The shape of a retry: on a dropped connection, wait until `GET /v1/health` says `ready`
-(`wisp status`), then resend the identical request with the identical key.
+How to retry after a dropped connection: wait until `wisp status` (or `GET /v1/health`)
+says `ready`, then send the identical request with the identical key.
 
-## What a stop does
+## What stopping does
 
-A stop request — `SIGTERM` on Linux and macOS, or Ctrl+C, which Node raises as `SIGINT`
-(a Windows service, whose stop WinSW will deliver as that Ctrl+C, is not installable yet) —
-starts a drain:
+`wisp stop`, `SIGTERM`, Ctrl-C and a service stop all start a **drain**:
 
-1. every **queued** Run settles at once, `failed` with `failure.reason: shutdown`, so
-   nothing is left waiting on a connection the Runtime has already walked away from;
-2. every **active** Run gets the whole window, and one that finishes inside it completes
-   normally with its transcript on disk;
-3. an active Run that outlives the window is aborted, also `failed` with `shutdown`;
-4. connectors disconnect and the stores close.
+1. Runs waiting in a queue end at once as `failed`, with `failure.reason: shutdown`.
+2. Runs already going get the whole drain window to finish. One that finishes in time
+   completes normally.
+3. A Run still going when the window ends is stopped, also `failed` with `shutdown`.
+4. Connectors disconnect and the stores close.
 
-`wisp stop` is what sends it. It reads the pid from `$WISP_HOME/runtime.lock` and signals
-it rather than calling `/v1`: a stop endpoint would let any token holder take the Runtime
-down, which is more than the desktop's own chat can do. It refuses when the lock names the
-desktop's sidecar — quit the desktop instead.
+`wisp stop` finds the Runtime's process id in `$WISP_HOME/runtime.lock` and signals it. On
+purpose there is no "stop" endpoint in `/v1`: a token should not be enough to take the
+Runtime down. `wisp stop` refuses to stop Wisp Desktop's Runtime; quit the app instead.
 
-## The window, and the service
+## The drain window
 
-`shutdownDrainTimeoutMs` (`SHUTDOWN_DRAIN_TIMEOUT_MS`), five seconds by default. Five
-seconds is a chat turn, not a scheduled Run: set it to the longest Run this host actually
-does, or a planned restart will fail that Run with `shutdown`.
+`shutdownDrainTimeoutMs` sets the window, 5 seconds by default. That is enough for a chat
+reply, not for a long scheduled job. Set it to the longest Run this machine does, or a
+planned restart will fail that Run with `shutdown`.
 
-The service's stop timeout has to be **longer** than the window, or the init system kills
-the process mid-drain and the partial output the drain was saving is lost anyway. The
-installer's user unit does that for you — it reads the window from where the Runtime will
-read it and writes the timeout as the window plus five seconds:
+The service manager must wait longer than the window, or it kills the Runtime in the middle
+of draining. The installer handles this: it reads the window from your configuration and
+sets the service's stop timeout to the window plus 5 seconds (`TimeoutStopSec` for systemd,
+`ExitTimeOut` for launchd).
 
-```ini
-[Service]
-ExecStart=/home/you/.wisp/bin/wisp serve
-Environment=WISP_HOME=/home/you/.wisp
-Restart=on-failure
-RestartPreventExitStatus=78
-TimeoutStopSec=10000ms
-```
-
-`RestartPreventExitStatus=78` is there because 78 is a misconfiguration, never a crash:
-restarting loops over the same refusal and buries the one line in the journal that says what
-to fix. See [the runbook](./runbook.md).
-
-To change the window later, set `shutdownDrainTimeoutMs` in `runtime.json` and re-run the
-installer with `WISP_SERVICE=1` — it rewrites the unit from the same value — or edit
-`TimeoutStopSec` yourself and `systemctl --user daemon-reload`.
+If you change the window later, run the installer again with `WISP_SERVICE=1` so it
+rewrites the service with the new value. On Linux you can instead edit `TimeoutStopSec` in
+`~/.config/systemd/user/wisp.service` and run `systemctl --user daemon-reload`.
 
 ## Concurrency
 
-- One active Run per Session. The rest queue, bounded by `maxQueuedRunsPerSession` (ten),
-  and only above that bound is the answer `409`.
-- `maxConcurrentRuns` (three) across the whole Runtime; beyond it a Run waits for a slot
-  with its caller's connection held, exactly as it waits in a Session's queue.
-- `wisp cancel <session>`, or `POST /v1/sessions/{id}/cancel`, ends the live Run and
-  everything queued behind it, each `cancelled`. Cancel is per Session; there is no cancel
-  of one queued message.
+- **One Run per Session at a time.** Others wait in the Session's queue, up to
+  `maxQueuedRunsPerSession` (10). Beyond that, a new Run is refused with `409`.
+- **`maxConcurrentRuns` (3) across the whole Runtime.** Beyond it, a Run waits for a free
+  slot, its connection held open, just as it waits in a Session's queue.
+- **Cancelling is per Session.** `wisp cancel <session>` or `POST /v1/sessions/{id}/cancel`
+  stops the current Run and everything queued behind it, each `cancelled`.
 
-A Session idle for days costs nothing and survives restarts; its thread is rebuilt from the
-transcript on the next Run, and `checkpointerMaxIdleThreads` caps how many stay warm.
+A Session that sits idle for days costs nothing and survives restarts.

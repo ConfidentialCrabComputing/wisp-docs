@@ -1,20 +1,19 @@
 ---
-sidebar_position: 9
 description: Every /v1 route, every command and every setting, in one place.
 ---
 
 # Reference
 
 The lists on this page are complete: a test in the Runtime's repository fails when something
-ships that this site does not name. What each thing means in practice is on the pages it links
-to; here it is only named.
+ships that this site does not name. The other pages explain how to use each item; this page
+only lists them.
 
 ## Routes
 
-Every route answers under `/v1` and takes `Authorization: Bearer <token>`, except
-`/v1/health` without a token, which says only that the Runtime is up, and the OAuth callback,
-which a browser reaches. The Runtime serves the full contract, request and answer schemas
-included, at `/v1/openapi.json`; this table is its index.
+Every route is under `/v1` and needs `Authorization: Bearer <token>`. Two exceptions:
+`/v1/health` without a token answers `200` with an empty body, and the OAuth callback is
+reached by a browser. The full API, with request and response schemas, is at
+`/v1/openapi.json`; this table is an index of it.
 
 ### The Runtime
 
@@ -50,6 +49,7 @@ included, at `/v1/openapi.json`; this table is its index.
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
 | `GET` | `/v1/audit` | the audit, newest first |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
+| `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
 
 ### The account
 
@@ -101,17 +101,19 @@ flow of its own. `wisp connectors telegram keys` and `wisp connectors auth teleg
 
 ## Commands
 
-One binary. `wisp serve` — or `wisp` with no argument — runs the Runtime; every other command
-is a client of a running one. A client finds it through `$WISP_HOME/runtime.lock`, or through
-`--url` and `--token` given together. `--json` makes a command print one JSON document on
-stdout and nothing else there. Exit codes are in [the runbook](runbook.md#exit-codes).
+One program. `wisp serve` (or `wisp` with no argument) runs the Runtime. Every other command
+talks to a running one, which it finds through `$WISP_HOME/runtime.lock`, or through
+`--url` and `--token` (or `WISP_URL` and `WISP_TOKEN`) given together. `--json` makes a
+command print one JSON document on stdout and nothing else there. `wisp --help` lists the
+commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit codes are in
+[Troubleshooting](runbook.md#exit-codes).
 
 | command | what it does |
 | --- | --- |
 | `wisp serve [--home dir] [--config file]` | run the Runtime in the foreground |
-| `wisp status` | the Runtime's health state |
+| `wisp status` | the Runtime's health state, version and kind |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
-| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k]` | one Run, waited on; without a session it opens one for the current folder |
+| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first |
 | `wisp sessions create [--project path] [--title t]` | open a Session |
 | `wisp sessions list [--all]` | list Sessions |
 | `wisp sessions show <id>` | one Session and its messages |
@@ -128,18 +130,35 @@ stdout and nothing else there. Exit codes are in [the runbook](runbook.md#exit-c
 | `wisp connectors remove <name>` | remove one |
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
+| `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp audit <session> [--json]` | a Session's audit |
 | `wisp login [--manual]` | the Account Login; `--manual` for a host with no browser |
 | `wisp logout` | sign out |
 | `wisp update` | install the newest release beside the running one; it takes effect on the next `wisp serve` |
+| `wisp uninstall` | remove what the installer put down (service, `bin`, `versions`, `runtime.json`, the `PATH` line); keep the data |
 | `wisp --version` | the build's version; touches nothing else |
+| `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
+
+## Installer
+
+`curl -fsSL https://usewisp.io/runtime/install.sh | sh`. Variables go on the `sh` side of the
+pipe. See [Install, update, uninstall](install.md).
+
+| variable | default | what it sets |
+| --- | --- | --- |
+| `WISP_HOME` | `~/.wisp` | where to install and keep data |
+| `WISP_SERVICE` | ask at a terminal on first install | `1` installs the service, `0` skips it |
+| `WISP_VERSION` | `latest` | the release to install |
+| `WISP_REQUIRE_SIGNATURE` | required on Linux | `1` refuses an install whose signature cannot be verified |
+| `NO_COLOR` | — | plain output |
 
 ## Configuration
 
-`$WISP_HOME/runtime.json` — `~/.wisp/runtime.json` unless `WISP_HOME` says otherwise — holds
-these keys, and the environment variable beside each overrides the file. The file is optional,
-but a key it holds that is not in this list, invalid JSON, or a file owned by another user
-stops `wisp serve` with exit **78**. A file holding `agentToken` must be `0600`.
+`$WISP_HOME/runtime.json` (`~/.wisp/runtime.json` by default) holds these keys, and the
+environment variable next to each overrides the file. The installer creates the file with
+`agentToken` only. A key not in this list, invalid JSON, or a file owned by another user
+stops `wisp serve` with exit **78**. A file holding `agentToken` should be readable only by
+you (`chmod 600`).
 
 | key | environment | default | what it sets |
 | --- | --- | --- | --- |

@@ -1,94 +1,75 @@
 ---
-sidebar_position: 8
-description: The boundary is the operating-system user — what the token defends, and what it never did.
+description: What Wisp protects against, what it does not, and where secrets live.
 ---
 
 # Security
 
-## The boundary is the operating-system user
+## The boundary is your OS user
 
-A process running as the same user as the Runtime is **trusted**. That is the same boundary
-Chrome, Docker Desktop and every password manager draw, and it is the one to design around:
-if something hostile is already running as you, it is not the Runtime's token that stands
-between it and your data.
+Wisp trusts every process running as the same operating-system user as the Runtime. That is
+the same line Chrome, Docker Desktop and password managers draw: if something hostile
+already runs as you, the Runtime's token is not what stands between it and your data.
 
-What the token, the loopback `Host` allowlist and the CORS allowlist defend against is
-everything that is *not* that user:
+The token, the loopback-only listener, and the `Host` and CORS checks protect against
+everything that is **not** your user:
 
-- a page in a browser doing `fetch("http://127.0.0.1:3000/v1/…")`;
-- another account on the same machine;
-- anything on the network — the listener never leaves loopback in phase 1.
+- a web page in your browser calling `http://127.0.0.1:3008/v1/…`;
+- other accounts on the same machine;
+- anything on the network. The Runtime only listens on `127.0.0.1`, and any other `host`
+  setting is refused.
 
-Raising the bar above the user — verifying a caller's code signature, protecting the Project
-folder or the binary itself — is a different product and is not attempted here.
+Protecting against your own user (checking which program is calling, guarding the Project
+folder or the binary) is outside what Wisp does.
 
-## The lock file
+## The token and the lock file
 
-`$WISP_HOME/runtime.lock` holds the Runtime's address and its token under mode `0600`, and
-that is how the CLI and an adapter find it without being configured twice. It moves nothing
-across the boundary: the token reaches the process in its environment, and a same-user
-process can read another's environment on every platform we ship to. The file puts the token
-where something that could already read it can now also find it.
+The token is in `runtime.json`, which the installer creates readable only by you. The
+running Runtime writes its address and token to `runtime.lock`, also readable only by you,
+so that the CLI and adapters can find it. That gives nothing new to your own processes,
+which could already read the Runtime's environment, and nothing to other users.
 
-On Windows there is no `0600`; the file sits under `%USERPROFILE%`, whose ACL already admits
-the user alone. Same boundary.
+On Windows there are no Unix file modes; both files sit under your user profile, which only
+you can read.
 
-## What changes when nobody is watching
+A token can do what Wisp Desktop's chat can do: run prompts, change Rules, manage
+connectors, read the audit. It cannot stop the Runtime, because there is no stop endpoint.
+Treat a leaked token like a leaked password: change `agentToken` in `runtime.json` and
+restart.
 
-On a desktop, an `ask` is a card someone reads. On a server there is no one, so phase 1 runs
-under one Confirmation Mode: **`policy`** — every `ask` resolves to a deny, the tool returns
-a refusal, the agent is told and continues.
+## Nobody approves anything mid-Run
 
-The consequence worth stating: **the default outcome of an injected "send this" is a
-denial**, not a card nobody sees. Web content, connector results and your own data all reach
-the model, and none of them can talk it into a side effect that no Rule already allowed.
-Nothing runs that a Rule did not explicitly allow, and no caller can approve anything for the
-duration of a Run.
+A Run started from the CLI or `/v1` runs under the `policy` confirmation mode: any tool
+whose decision is `ask` is refused, and the agent continues without it. Only tools a Rule
+explicitly allows can act.
 
-That puts the whole weight on Rules. `wisp permissions allow-connector <name> --project .`
-writes one per-tool row for everything a Connector exposes; `wisp permissions get --project .`
-shows what actually resolves, and which step decided it.
-
-## `bash_run`
-
-It baselines to `ask`, so under `policy` it is denied until a Rule allows it, per Project.
-Two things to know before writing that Rule:
-
-- On Linux and macOS it needs an OS sandbox and fails closed without one — bubblewrap on
-  Linux (`apt install bubblewrap`), `sandbox-exec` on macOS. On Windows there is no sandbox
-  backend yet, and a command runs on the host **without isolation**, so a Rule that allows
-  `bash_run` there allows the host itself.
-- The sandbox confines the filesystem, not the network. An allowed `bash_run` has the host's
-  full network, so that Rule is the decision to allow egress, and it stays deny by default
-  for exactly that reason.
+The consequence: if a web page, a connector result or a document tries to get the agent to
+"send this", **the default result is a refusal**, not an approval card that nobody sees.
+That puts all the weight on your Rules. See [Permissions](./permissions.md), including the
+warnings about [`bash_run`](./permissions.md#bash_run).
 
 ## What reaches the model
 
-Every connector result passes through one place that strips control, zero-width and
-bidirectional characters and the reserved framing tags, so a tool's output cannot impersonate
-the transcript's structure. What that pass cannot decide is who *wrote* a line — see
-[provenance](./adapter-contract.md#provenance) in the adapter contract, and mark authorship
-in the MCP servers you own.
+Every connector result goes through one filter that removes control characters, invisible
+and bidirectional characters, and Wisp's own framing tags, so a tool's output cannot pretend
+to be part of the conversation's structure. What the filter cannot tell is who wrote a line;
+see [Who wrote what](./adapter-contract.md#who-wrote-what).
 
-Confirmation payloads carry ids and kernel-named fields, never text a model chose.
+Approval requests carry ids and fields Wisp names itself, never text the model chose.
+
+The model runs inside a trusted execution environment, and Wisp sends it nothing unless that
+environment is verified. See [Attestation](./runbook.md#attestation).
 
 ## Secrets
 
-- At rest: SQLCipher, with the key in the OS keyring. Connector secrets live in the encrypted
-  store, never in a Project folder.
-- In transit to the Runtime: `wisp connectors add … --header-stdin Authorization` reads the
-  secret from the terminal, because a command line is readable by another local account —
-  which is outside the boundary, which is the point.
-- `runtime.json` holds the agent token. A file owned by another user is refused outright
-  (exit 78); a file of your own that is readable by others earns a warning to `chmod 600` it.
+- **On disk:** the stores are encrypted with SQLCipher, and the key is kept in the OS
+  keychain. Connector secrets live in that encrypted store, never in a Project folder.
+- **On the way in:** `--header-stdin` and `--api-hash-stdin` read a secret from the
+  terminal, because a command line can be seen by other users on the machine.
+- **`runtime.json`:** a file owned by another user is refused (exit 78). A file of yours
+  that others can read gets a warning to `chmod 600` it.
 
-## What a token can do
+## Not available yet
 
-What the desktop's chat can already do: run turns, write Rules, manage Connectors, read the
-audit. It deliberately cannot stop the Runtime — there is no stop endpoint on `/v1`, and
-`wisp stop` is a signal to a pid from the lock file, not a request. Treat a leaked token as a
-compromised account: rotate it in `runtime.json` and restart.
-
-Named Service Tokens with narrower capabilities, a listener off loopback, `allowedHosts` and
-TLS at a reverse proxy arrive together in phase 2. Until then, if something off-host has to
-reach a Runtime, tunnel to its loopback rather than binding it wider.
+Named tokens with narrower permissions, listening beyond loopback, and TLS are planned. Until
+then, if something on another machine has to reach a Runtime, tunnel to its loopback port
+(for example with `ssh -L`) instead of exposing it.
