@@ -65,16 +65,16 @@ test("the operator pages name every state, reason and code a phase-1 operator me
   assert.match(restarts, /TimeoutStopSec/);
 });
 
-test("the look is Infima variables and the landing's fonts, with nothing ejected", () => {
+test("the look is Infima variables and the landing's heading font, with nothing ejected", () => {
   const home = page("index.html");
   const stylesheet = home.match(/href=(\/assets\/css\/[^\s>"]+\.css)/)?.[1];
   assert.ok(stylesheet, "the page loads no stylesheet");
   const css = page(stylesheet.slice(1));
-  // The landing's paper and its dark surface, both painted through Infima's
-  // own variables rather than by overriding the theme's rules.
-  assert.match(css, /--ifm-background-color:\s*#fdf9ef/);
-  assert.match(css, /--ifm-background-color:\s*#100f0d/);
-  assert.match(css, /--ifm-font-family-base:[^;]*Satoshi/);
+  // White paper and a neutral dark surface, both painted through Infima's own
+  // variables rather than by overriding the theme's rules.
+  assert.match(css, /--ifm-background-color:\s*#fff(fff)?\b/);
+  assert.match(css, /--ifm-background-color:\s*#16171a/);
+  assert.match(css, /--ifm-heading-font-family:[^;]*Satoshi/);
   // An ejected theme component is owned forever and comes due at the next minor
   // upgrade: phase 1 swizzles nothing.
   assert.ok(!existsSync(new URL("../src/theme", import.meta.url)), "src/theme/ holds an ejected component");
