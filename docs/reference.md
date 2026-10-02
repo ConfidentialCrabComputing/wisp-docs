@@ -111,7 +111,8 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | command | what it does |
 | --- | --- |
 | `wisp serve [--home dir] [--config file]` | run the Runtime in the foreground |
-| `wisp status` | the Runtime's health state, version and kind |
+| `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
+| `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first |
 | `wisp sessions create [--project path] [--title t]` | open a Session |
@@ -119,23 +120,23 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp sessions show <id>` | one Session and its messages |
 | `wisp sessions delete <id>` | delete a Session |
 | `wisp cancel <session>` | stop a Session's Runs |
-| `wisp permissions get [--project path]` | the Rules |
-| `wisp permissions set <tool> ask\|allow\|deny [--project path]` | write a Rule for a tool |
+| `wisp permissions get [--project path] [--connector name]` | the Rules; `--connector` shows only that connector's tools |
+| `wisp permissions set <tool> ask\|allow\|deny\|default [--project path]` | write a Rule for a tool; `default` drops it |
 | `wisp permissions allow-connector <name> [--project path]` | allow every tool of a Connector |
 | `wisp permissions bypass on\|off [--project path]` | a Project's bypass |
 | `wisp connectors list` | the Connectors |
-| `wisp connectors add <name> (--http url \| --sse url \| --stdio cmd) [--header k=v]… [--header-stdin k]` | add one; `--header-stdin` reads a secret from the terminal |
-| `wisp connectors auth <name>` | sign a Connector in |
+| `wisp connectors add <name> (--http url \| --sse url \| --stdio cmd) [--header k=v]… [--header-stdin k] [--project path] [--allow]` | add one; `--header-stdin` reads a secret from the terminal, `--project` also enables it there, `--allow` also allows its tools |
+| `wisp connectors auth <name> [--project path] [--allow]` | sign a Connector in; `--project` and `--allow` as for `add` |
 | `wisp connectors telegram keys --api-id <n> --api-hash-stdin` | save the Telegram API keys |
 | `wisp connectors remove <name>` | remove one |
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp audit <session> [--json]` | a Session's audit |
-| `wisp login [--manual]` | the Account Login; `--manual` for a host with no browser |
+| `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |
-| `wisp update` | install the newest release beside the running one; it takes effect on the next `wisp serve` |
-| `wisp uninstall` | remove what the installer put down (service, `bin`, `versions`, `runtime.json`, the `PATH` line); keep the data |
+| `wisp update` | install the newest release beside the running one and restart the service onto it; without a running service, it takes effect on the next `wisp serve` |
+| `wisp uninstall` | remove what the installer put down (service, `bin`, `versions`, `runtime.json`, the `PATH` line); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
 

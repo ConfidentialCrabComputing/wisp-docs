@@ -53,6 +53,8 @@ wisp connectors enable chatstore --project .
 wisp permissions allow-connector chatstore --project .
 ```
 
+`wisp connectors add … --project . --allow` does all three in one command.
+
 Then check what the agent will actually get:
 
 ```sh

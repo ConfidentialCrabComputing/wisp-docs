@@ -10,16 +10,37 @@ description: Health states, exit codes, why a Run failed, attestation, the audit
 ```sh
 wisp status
 # ready (wisp 0.1.0, serve)
+# account  you@example.com
 ```
 
 The answer is the state, the version, and which Runtime answered: `serve` for `wisp serve`
-or the service, `desktop` for Wisp Desktop's. It comes from `GET /v1/health`, which also
+or the service, `desktop` for Wisp Desktop's. Below it are the signed-in account and, while
+`bash_run` is not allowed, a line saying so. It comes from `GET /v1/health`, which also
 reports `update` when a newer release exists. `GET /v1/health` without a token answers `200`
 with an empty body, so a liveness probe needs no token, but only a request with the token
 sees the state.
 
 `GET /v1/ready` is a yes/no for whether a Run would be accepted now, along with
 `proxyResolved`, `proxyFailed` and `attestationFailed`.
+
+### `wisp doctor`
+
+When `wisp status` gets no answer, or you do not know where to start:
+
+```sh
+wisp doctor
+# ✓ config: /home/you/.wisp/runtime.json
+# ✓ keyring
+# ✗ service: wisp.service is inactive — systemctl --user restart wisp.service
+# ✗ runtime: … — systemctl --user restart wisp.service
+# ✓ sandbox: bubblewrap
+# ✓ path: /home/you/.wisp/bin
+```
+
+One line per check: the config, the OS keyring, the service, the Runtime, the login, the
+proxy, the `bash_run` sandbox (Linux only) and `PATH`. Every `✗` ends with the command that
+fixes it. It exits `0` when every check passes and `1` otherwise. `wisp doctor` needs no
+running Runtime, and any command that finds none (exit code `4`) points at it.
 
 ### The five states
 
