@@ -49,7 +49,7 @@ wisp permissions get --project .
 
 Every tool with its effective decision. The step is shown only when a Rule or a bypass made
 the decision; a tool on its own default shows none. Without `--project` you see the global
-picture.
+picture. `--connector <name>` shows only that connector's tools.
 
 ## Changing it
 
@@ -62,6 +62,9 @@ wisp permissions allow-connector github --project .
 
 # one tool, everywhere
 wisp permissions set bash_run deny
+
+# drop a Rule: the tool is back on its own default
+wisp permissions set bash_run default
 ```
 
 `allow-connector` writes one ordinary Rule per tool the connector has right now. A tool the

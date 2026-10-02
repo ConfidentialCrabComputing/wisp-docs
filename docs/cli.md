@@ -23,6 +23,8 @@ There is no time limit on the wait. Ctrl-C or `wisp cancel` ends it.
 - **Exit code** is `0` when the Run completed and `1` when it failed or was cancelled. A
   failed Run prints `failed: <reason>: <message>` on stderr. The reasons are listed in
   [Troubleshooting](./runbook.md#why-a-run-failed).
+- **Not signed in yet?** At a terminal, `wisp run` asks `Not signed in. Run wisp login now?`
+  and signs you in before the Run. From a script, or with `--json`, it does not ask.
 
 ### Continuing a conversation
 

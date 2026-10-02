@@ -87,8 +87,8 @@ The answer is one JSON object:
 { "runId": "…",
   "status": "completed",
   "output": { "text": "Latency has recovered…\n\nDraft for #ops: …" },
-  "toolCalls": [ { "name": "mcp__chatstore__read_thread", "args": {}, "ok": true, "durationMs": 380 },
-                 { "name": "mcp__chatstore__post_message", "args": {}, "ok": false, "durationMs": 1 } ],
+  "toolCalls": [ { "name": "mcp__telegram__get_messages", "args": {}, "ok": true, "durationMs": 380 },
+                 { "name": "mcp__telegram__send_message", "args": {}, "ok": false, "durationMs": 1 } ],
   "usage": { "inputTokens": 8122, "outputTokens": 311, "totalTokens": 8433 },
   "artifacts": ["notes/4711.md"] }
 ```

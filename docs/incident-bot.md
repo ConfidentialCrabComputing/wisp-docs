@@ -7,8 +7,8 @@ description: The adapter contract as a walkthrough you can run, with one Session
 An on-call assistant. Alerts arrive in your own systems. Each incident gets one Session, and
 each new alert on it becomes a Run whose input is what changed. The agent reads the
 procedure, looks things up through your connectors, and drafts the message for the
-operators, which it is not allowed to send itself. Nothing here requires Wisp to know about
-Slack or Telegram.
+operators. It reads the on-call chat through the built-in Telegram connector and leaves its
+message in that chat's draft box: it is allowed to draft, not to send.
 
 You need a Runtime that is running and signed in. If you do not have one, start with the
 [Quickstart](./quickstart.md).
@@ -27,7 +27,9 @@ You are the on-call assistant for the payments service.
 For every signal:
 1. Say what changed since the last message on this incident.
 2. Check the runbook and the dashboards before guessing.
-3. You may not message anyone. Draft what you would send and hand it back.
+3. Read the Telegram chat "Payments on-call" for what the operators already know.
+4. You may not message anyone. Leave what you would send as a draft in that chat
+   (save_draft), and return the same text.
 MD
 
 cat > .settings/skills/open-case/SKILL.md <<'MD'
@@ -45,20 +47,25 @@ MD
 
 ## 2. The connector, and what it may do
 
-```sh
-wisp connectors add chatstore --http https://chat.internal/mcp/ --header-stdin Authorization
-wisp connectors enable chatstore --project .
+Telegram signs in as your own account, with API keys from
+[my.telegram.org](https://my.telegram.org) (see [Connectors](./connectors.md#telegram)):
 
-# allow the read tools only
-wisp permissions set mcp__chatstore__read_thread allow --project .
-wisp permissions set mcp__chatstore__search allow --project .
+```sh
+wisp connectors telegram keys --api-id 123456 --api-hash-stdin
+wisp connectors auth telegram
+wisp connectors enable telegram --project .
+
+# find the chat, read it, and draft in it; nothing else
+for tool in resolve_chat list_chats get_messages search_messages save_draft; do
+  wisp permissions set "mcp__telegram__$tool" allow --project .
+done
 wisp permissions get --project .
 ```
 
-The tools that read now run without asking. `mcp__chatstore__post_message` is left at its
-default, `ask`, so in an unattended Run it is refused. That is exactly what step 3 of the
-SOP relies on. (`wisp permissions allow-connector chatstore` would have allowed posting
-too.)
+These tools now run without asking. `mcp__telegram__send_message` and the other tools that
+write are left at their default, `ask`, so in an unattended Run they are refused. That is
+exactly what step 4 of the SOP relies on. (`wisp permissions allow-connector telegram`
+would have allowed sending too.)
 
 ## 3. The first alert, from the CLI
 
@@ -107,16 +114,16 @@ returns the Run's outcome:
 ```json
 { "runId": "…",
   "status": "completed",
-  "output": { "text": "Latency has recovered…\n\nDraft for #ops: …" },
-  "toolCalls": [ { "name": "mcp__chatstore__read_thread", "ok": true, "durationMs": 380 },
-                 { "name": "mcp__chatstore__post_message", "ok": false, "durationMs": 1 } ],
+  "output": { "text": "Latency has recovered…\n\nDraft for Payments on-call: …" },
+  "toolCalls": [ { "name": "mcp__telegram__get_messages", "ok": true, "durationMs": 380 },
+                 { "name": "mcp__telegram__save_draft", "ok": true, "durationMs": 210 } ],
   "usage": { "inputTokens": 8122, "outputTokens": 311, "totalTokens": 8433 },
   "artifacts": [] }
 ```
 
-The draft is in `output.text`, and your adapter posts it, because your side owns the
-channel. The refused `post_message` is the design working: no Rule allows it, so the agent
-drafted instead.
+The draft is in `output.text` and in the chat's draft box. An operator opens "Payments
+on-call", reads it and presses send. Had the agent tried `send_message`, the call would be
+refused and listed with `"ok": false`: no Rule allows it.
 
 ## 6. What an operator sees afterwards
 
@@ -137,5 +144,5 @@ forgotten its keys, so this starts a new Run; [Runs and restarts](./runs-and-res
 explains why.
 
 What stayed on your side the whole time: the alert source, the incident id, the retry and
-the sending. What stayed on Wisp's: the Session, the SOP, the tools, the Rules and the
+the decision to send. What stayed on Wisp's: the Session, the SOP, the tools, the Rules and the
 audit.
