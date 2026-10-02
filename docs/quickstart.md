@@ -73,8 +73,9 @@ wisp login
 
 This opens a browser, waits for you to sign in, and prints `ready`.
 
-On a server without a browser, use `--manual`. It prints a URL: open it on any device, sign
-in, then copy the address the browser ends up on (something like
+On a server without a browser, or over SSH, it does not wait for one. It prints a URL instead
+(`--manual` does the same anywhere): open it on any device, sign in, then copy the address
+the browser ends up on (something like
 `127.0.0.1:49873/callback?code=…`; the page itself will not load, and that is fine) and paste
 it back into the terminal.
 

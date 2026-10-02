@@ -55,6 +55,8 @@ anything and says which of these it is:
 - `runtime.json` belongs to another user;
 - `wispHome` is set inside a `runtime.json` that was itself found through `WISP_HOME`;
 - the port is already taken;
+- the OS keyring cannot store the encryption keys (on Linux: no keyring running, or it is
+  locked). `wisp doctor` names the command that unlocks it;
 - **another Runtime already uses this data directory.** The message says which one and its
   process id. Usually it is Wisp Desktop, or a `wisp serve` you forgot. Stop it, or give
   this one its own `WISP_HOME`.
