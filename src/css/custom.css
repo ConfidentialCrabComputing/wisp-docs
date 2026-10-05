@@ -1,16 +1,11 @@
 /**
- * The whole look of the site: the landing's palette and fonts, expressed as
- * Infima's own custom properties. Nothing here overrides a theme rule and
- * nothing is swizzled — a variable survives a Docusaurus upgrade, an ejected
- * component is owned forever.
+ * The whole look of the site, expressed as Infima's own custom properties.
+ * Nothing here overrides a theme rule and nothing is swizzled — a variable
+ * survives a Docusaurus upgrade, an ejected component is owned forever.
+ *
+ * White paper, the system UI font for prose (it is what reads best on each
+ * OS), the landing's Satoshi for headings, and its amber for links.
  */
-
-@font-face {
-  font-family: 'Satoshi';
-  src: url('../fonts/Satoshi-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-display: swap;
-}
 
 @font-face {
   font-family: 'Satoshi';
@@ -26,15 +21,8 @@
   font-display: swap;
 }
 
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('../fonts/NotoSans-Variable.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 :root {
-  /* The amber of the landing's glow, darkened until it carries text on paper. */
+  /* The amber of the landing's glow, darkened until it carries text on white. */
   --ifm-color-primary: #9a5b00;
   --ifm-color-primary-dark: #8b5200;
   --ifm-color-primary-darker: #834d00;
@@ -43,18 +31,53 @@
   --ifm-color-primary-lighter: #b16900;
   --ifm-color-primary-lightest: #ca7800;
 
-  --ifm-background-color: #fdf9ef;
-  --ifm-background-surface-color: #fdf9ef;
-  --ifm-font-color-base: #1a1a1a;
-  --ifm-heading-color: #1a1a1a;
-  --ifm-toc-border-color: #d9d3c7;
-  --ifm-code-background: #e8e0d0;
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #ffffff;
+  --ifm-font-color-base: #1f2328;
+  --ifm-font-color-secondary: #59636e;
+  --ifm-heading-color: #111111;
+  --ifm-toc-border-color: #e6e8eb;
+  --ifm-hr-border-color: #e6e8eb;
 
-  --ifm-font-family-base: 'Satoshi', 'Helvetica Neue', Arial, sans-serif;
-  --ifm-heading-font-family: 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --ifm-font-family-base: system-ui, -apple-system, 'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif;
+  --ifm-heading-font-family: 'Satoshi', var(--ifm-font-family-base);
+  --ifm-font-family-monospace: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(26, 26, 26, 0.1);
+  /* Prose: a size and leading that read without effort. */
+  --ifm-font-size-base: 106.25%; /* 17px */
+  --ifm-line-height-base: 1.7;
+  --ifm-paragraph-margin-bottom: 1.1rem;
+  --ifm-heading-font-weight: 700;
+  --ifm-heading-line-height: 1.25;
+  --ifm-heading-margin-top: 2.25rem;
+  --ifm-h1-font-size: 2.6rem;
+  --ifm-h2-font-size: 1.85rem;
+  --ifm-h3-font-size: 1.35rem;
+  --ifm-link-hover-decoration: underline;
+
+  /* Code: a quiet grey card, never a coloured block. */
+  --ifm-code-font-size: 88%;
+  --ifm-code-background: #f2f3f5;
+  --ifm-code-border-radius: 0.3rem;
+  --ifm-code-padding-horizontal: 0.35rem;
+  --ifm-pre-background: #f6f8fa;
+  --ifm-pre-padding: 1.1rem;
+  --ifm-pre-line-height: 1.6;
+  --docusaurus-highlighted-code-line-bg: rgba(31, 35, 40, 0.07);
+
+  /* Chrome: hairlines, not shadows. */
+  --ifm-navbar-height: 4rem;
+  --ifm-navbar-shadow: 0 1px 0 var(--ifm-toc-border-color);
+  --ifm-navbar-link-color: var(--ifm-font-color-base);
+  --ifm-menu-color: #3d444d;
+  --ifm-navbar-link-hover-color: #111111;
+  --ifm-menu-color-active: #111111;
+  --ifm-menu-color-background-active: #eef0f2;
+  --ifm-menu-color-background-hover: #f4f5f7;
+  --ifm-table-border-color: var(--ifm-toc-border-color);
+  --ifm-table-stripe-background: #fafbfc;
+  --ifm-table-head-background: #f6f8fa;
+  --ifm-footer-background-color: #f6f8fa;
 }
 
 [data-theme='dark'] {
@@ -66,12 +89,24 @@
   --ifm-color-primary-lighter: #ffdba1;
   --ifm-color-primary-lightest: #ffedcd;
 
-  --ifm-background-color: #100f0d;
-  --ifm-background-surface-color: #1a1815;
-  --ifm-font-color-base: #fdf9ef;
-  --ifm-heading-color: #fdf9ef;
-  --ifm-toc-border-color: rgba(253, 249, 239, 0.1);
-  --ifm-code-background: rgba(253, 249, 239, 0.1);
+  --ifm-background-color: #16171a;
+  --ifm-background-surface-color: #16171a;
+  --ifm-font-color-base: #e6e8eb;
+  --ifm-font-color-secondary: #9aa3ad;
+  --ifm-heading-color: #f5f6f7;
+  --ifm-toc-border-color: #2b2e33;
+  --ifm-hr-border-color: #2b2e33;
 
-  --docusaurus-highlighted-code-line-bg: rgba(253, 249, 239, 0.15);
+  --ifm-code-background: #24262b;
+  --ifm-pre-background: #1e2024;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
+
+  --ifm-menu-color: #c3c9d0;
+  --ifm-navbar-link-hover-color: #ffffff;
+  --ifm-menu-color-active: #ffffff;
+  --ifm-menu-color-background-active: #26282d;
+  --ifm-menu-color-background-hover: #202227;
+  --ifm-table-stripe-background: #1b1c20;
+  --ifm-table-head-background: #1e2024;
+  --ifm-footer-background-color: #111214;
 }

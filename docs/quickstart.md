@@ -12,7 +12,7 @@ From a Mac or a Linux machine with nothing installed to an agent that answers.
 curl -fsSL https://usewisp.io/runtime/install.sh | sh
 ```
 
-The installer asks one question:
+The installer asks:
 
 ```
 Start the Runtime in the background now and at every login? [Y/n]
@@ -21,18 +21,35 @@ Start the Runtime in the background now and at every login? [Y/n]
 Press **Enter**. Wisp then runs as a background service (a launchd agent on a Mac, a
 systemd user service on Linux), so you never have to start it by hand.
 
+Once the service is up, the installer offers to sign you in:
+
+```
+Log in now? [Y/n]
+```
+
+Press **Enter** and follow [step 2](#2-sign-in) right there; you can then skip it below.
+
 The installer does everything else for you: it downloads and verifies the release, puts the
 `wisp` command in `~/.wisp/bin`, adds that folder to your `PATH`, and creates
 `~/.wisp/runtime.json` with a random access token. You do not need to configure anything.
 
-Open a new terminal so the `PATH` change takes effect, then check:
+The installer ends with the line that loads the new `PATH` into your terminal, such as
+`source ~/.zshrc` (`. ~/.profile` for sh and dash). Run it, or open a new terminal, then
+check:
 
 ```sh
 wisp status
 # login_required (wisp 0.1.0, serve)
+# account  not signed in — wisp login
+# ! bash_run is ask, which a Run cannot answer — wisp permissions set bash_run allow --project .
 ```
 
-`login_required` is expected: the Runtime is up and waiting for you to sign in.
+`login_required` is expected if you did not sign in during the install: the Runtime is up
+and waiting for you. The `bash_run` line is a reminder, not an error; see
+[Permissions](./permissions.md#bash_run) before you follow it.
+
+If something does not answer, `wisp doctor` checks the whole setup and prints the command
+that fixes each problem.
 
 :::note[Linux]
 On Linux the installer needs `minisign` or OpenSSL 3 to verify the release signature, and
@@ -73,8 +90,9 @@ wisp login
 
 This opens a browser, waits for you to sign in, and prints `ready`.
 
-On a server without a browser, use `--manual`. It prints a URL: open it on any device, sign
-in, then copy the address the browser ends up on (something like
+On a server without a browser, or over SSH, it does not wait for one. It prints a URL instead
+(`--manual` does the same anywhere): open it on any device, sign in, then copy the address
+the browser ends up on (something like
 `127.0.0.1:49873/callback?code=…`; the page itself will not load, and that is fine) and paste
 it back into the terminal.
 
@@ -82,10 +100,15 @@ it back into the terminal.
 wisp login --manual
 ```
 
+Once signed in, it prints the same summary as `wisp status`:
+
 ```sh
 wisp status
 # ready (wisp 0.1.0, serve)
+# account  you@example.com
 ```
+
+If you skip this step, the first `wisp run` at a terminal asks whether to sign in first.
 
 ## 3. Ask something
 
@@ -134,6 +157,12 @@ The three commands do three different things:
 3. `allow-connector` lets those tools run. Nobody is watching a CLI Run to approve a tool
    call, so a tool with no Rule that allows it is refused. This command allows every
    GitHub tool in this folder. To allow only some of them, see [Permissions](./permissions.md).
+
+`add` does all three in one command when you give it `--project` and `--allow`:
+
+```sh
+wisp connectors add github --http https://api.githubcopilot.com/mcp/ --header-stdin Authorization --project . --allow
+```
 
 ```sh
 wisp connectors list

@@ -46,12 +46,14 @@ git clone git@example.com:ops/incident-agent.git /srv/agents/incidents
 cd /srv/agents/incidents
 
 # once per machine: add the connector with its secret
-wisp connectors add chatstore --http https://chat.internal/mcp/ --header-stdin Authorization
+wisp connectors add github --http https://api.githubcopilot.com/mcp/ --header-stdin Authorization
 
 # once per Project: enable it, and allow the tools it may use unattended
-wisp connectors enable chatstore --project .
-wisp permissions allow-connector chatstore --project .
+wisp connectors enable github --project .
+wisp permissions allow-connector github --project .
 ```
+
+`wisp connectors add … --project . --allow` does all three in one command.
 
 Then check what the agent will actually get:
 

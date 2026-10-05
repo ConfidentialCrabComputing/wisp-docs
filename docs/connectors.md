@@ -19,6 +19,18 @@ Skip the last step and the agent sees the tools but every call is refused, becau
 is there to approve it. [Permissions](./permissions.md) explains why and how to allow only
 some tools.
 
+`add` and `auth` take the other two steps as options: `--project <path>` enables the
+connector for that Project, and `--allow` allows all its tools (in that Project, or
+globally without `--project`):
+
+```sh
+wisp connectors add github --http https://api.githubcopilot.com/mcp/ --header-stdin Authorization --project . --allow
+```
+
+`--allow` needs the connector to be connected. If it is not signed in yet, the command
+stores it, exits `1` and names the `wisp connectors auth <name> … --allow` to run next; if
+it failed, it prints the server's error. The connector stays added either way.
+
 ## Adding an MCP server
 
 ```sh
@@ -56,7 +68,8 @@ wisp connectors auth notion
 
 `auth` prints a URL. Open it on any device, sign in, and paste back the address the browser
 lands on, the same way as [`wisp login --manual`](./quickstart.md#2-sign-in). The command
-prints the connector's new state and exits `0` once it is connected.
+prints the connector's new state and exits `0` once it is connected. Add `--project <path>`
+and `--allow` to enable it and allow its tools in the same command.
 
 ## Telegram
 

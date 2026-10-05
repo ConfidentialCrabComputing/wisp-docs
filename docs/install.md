@@ -25,9 +25,12 @@ curl -fsSL https://usewisp.io/runtime/install.sh | sh
 3. Unpacks it into `~/.wisp/versions/<version>` and points `~/.wisp/bin/wisp` at it.
 4. On the first install, writes `~/.wisp/runtime.json` with a random access token
    (`agentToken`), readable only by you. A later run keeps the file you have.
-5. Adds `~/.wisp/bin` to `PATH` in `~/.zshrc`, `~/.bashrc` or `~/.profile`, whichever
-   matches your shell.
+5. Adds `~/.wisp/bin` to `PATH` in `~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`
+   or `~/.profile`, whichever matches your shell, and ends by printing the command that
+   loads it into the current terminal (`source <file>`, or `. ~/.profile`).
 6. If you said yes, or set `WISP_SERVICE=1`, installs and starts the service.
+7. If you are not signed in and the service came up, asks `Log in now? [Y/n]` and runs
+   `wisp login`. Then it prints `wisp status`.
 
 Running the installer again upgrades in place and keeps your data and settings.
 
@@ -137,9 +140,13 @@ To use a different token, edit `agentToken` in `~/.wisp/runtime.json`. It must b
 wisp update
 ```
 
-This downloads and verifies the newest release next to the current one. The running
-Runtime keeps going on the old version until you restart it (see the restart commands
-above). When a newer release exists, every `wisp` command mentions it once on stderr:
+This downloads and verifies the newest release next to the current one, then restarts the
+service onto it and waits for it to come up on the new version. If the service does not
+come up within 30 seconds, the release is still installed; `wisp doctor` says why.
+
+A service you stopped stays stopped, and a `wisp serve` you started by hand keeps running
+the old version until you restart it. When a newer release exists, every `wisp` command
+mentions it once on stderr:
 
 ```
 wisp 0.2.0 is available — run `wisp update`
@@ -152,8 +159,18 @@ wisp uninstall
 ```
 
 This removes the service, `~/.wisp/bin`, `~/.wisp/versions`, `runtime.json` and the `PATH`
-line the installer added. It keeps your data, meaning Sessions, connectors and keys, because
-Wisp Desktop may be using it. If you started `wisp serve` by hand, `wisp stop` it first.
+line the installer added. At a terminal it first asks what to do with your data:
 
-To delete the data as well, remove `~/.wisp` after uninstalling. Do not do this while Wisp
-Desktop is installed: that folder holds the app's data too.
+```
+  1) Keep data: remove the Runtime; Sessions, connectors and settings stay
+  2) Delete everything: also every Session, connector and setting, Wisp Desktop's included
+  3) Cancel
+Choose [1]:
+```
+
+**Keep data** is the default, and the only choice when there is no terminal to ask on. Pick
+it when Wisp Desktop is installed: `~/.wisp` holds the app's data too. **Delete everything**
+asks once more, then deletes `~/.wisp`; it refuses while Wisp Desktop is running.
+
+If you started `wisp serve` by hand, `wisp stop` it first. The command refuses before it
+removes anything.
