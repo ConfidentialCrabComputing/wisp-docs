@@ -36,6 +36,7 @@ reached by a browser. The full API, with request and response schemas, is at
 | `DELETE` | `/v1/sessions/{id}` | delete a Session |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
 | `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md) |
+| `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again and wait for its outcome; `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its message's latest Run, or something was sent after it. A second retry of the same Run answers with the Run the first one started |
 | `POST` | `/v1/sessions/{id}/cancel` | stop the Session's Runs |
 
 ### Rules, Skills and the audit
@@ -171,6 +172,7 @@ you (`chmod 600`).
 | `maxConcurrentRuns` | `MAX_CONCURRENT_RUNS` | `3` | Runs executing at once across all Sessions |
 | `maxQueuedRunsPerSession` | `MAX_QUEUED_RUNS_PER_SESSION` | `10` | Runs that may wait behind a Session's live one before the next is refused with `409` |
 | `idempotencyTtlMs` | `IDEMPOTENCY_TTL_MS` | `86400000` (24 h) | how long a key names the Run it started — see [the key](runs-and-restarts.md#the-key) |
+| `runRecordRetentionMs` | `RUN_RECORD_RETENTION_MS` | `604800000` (7 days) | how long an ended Run's record is kept; a daily sweep deletes it after this, never sooner than `idempotencyTtlMs` after it began |
 | `shutdownDrainTimeoutMs` | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `5000` | how long a stop lets running Runs finish before it aborts them |
 | `confirmTimeoutMs` | `CONFIRM_TIMEOUT_MS` | `7200000` (2 h) | how long an unanswered confirmation waits before it is denied |
 | `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | silence from the model after which a Run fails `stream_stalled` |
