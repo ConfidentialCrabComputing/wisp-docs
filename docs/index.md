@@ -1,46 +1,34 @@
 ---
 slug: /
-title: The Wisp Runtime
-sidebar_label: What is Wisp
-description: An AI agent you run on your own machine, with a model inside a trusted execution environment.
+title: Wisp
+sidebar_label: About Wisp
+description: A confidential AI harness that lets nobody, including Wisp or the GPU provider, read, store or train on your data.
 ---
 
-# The Wisp Runtime
+# Wisp
 
-Wisp is an AI agent you run on your own machine. You install one program, `wisp`. It keeps
-your credentials and your conversations on that machine and does the work there. The model
-it talks to runs inside a trusted execution environment, so the files it reads are never
-visible in the clear on the way to the model.
+Wisp is a confidential AI harness that lets nobody, including Wisp or the GPU provider,
+read, store or train on user data.
 
-There are two ways to use it, and both talk to the same Runtime:
+Most AI companies enforce *privacy by policy*: they publish a document (Terms of Service or
+a Privacy Policy) where they promise not to misuse your data. That guarantee is purely
+legal. With no structural buffers, millions of user sessions and terabytes of confidential
+information have already been exposed through hacks, system errors and government
+subpoenas.
 
-- **From a terminal or a script.** `wisp run "…"` sends a prompt and prints the answer, the
-  way `claude -p` does.
-- **Over HTTP.** The `/v1` API on `127.0.0.1` lets your own code (a chat bot, a webhook
-  handler, a scheduler) turn its events into Runs.
+Wisp is built on *privacy by architecture*. The whole harness is built from the ground up
+with privacy in mind, so you don't have to trust anyone (even us) and can instead
+cryptographically verify exactly how your data is processed.
 
-If you also use Wisp Desktop, the CLI talks to the Runtime inside the app, and your Sessions
-and connectors are shared between the two.
+Wisp is a desktop app that runs a privacy-enhanced local agent. It anonymizes your
+identifiable requests (web search, for example) through the Wisp Proxy, which runs inside a
+Trusted Execution Environment (TEE), and routes your prompts to open-weight LLMs inside a
+TEE: a secure hardware enclave that nobody can access.
 
 ## Where to go next
 
 | You want to… | Read |
 | --- | --- |
-| Install it and get a first answer | [Quickstart](./quickstart.md) |
-| Run it as a service, update it, remove it | [Install, update, uninstall](./install.md) |
-| Use it day to day from the terminal | [Using the CLI](./cli.md) |
-| Give the agent access to GitHub, Drive, Telegram, your own MCP servers | [Connectors](./connectors.md) |
-| Decide which tools may run unattended | [Permissions](./permissions.md) |
-| Ship an agent as a folder you can check out on a server | [Deploying an agent](./deploy-an-agent.md) |
-| Call Wisp from your own code | [The adapter contract](./adapter-contract.md) and [a worked example](./incident-bot.md) |
-| Keep it running | [Runs and restarts](./runs-and-restarts.md), [Troubleshooting](./runbook.md), [Security](./security.md) |
-| Look up a command, route or setting | [Reference](./reference.md) |
-
-## Words used on this site
-
-- **Runtime**: the running `wisp serve` process (or the one inside Wisp Desktop).
-- **Session**: one conversation. It keeps its history between Runs and across restarts.
-- **Run**: one prompt sent to a Session, and the agent's work until it answers.
-- **Project**: the folder a Session works in. The agent's file tools are confined to it.
-- **Connector**: an MCP server, or Telegram, that gives the agent more tools.
-- **Rule**: a decision (`allow`, `ask` or `deny`) for one tool, globally or for one Project.
+| Understand how Wisp keeps your data private | [How Wisp works](./how-it-works/overview.md) |
+| Use the Wisp desktop app and its features | [The desktop app](./desktop/app.md) |
+| Run the agent from a terminal, a script or your own code | [The Wisp Runtime](./runtime.md) |

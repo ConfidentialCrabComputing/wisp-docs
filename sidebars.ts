@@ -7,8 +7,20 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
  * regrouping the sidebar never moves a page.
  */
 const sidebars: SidebarsConfig = {
-  docsSidebar: [
+  howItWorksSidebar: [
     'index',
+    'how-it-works/overview',
+    'how-it-works/agent',
+    'how-it-works/kernel',
+    'how-it-works/encryption',
+    'how-it-works/proxy',
+    'how-it-works/tee',
+    'how-it-works/llm',
+    'how-it-works/glossary',
+  ],
+  desktopSidebar: ['desktop/app', 'desktop/transcript'],
+  runtimeSidebar: [
+    'runtime',
     {
       type: 'category',
       label: 'Getting started',

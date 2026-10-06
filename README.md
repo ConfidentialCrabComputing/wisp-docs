@@ -1,8 +1,9 @@
 # wisp-docs
 
-The public documentation of the [Wisp Runtime](https://usewisp.io), served at
-**docs.usewisp.io**. A [Docusaurus](https://docusaurus.io/) site; every page is Markdown
-under `docs/`.
+The public documentation of [Wisp](https://usewisp.io), served at **docs.usewisp.io**. A
+[Docusaurus](https://docusaurus.io/) site; every page is Markdown under `docs/`, in three
+sections, each with its own sidebar: how Wisp works (`docs/how-it-works/`), the desktop app
+(`docs/desktop/`) and the Runtime (the pages directly under `docs/`).
 
 The repository is public on purpose: the site is what `usewisp.io` serves, and
 `wisp-agent`'s CI clones this repository with no credential to check that every route,
