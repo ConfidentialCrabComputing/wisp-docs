@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Wisp',
-  tagline: 'The agent runtime you run yourself',
+  tagline: 'A confidential AI harness',
   favicon: 'img/favicon.png',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -59,6 +59,9 @@ const config: Config = {
     navbar: {
       title: 'Wisp',
       items: [
+        {type: 'docSidebar', sidebarId: 'howItWorksSidebar', label: 'How Wisp works', position: 'left'},
+        {type: 'docSidebar', sidebarId: 'desktopSidebar', label: 'Desktop app', position: 'left'},
+        {type: 'docSidebar', sidebarId: 'runtimeSidebar', label: 'Runtime', position: 'left'},
         {to: '/quickstart', label: 'Quickstart', position: 'left'},
         {href: 'https://usewisp.io', label: 'usewisp.io', position: 'right'},
       ],
