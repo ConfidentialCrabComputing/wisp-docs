@@ -36,11 +36,13 @@ connectors, read the audit. It cannot stop the Runtime, because there is no stop
 Treat a leaked token like a leaked password: change `agentToken` in `runtime.json` and
 restart.
 
-## Nobody approves anything mid-Run
+## Nobody approves anything mid-Run, unless you allow it
 
-A Run started from the CLI or `/v1` runs under the `policy` confirmation mode: any tool
-whose decision is `ask` is refused, and the agent continues without it. Only tools a Rule
-explicitly allows can act.
+A Run started from the CLI or `/v1` runs under the `policy` confirmation mode by default:
+any tool whose decision is `ask` is refused, and the agent continues without it. Only tools
+a Rule explicitly allows can act. An operator who adds `interactive` to `confirmationModes`
+lets a caller ask for that mode instead: the Run then parks on an `ask`, and whoever holds
+the token and the Run's id can approve it.
 
 The consequence: if a web page, a connector result or a document tries to get the agent to
 "send this", **the default result is a refusal**, not an approval card that nobody sees.

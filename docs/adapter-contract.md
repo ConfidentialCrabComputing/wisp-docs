@@ -78,7 +78,7 @@ The connection stays open until the Run ends. The body takes exactly one of `inp
 | `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`) |
 | `skill`, `arguments` | run one of the Project's [Skills](./deploy-an-agent.md#what-the-folder-holds) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
-| `confirmationMode` | optional; only `policy` is accepted today |
+| `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 
 The answer is one JSON object:
@@ -108,6 +108,30 @@ drafting what it was not allowed to send. The refused call appears in `toolCalls
 
 Design your adapter around this: **Wisp drafts, your adapter sends.**
 
+## Approvals
+
+With `confirmationMode: interactive`, a tool the Rules hold for a person does not fail:
+the Run parks, and the waiting request answers at once:
+
+```json
+{ "runId": "…",
+  "status": "parked",
+  "confirmations": [ { "id": "…", "toolName": "mcp__telegram__send_message",
+                       "toolCallId": "…", "args": { "…": "…" } } ] }
+```
+
+`args` is what the desktop's approval card shows, the recipient named by Wisp where a
+connector names one. Answer each Prompt with
+`POST /v1/runs/{runId}/confirmations/{id}` and `{ "decision": "approve" }` (or `deny`,
+`allow_project`, `allow_global`). That request waits for the Run's next park or its end and
+answers like the first one did; while another Prompt of the same step is still pending, it
+answers at once with the Prompts left. A Prompt nobody answers within `confirmTimeoutMs` is
+denied and the Run goes on. A Prompt already settled, or one that is not this Run's, is
+`404`; read the Run with `GET /v1/runs/{id}`, which lists a parked Run's `confirmations`.
+
+The operator decides whether any of this is possible: a Run naming a mode outside
+`confirmationModes` is refused `403`, and the default allows `policy` alone.
+
 ## Follow-ups and cancelling
 
 A Session runs one Run at a time. A message that arrives while a Run is going waits in a
@@ -135,11 +159,10 @@ answers whether the Runtime will accept a Run right now.
 
 What is there today: turning a message into a Session and a Run, reading a Run back by id
 (`GET /v1/runs/{id}`, across restarts too) and following its Events while it works
-(`GET /v1/runs/{id}/events`; see the [reference](./reference.md)). What is not there yet: a
-person approving something mid-Run, and the answer's text as it streams — the Events say
-when a Run started, each tool call it made and how it ended.
+(`GET /v1/runs/{id}/events`; see the [reference](./reference.md)), and a person approving
+a tool mid-Run through the `interactive` mode. What is not there yet: the Prompts on the
+Event stream — a parked Run's are read from the waiting request or `GET /v1/runs/{id}`.
 
-- **No approvals.** `policy` is the only confirmation mode: only what Rules allow runs.
 - **No author marking on input.** Everything in `input` is treated as the account owner's
   own words. If you relay a message from someone else, the agent reads it as yours. Either
   relay it knowing that, or keep it out of the input.
