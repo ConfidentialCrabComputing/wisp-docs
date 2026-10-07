@@ -133,14 +133,12 @@ answers whether the Runtime will accept a Run right now.
 
 ## Not available yet
 
-What is there today: everything about turning a message into a Session and a Run. What is
-not there yet: watching a Run while it works, a person approving something mid-Run, and
-reading a Run back after its connection is gone.
+What is there today: turning a message into a Session and a Run, reading a Run back by id
+(`GET /v1/runs/{id}`, across restarts too) and following its Events while it works
+(`GET /v1/runs/{id}/events`; see the [reference](./reference.md)). What is not there yet: a
+person approving something mid-Run, and the answer's text as it streams — the Events say
+when a Run started, each tool call it made and how it ended.
 
-- **No progress stream.** You get one answer per Run, over the open connection. Show
-  "working…" on your side.
-- **No `GET /v1/runs/{id}`.** If the connection drops, you have the Session's history
-  (`GET /v1/sessions/{id}/history`) and your idempotency key.
 - **No approvals.** `policy` is the only confirmation mode: only what Rules allow runs.
 - **No author marking on input.** Everything in `input` is treated as the account owner's
   own words. If you relay a message from someone else, the agent reads it as yours. Either
