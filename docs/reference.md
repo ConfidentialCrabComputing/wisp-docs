@@ -35,7 +35,9 @@ reached by a browser. The full API, with request and response schemas, is at
 | `PATCH` | `/v1/sessions/{id}` | rename a Session or move it |
 | `DELETE` | `/v1/sessions/{id}` | delete a Session |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
-| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md) |
+| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md); with `wait: false`, answer `202 { runId, status }` at once and let the Run go on |
+| `GET` | `/v1/runs` | the Runs of every Session, newest first, as Run resources, paged by `limit` (up to 200, default 50) and `cursor` (the `nextCursor` of the previous page, `null` on the last). `sessionId` narrows to one Session, `status` to a comma-separated set (`running,parked`), and `origin` picks the entrance: `v1` when absent, `api` for the desktop's, `all` for both. Runs from before a restart list with the status they ended with |
+| `GET` | `/v1/runs/{runId}` | one Run, read from its record, across restarts too: `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`, `createdAt`, `startedAt`, `settledAt`, and once it ended the outcome a waited-on Run answers with; `404` for an unknown id |
 | `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again and wait for its outcome; `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its message's latest Run, or something was sent after it. A second retry of the same Run answers with the Run the first one started |
 | `POST` | `/v1/sessions/{id}/cancel` | stop the Session's Runs |
 
@@ -115,7 +117,9 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
-| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first |
+| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first. `--detach` prints the Run's id and returns without waiting |
+| `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
+| `wisp runs show <id> [--json]` | one Run: its status and, once it ended, its answer; `--json` for the whole Run |
 | `wisp sessions create [--project path] [--title t]` | open a Session |
 | `wisp sessions list [--all]` | list Sessions |
 | `wisp sessions show <id>` | one Session and its messages |
