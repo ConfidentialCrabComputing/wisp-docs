@@ -35,13 +35,46 @@ reached by a browser. The full API, with request and response schemas, is at
 | `PATCH` | `/v1/sessions/{id}` | rename a Session or move it |
 | `DELETE` | `/v1/sessions/{id}` | delete a Session |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
-| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md); with `wait: false`, answer `202 { runId, status }` at once and let the Run go on. With `confirmationMode: interactive` the wait ends at the Run's first park too, with `{ runId, status: "parked", confirmations }`; `403` with `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out |
+| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md); with `wait: false`, answer `202 { runId, status }` at once and let the Run go on. With `confirmationMode: interactive` the wait ends at the Run's first park too, with `{ runId, status: "parked", confirmations }`; `403` with `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out. A repeat of the `idempotencyKey` of a parked Run answers at once with the pending Prompts — `200 parked`, or `202 { runId, status: "parked" }` with `wait: false` |
 | `GET` | `/v1/runs` | the Runs of every Session, newest first, as Run resources, paged by `limit` (up to 200, default 50) and `cursor` (the `nextCursor` of the previous page, `null` on the last). `sessionId` narrows to one Session, `status` to a comma-separated set (`running,parked`), and `origin` picks the entrance: `v1` when absent, `api` for the desktop's, `all` for both. Runs from before a restart list with the status they ended with |
 | `GET` | `/v1/runs/{runId}` | one Run, read from its record, across restarts too: `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`, `createdAt`, `startedAt`, `settledAt`, and once it ended the outcome a waited-on Run answers with; while a `/v1` Run is parked, its pending Prompts as `confirmations`; `404` for an unknown id |
-| `GET` | `/v1/runs/{runId}/events` | the Run's Events over SSE, each frame's `data` one JSON Event and its `id` the Event's `seq`: `run.queued`, `run.started`, a `tool_call` for each call that ended (the outcome's `toolCalls` entry plus `toolCallId`), then exactly one `run.completed`, `run.failed` or `run.cancelled` carrying the outcome, after which the stream closes. A Run that has ended, or one from before a restart, sends its terminal Event alone; a desktop Run still going sends one Event for where it stands, then its terminal one. A `: ping` comment comes every 15 seconds. Read it with `fetch` — a browser's `EventSource` cannot send the token. Skip an Event of a kind you do not know and ignore fields you do not know: new kinds and fields may be added, never changed or removed |
-| `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again and wait for its outcome; `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its message's latest Run, or something was sent after it. A second retry of the same Run answers with the Run the first one started. The retry inherits the Run's `confirmationMode`, and is `403` when `confirmationModes` no longer has it |
-| `POST` | `/v1/runs/{runId}/confirmations/{promptId}` | answer a parked Run's Prompt with `{ decision }` — `approve`, `deny`, `allow_project` or `allow_global` (the last two also write the Rule) — and wait for the Run's next park or its end, answered as the Run request is. While another Prompt of the same step is pending it answers at once with `status: parked` and the Prompts left. `404`, the same for each, when the Prompt is unknown, already settled, of another Run, of a desktop Run, or of a Run that has ended |
+| `GET` | `/v1/runs/{runId}/events` | the Run's Events over SSE, each frame's `data` one JSON Event and its `id` the Event's `seq`, ending with exactly one terminal Event, after which the stream closes; `Last-Event-ID` resumes. See [the Event stream](#the-event-stream) |
+| `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again and wait for its outcome; with `{ "wait": false }`, answer `202 { runId, status }` for the new Run at once; `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its message's latest Run, or something was sent after it. A second retry of the same Run answers with the Run the first one started. The retry inherits the Run's `confirmationMode`, and is `403` when `confirmationModes` no longer has it |
+| `POST` | `/v1/runs/{runId}/confirmations/{promptId}` | answer a parked Run's Prompt with `{ decision }` — `approve`, `deny`, `allow_project` or `allow_global` (the last two also write the Rule) — and wait for the Run's next park or its end, answered as the Run request is; with `wait: false` it answers `202 { runId, status }` at once and the Run goes on. While another Prompt of the same step is pending it answers at once with `status: parked` and the Prompts left. `404`, the same for each, when the Prompt is unknown, already settled, of another Run, of a desktop Run, or of a Run that has ended |
 | `POST` | `/v1/sessions/{id}/cancel` | stop the Session's Runs |
+
+### The Event stream
+
+Every Event carries `seq` and `kind`. In the order a Run makes them:
+
+| kind | fields | when |
+| --- | --- | --- |
+| `run.queued` | | the Run waits behind another of its Session |
+| `run.started` | | the Run's turn begins |
+| `text.delta` | `text` | a piece of the main agent's answer as it is written; a subagent's text is not streamed |
+| `tool_call.started` | `name`, `toolCallId` | a call passed the Rules and runs now, a subagent's too; no arguments. A refused call has none |
+| `tool_call` | the outcome's `toolCalls` entry, plus `toolCallId` | a call ended |
+| `run.parked` | | an `interactive` Run waits on its first pending Prompt |
+| `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks |
+| `confirmation.resolved` | `id`, `decision`, `via` | a Prompt settled: `via` is `api` when answered, `timeout` when nobody answered in time (a deny), `cancel` when the Run was cancelled (a deny) |
+| `run.resumed` | | the last pending Prompt settled and the Run goes on |
+| `run.completed`, `run.failed`, `run.cancelled` | `outcome` | the one terminal Event, carrying what `GET /v1/runs/{runId}` answers |
+| `gap` | `status`, `text` | see resuming below |
+
+- **Resuming.** Send the last `seq` you saw as `Last-Event-ID` and the stream replays every
+  Event after it. Each Run keeps its last 1000 Events in memory; when the one you need is gone,
+  you get a `gap` first — the Run's `status` now and the `text` of the `text.delta`s it
+  stands for — then a `confirmation.required` for each pending Prompt, then the Events the
+  Runtime still holds. The answer so far is the `gap`'s `text` plus the `text.delta`s after
+  it. Key Prompts by `id`: one may reach you twice.
+- **Late and old Runs.** A Run that has ended, or one from before a restart, sends its
+  terminal Event alone. A desktop Run still going sends one Event for where it stands, then
+  its terminal one.
+- **Waited-on Runs stream too**, so a script can hold the Run while a dashboard follows it.
+- A `: ping` comment comes every 15 seconds. Read the stream with `fetch` — a browser's
+  `EventSource` cannot send the token.
+- **Compatibility.** Skip an Event of a kind you do not know and ignore fields you do not
+  know: new kinds and fields may be added, never changed or removed.
 
 ### Rules, Skills and the audit
 
@@ -120,7 +153,8 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first. `--detach` prints the Run's id and returns without waiting. `--interactive` runs it in the `interactive` mode: on a park it prints each pending Prompt as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer |
-| `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; when the Prompt is already settled or unknown it says so and prints the Run's state |
+| `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
+| `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
 | `wisp runs show <id> [--json]` | one Run: its status and, once it ended, its answer; `--json` for the whole Run |
 | `wisp runs events <id> [--json]` | follow a Run's Events, one line each, and print its answer at the end; `--json` for each Event as sent, one per line. Exits when the Run ends, with `wisp run`'s exit code |

@@ -6,13 +6,16 @@ description: What happens to a Run when the connection drops or the Runtime rest
 
 ## A Run happens at most once
 
-Wisp never retries a Run on its own, and it does not save Runs to disk. A Run's answer is
-the response to the request that started it. If that connection drops, or the Runtime
-stops, the answer is gone. The Session's history is on disk and survives, even when the
-turn itself finished.
+Wisp never retries a Run on its own. It does keep a record of every Run on disk, with its
+status and, once it ended, its outcome. If the connection that started a Run drops, the
+Run goes on, and `GET /v1/runs/{runId}` (or `wisp runs show`) reads its answer afterwards —
+after a restart too. A Run the Runtime stopped in the middle reads `failed` with
+`failure.reason: shutdown`, a Run parked on a Prompt among them. Records are kept for
+`runRecordRetentionMs` (7 days).
 
-So retrying is always the caller's decision. The idempotency key is what makes a retry
-safe.
+So retrying is always the caller's decision: `POST /v1/runs/{runId}/retry` (or
+`wisp retry`) runs a failed or cancelled Run's message again. The idempotency key is what
+makes sending the same request twice safe.
 
 ## The key
 
@@ -22,13 +25,16 @@ Skill, and the model preference). Then:
 
 - **a repeat while the Run is still going** joins it: two requests, one Run, the same
   answer;
+- **a repeat while the Run is parked** on a Prompt answers at once with the pending
+  Prompts, so a lost park response does not leave you waiting on Prompts only you answer;
 - **a repeat after it ended** gets the stored answer, and the Session's history does not
   get a second turn;
 - **the same key with a different request** is refused with `409`, and nothing runs.
 
-Keys are kept in memory for `idempotencyTtlMs` (24 hours), and the oldest are dropped first
-when there are many. **A restart forgets every key**, so a repeat after a restart starts a
-new Run.
+A key lives in the Run's record for `idempotencyTtlMs` (24 hours), **restarts included**: a
+repeat after a restart finds its Run and starts nothing new — except a Run a shutdown ended
+while it still waited in its queue: nothing of it ran, so the repeat runs it. With `"wait": false` a repeat
+answers `202` with the same `runId` and the Run's status now.
 
 How to retry after a dropped connection: wait until `wisp status` (or `GET /v1/health`)
 says `ready`, then send the identical request with the identical key.

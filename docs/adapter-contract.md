@@ -70,7 +70,9 @@ Content-Type: application/json
   "idempotencyKey": "incident-4711:evt-8824" }
 ```
 
-The connection stays open until the Run ends. The body takes exactly one of `input` or
+The connection stays open until the Run ends — or send `"wait": false` and get
+`202 { runId, status }` at once, then read the Run with `GET /v1/runs/{runId}` or follow
+its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `input` or
 `skill`:
 
 | Field | Meaning |
@@ -80,6 +82,7 @@ The connection stays open until the Run ends. The body takes exactly one of `inp
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
+| `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 
 The answer is one JSON object:
 
@@ -129,6 +132,13 @@ answers at once with the Prompts left. A Prompt nobody answers within `confirmTi
 denied and the Run goes on. A Prompt already settled, or one that is not this Run's, is
 `404`; read the Run with `GET /v1/runs/{id}`, which lists a parked Run's `confirmations`.
 
+The same Prompts go out on the Run's Event stream as `confirmation.required`, and each
+settles there as `confirmation.resolved` with how: `api`, `timeout` or `cancel`. So the
+answer can come from whoever follows the stream, while the first request still waits; the
+first answer settles a Prompt, and that waiting request then returns. An answer with
+`"wait": false` returns `202` at once. A Prompt of a subagent arrives and is answered
+exactly like one of the main agent.
+
 The operator decides whether any of this is possible: a Run naming a mode outside
 `confirmationModes` is refused `403`, and the default allows `policy` alone.
 
@@ -146,7 +156,25 @@ yourself.
 
 `POST /v1/sessions/{id}/cancel` stops the current Run and everything queued behind it. It
 answers `202` when something was stopped and `204` when nothing was running. You cannot
-cancel a single queued message.
+cancel a single queued message. A Run parked on a Prompt is cancelled too: its Prompts are
+denied, and the waiting request answers `cancelled`.
+
+## Not waiting
+
+A caller that cannot hold a connection — a serverless function, a queue worker, a CI step
+behind a proxy — sends `"wait": false`. Then:
+
+- `GET /v1/runs/{runId}` gives the Run's `status` and, once it ended, the same outcome a
+  waited-on Run answers with. It reads the Run's record, so it works after a restart too.
+- `GET /v1/runs/{runId}/events` streams the answer as it is written, each tool call, the
+  Prompts and the outcome; `Last-Event-ID` resumes after a dropped connection. See
+  [the Event stream](./reference.md#the-event-stream).
+- `GET /v1/runs?status=parked` finds Runs waiting on a person, across Sessions, when you kept
+  no ids of your own.
+
+A repeat with the same `idempotencyKey` answers `202` with the same `runId` and its status
+now, and starts nothing. Nothing is pushed to you: there are no webhooks — poll the Run or
+follow its Events.
 
 ## Health
 
@@ -157,11 +185,10 @@ answers whether the Runtime will accept a Run right now.
 
 ## Not available yet
 
-What is there today: turning a message into a Session and a Run, reading a Run back by id
-(`GET /v1/runs/{id}`, across restarts too) and following its Events while it works
-(`GET /v1/runs/{id}/events`; see the [reference](./reference.md)), and a person approving
-a tool mid-Run through the `interactive` mode. What is not there yet: the Prompts on the
-Event stream — a parked Run's are read from the waiting request or `GET /v1/runs/{id}`.
+What is there today: turning a message into a Session and a Run, waiting for it or not,
+reading a Run back by id (`GET /v1/runs/{id}`, across restarts too), following its Events
+while it works (`GET /v1/runs/{id}/events`; see the [reference](./reference.md)), and a
+person approving a tool mid-Run through the `interactive` mode. What is not there yet:
 
 - **No author marking on input.** Everything in `input` is treated as the account owner's
   own words. If you relay a message from someone else, the agent reads it as yours. Either
