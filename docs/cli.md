@@ -68,6 +68,22 @@ wisp run 6b4f2a7e-… --skill summarise ""       # a Skill on an existing Sessio
 key, it gets the first Run's answer instead of running the prompt twice. This is what makes
 a cron job or a retry loop safe. See [Runs and restarts](./runs-and-restarts.md#the-key).
 
+### Long Runs and approvals
+
+```sh
+wisp run --detach "rebuild the weekly report"   # prints the Run id and returns
+wisp runs events <run>                          # follow it: the answer as it is written, each tool call
+wisp runs show <run>                            # its status, and its answer once it ended
+wisp runs list --status running,parked          # what runs now, and what waits on a person
+wisp retry <run>                                # run a failed or cancelled Run's message again
+```
+
+`--interactive` lets a tool the Rules hold for a person wait for an answer instead of being
+refused — the operator must allow it in `confirmationModes`. On a park `wisp run` prints each
+Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `deny`,
+`allow-project`, `allow-global`), which waits for the next park or the end, exactly like
+`wisp run`. Add `--detach` to answer and return at once.
+
 ## Sessions
 
 ```sh

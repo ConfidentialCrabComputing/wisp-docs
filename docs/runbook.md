@@ -63,6 +63,7 @@ Every `wisp` command except `wisp serve`:
 | `0` | done: the Run completed, or the command succeeded |
 | `1` | the Run failed or was cancelled, or the request was refused |
 | `2` | the command line was wrong; the message shows the right usage |
+| `3` | an `interactive` Run parked on a Prompt; answer it with `wisp confirm` |
 | `4` | no Runtime is running, or none answered where `runtime.lock`, `--url` or `WISP_URL` said |
 | `5` | the Runtime refused the token |
 | `130` | Ctrl-C while the command was waiting for you to paste something |
