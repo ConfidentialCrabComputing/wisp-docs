@@ -88,6 +88,8 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/audit` | the audit, newest first |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
 | `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
+| `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
+| `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
 
 ### The account
 
@@ -175,6 +177,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
+| `wisp sandbox [on\|off \| network on\|off]` | the `bash_run` sandbox switches; `on`/`off` turns the sandbox on or off, `network on`/`off` its network. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp audit <session> [--json]` | a Session's audit |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |

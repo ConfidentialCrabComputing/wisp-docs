@@ -49,6 +49,9 @@ The consequence: if a web page, a connector result or a document tries to get th
 That puts all the weight on your Rules. See [Permissions](./permissions.md), including the
 warnings about [`bash_run`](./permissions.md#bash_run).
 
+Keep the `bash_run` sandbox on. Without it (`wisp sandbox off`) a `bash_run` command runs as
+the Runtime's own user and can read the key source.
+
 ## What reaches the model
 
 Every connector result goes through one filter that removes control characters, invisible

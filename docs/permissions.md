@@ -99,6 +99,10 @@ refused until a Rule allows it. Before you allow it, know that:
   available, `bash_run` refuses to run rather than running without it.
 - **On Windows there is no sandbox yet.** Commands run directly on the host, so allowing
   `bash_run` there allows anything the user can do.
+- **The sandbox can be switched off, and its network with it.** `wisp sandbox off` (or
+  `PUT /v1/sandbox`) turns it off. Without the sandbox a `bash_run` command runs as the
+  Runtime's own user and can read the key source. `wisp sandbox network off` keeps the
+  sandbox and takes its network away, which also breaks package managers and `git`.
 
 ## Where Rules live
 
