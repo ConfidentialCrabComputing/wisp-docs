@@ -68,6 +68,20 @@ wisp run 6b4f2a7e-… --skill summarise ""       # a Skill on an existing Sessio
 key, it gets the first Run's answer instead of running the prompt twice. This is what makes
 a cron job or a retry loop safe. See [Runs and restarts](./runs-and-restarts.md#the-key).
 
+### Structured answers
+
+`--output-schema <file>` sends a JSON Schema (its root an object) that the answer must match.
+On success `wisp run` prints only the value, as JSON, so the next command in a pipeline can
+read it; `--json` still prints the whole outcome with the value in `output.structured`.
+
+```sh
+wisp run --output-schema verdict.json "is the build green?" | jq -r .status
+```
+
+A file that cannot be read or is not JSON is a usage error (exit `2`) and nothing is sent; a
+schema the Runtime refuses prints its `400` and exits `1`. A Run whose agent never produces a
+matching value fails `output_schema_unsatisfied` and exits `1`.
+
 ### Long Runs and approvals
 
 ```sh
