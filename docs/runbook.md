@@ -79,12 +79,40 @@ anything and says which of these it is:
 - the port is already taken;
 - the OS keyring cannot store the encryption keys (on Linux: no keyring running, or it is
   locked). `wisp doctor` names the command that unlocks it;
+- the [key file](#the-encryption-key-on-a-server) is inside the data directory, belongs to
+  another user, is readable by others, or does not hold 32 bytes of base64;
+- the key does not open the data directory's stored keys (a different key from the one it
+  was made with), or the directory has data but its stored keys are missing;
 - **another Runtime already uses this data directory.** The message says which one and its
   process id. Usually it is Wisp Desktop, or a `wisp serve` you forgot. Stop it, or give
   this one its own `WISP_HOME`.
 
 Restarting does not fix any of these, which is why the systemd service does not restart
 after a 78.
+
+## The encryption key on a server
+
+A server's OS keyring does not survive a reboot, so on a server the Runtime takes its root
+key from you instead: 32 random bytes as one base64 line.
+
+```bash
+mkdir -p ~/.config/wisp
+(umask 077; openssl rand -base64 32 > ~/.config/wisp/master.key)
+```
+
+Pass it with `WISP_MASTER_KEY_FILE=/home/you/.config/wisp/master.key`, an absolute path:
+a systemd `Environment=` line does not expand `~`. The file must belong to the
+user running `wisp serve`, be readable by nobody else (`chmod 600`), and live outside the
+data directory. Everything the Runtime would otherwise keep in the keyring, the login
+among it, is stored encrypted under this key in `WISP_HOME/keys/`.
+
+`WISP_MASTER_KEY` takes the same line directly. Prefer the file: an environment variable
+can be read from `/proc/<pid>/environ` and shows up in a service manager's output
+(`systemctl show`, a unit file).
+
+**Back the key file up.** Without it the data directory cannot be opened: the Runtime
+refuses to start (exit 78) rather than make new keys over your data. It makes them only in
+an empty data directory.
 
 ## Why a Run failed
 
