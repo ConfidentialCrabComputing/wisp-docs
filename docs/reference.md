@@ -233,5 +233,7 @@ you (`chmod 600`).
 | `fsMaxFileSize` | `FS_MAX_FILE_SIZE` | `10485760` (10 MiB) | the largest file the file tools read |
 | `maxImageSizeBytes` | `MAX_IMAGE_SIZE_BYTES` | `10485760` (10 MiB) | the largest image a message may carry |
 | `skillPaths` | `SKILL_PATHS` | none | extra folders of Skills, separated like `PATH` |
+| `logFormat` | `LOG_FORMAT` | `text` | how stderr lines are written: `text`, or `json` for one object per line with `ts`, `level`, `component`, `msg`, and `runId`/`sessionId` during a Run. A config error is written in this format too, read from the environment or from the file's own `logFormat` |
+| `logLevel` | `LOG_LEVEL` | `info` | `debug` also puts a failed call's own error text on stderr, secrets removed; it may quote a request, so ship it to a third party knowingly. At `info` that text stays in the local diagnostics table |
 
 Durations are in milliseconds.
