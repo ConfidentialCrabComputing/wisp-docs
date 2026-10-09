@@ -223,6 +223,120 @@ A repeat with the same `idempotencyKey` answers `202` with the same `runId` and 
 now, and starts nothing. Nothing is pushed to you: there are no webhooks — poll the Run or
 follow its Events.
 
+## From TypeScript
+
+There is no SDK package to install: generate the types from the API of the Runtime you run,
+and call it through [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/). The document
+is the one `GET /v1/openapi.json` serves; every release also carries it as `v1.json` beside
+its archives.
+
+```sh
+curl -fsS -H "Authorization: Bearer $TOKEN" "$URL/v1/openapi.json" -o v1.json && npx openapi-typescript v1.json -o v1.d.ts
+```
+
+A Run started without waiting, its answer followed as it is written:
+
+```ts
+// A typed call to the Wisp Runtime through `openapi-fetch`, with the types
+// `openapi-typescript` generates from the release's v1.json into `./v1.d.ts`.
+import createClient from "openapi-fetch";
+import type { paths } from "./v1.js";
+import { runEvents } from "./events-reader.js";
+
+const baseUrl = process.env.WISP_URL ?? "http://127.0.0.1:3008";
+const token = process.env.WISP_TOKEN ?? "";
+const client = createClient<paths>({ baseUrl, headers: { authorization: `Bearer ${token}` } });
+
+const session = await client.POST("/v1/sessions", { body: { origin: "cli", title: "Nightly report" } });
+if (!session.data) throw new Error(`session: HTTP ${session.response.status}`);
+
+const run = await client.POST("/v1/sessions/{id}/runs", {
+  params: { path: { id: session.data.id } },
+  body: { input: "Summarise yesterday's incidents", wait: false },
+});
+if (!run.data) throw new Error(`run: HTTP ${run.response.status}`);
+
+for await (const event of runEvents(baseUrl, token, run.data.runId)) {
+  if (event.kind === "text.delta") process.stdout.write(event.text);
+  if (event.kind === "run.completed") console.log(`\n${event.outcome.usage.totalTokens} tokens`);
+}
+```
+
+The Event stream is the one part a generator does not handle. This reader, saved as
+`events-reader.ts` beside `v1.d.ts`, follows a Run's Events until the terminal one, skips a
+kind it does not know, and resumes a dropped connection with `Last-Event-ID`. It runs
+server-side, on Node 18 or later: a browser's `EventSource` cannot send the token.
+
+```ts
+// Reads a Run's Events from the Wisp Runtime. Server-side: the stream needs the
+// Bearer token, which a browser's EventSource cannot send. `./v1.js` holds the
+// types `openapi-typescript` generates from the release's v1.json.
+import type { paths } from "./v1.js";
+
+export type RunEvent =
+  paths["/v1/runs/{runId}/events"]["get"]["responses"]["2XX"]["content"]["text/event-stream"];
+
+// Every kind this reader knows, and whether it ends the stream. Any other kind is skipped.
+const KINDS: Record<RunEvent["kind"], boolean> = {
+  "run.queued": false, "run.started": false, "run.parked": false, "run.resumed": false,
+  "text.delta": false, "tool_call.started": false, "tool_call": false, "gap": false,
+  "confirmation.required": false, "confirmation.resolved": false,
+  "run.completed": true, "run.failed": true, "run.cancelled": true,
+};
+
+function decode(data: string): RunEvent | undefined {
+  try {
+    const event: unknown = JSON.parse(data);
+    const known = typeof event === "object" && event !== null && "seq" in event &&
+      typeof event.seq === "number" && "kind" in event && typeof event.kind === "string" &&
+      Object.hasOwn(KINDS, event.kind);
+    return known ? (event as RunEvent) : undefined; // the Runtime vouches for the rest
+  } catch {
+    return undefined;
+  }
+}
+
+// Follows a Run's Events until its terminal one. A connection that drops, or
+// ends having brought an Event, is resumed after the last seq with Last-Event-ID.
+export async function* runEvents(baseUrl: string, token: string, runId: string): AsyncGenerator<RunEvent> {
+  let lastSeq: number | undefined;
+  for (let progressed = true; progressed; ) {
+    progressed = false;
+    const res = await fetch(`${baseUrl}/v1/runs/${encodeURIComponent(runId)}/events`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
+      },
+    });
+    if (!res.ok || !res.body) throw new Error(`events: HTTP ${res.status}`);
+    let buffered = "";
+    try {
+      for await (const chunk of res.body.pipeThrough(new TextDecoderStream())) {
+        buffered += chunk;
+        for (let end = buffered.indexOf("\n\n"); end !== -1; end = buffered.indexOf("\n\n")) {
+          const data = buffered.slice(0, end).split("\n").find((l) => l.startsWith("data: "))?.slice(6);
+          buffered = buffered.slice(end + 2);
+          const event = data === undefined ? undefined : decode(data);
+          if (event === undefined) continue; // a `: ping`, an unknown kind or a broken frame
+          lastSeq = event.seq;
+          progressed = true;
+          yield event;
+          if (KINDS[event.kind]) return;
+        }
+      }
+    } catch {
+      progressed = true; // the connection dropped: resume, a second later
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  throw new Error("events: the stream ended before the Run did");
+}
+```
+
+Both are checked against each release's document before it ships. A Runtime that adds an
+Event kind fails to typecheck against this reader until the kind joins its table, so the
+compiler tells you what is new.
+
 ## Health
 
 `GET /v1/health` with the token returns the Runtime's state (`ready`, `login_required` and
