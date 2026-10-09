@@ -81,6 +81,8 @@ anything and says which of these it is:
 - `runtime.json` belongs to another user;
 - `wispHome` is set inside a `runtime.json` that was itself found through `WISP_HOME`;
 - the port is already taken;
+- `host` is not a loopback address and `allowedHosts` is empty (see
+  [reaching it from another machine](#reaching-it-from-another-machine));
 - the OS keyring cannot store the encryption keys (on Linux: no keyring running, or it is
   locked). `wisp doctor` names the command that unlocks it;
 - the [key file](#the-encryption-key-on-a-server) is inside the data directory, belongs to
@@ -93,6 +95,41 @@ anything and says which of these it is:
 
 Restarting does not fix any of these, which is why the systemd service does not restart
 after a 78.
+
+## Reaching it from another machine
+
+The Runtime speaks plain HTTP, and one token authorises everything it does, `bash` included.
+**That token must never cross a network in clear.** Put a reverse proxy that terminates TLS
+in front of the Runtime, and give callers its `https://` address.
+
+The proxy forwards the name the caller used (`wisp.example.com`) as the `Host` header. The
+Runtime refuses any `Host` that is not loopback or listed in `allowedHosts`, which keeps a
+web page from reaching it through DNS rebinding, so list that name. With the proxy on the
+same machine, the Runtime stays on loopback:
+
+```json
+{ "agentToken": "…", "allowedHosts": ["wisp.example.com"] }
+```
+
+A [Caddy](https://caddyserver.com) site in front of it, which gets and renews the
+certificate itself and streams the Event stream without buffering:
+
+```text
+wisp.example.com {
+    reverse_proxy 127.0.0.1:3008
+}
+```
+
+Then, from anywhere: `wisp status --url https://wisp.example.com --token …`.
+
+With the proxy on another machine, also set `host` to the address the proxy connects to,
+a private network address rather than `0.0.0.0`, and list that address in `allowedHosts`
+as well: `wisp` on the Runtime's own machine finds it there. A non-loopback `host` with an empty
+`allowedHosts` stops `wisp serve` with exit **78**. Opening the listener does not open the
+Runtime to browsers: its CORS allowlist still names only local origins.
+
+Wisp Desktop ignores `host`. It always listens on loopback and logs that it ignored the
+setting.
 
 ## The encryption key on a server
 

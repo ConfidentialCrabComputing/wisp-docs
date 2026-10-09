@@ -208,7 +208,8 @@ you (`chmod 600`).
 | --- | --- | --- | --- |
 | `agentToken` | `WISP_AGENT_TOKEN` | — required | the bearer token; at least 32 characters |
 | `port` | `PORT` | `3008` | the port the Runtime listens on |
-| `host` | `HOST` | `127.0.0.1` | the address it listens on; loopback only, anything else is refused |
+| `host` | `HOST` | `127.0.0.1` | the address it listens on; anything but loopback needs `allowedHosts`. Wisp Desktop ignores it |
+| `allowedHosts` | `ALLOWED_HOSTS` (comma-separated) | `[]` | host names, without a port, a request's `Host` may carry besides loopback; the name your [reverse proxy](runbook.md#reaching-it-from-another-machine) is reached by |
 | `wispHome` | `WISP_HOME` | `~/.wisp` | the data directory; only from `--config` or the environment, never from a `runtime.json` found through it |
 | `teeLlmModel` | `TEE_LLM_MODEL` | `auto:auto:best` | the model a Run uses when it does not name one |
 | `maxConcurrentRuns` | `MAX_CONCURRENT_RUNS` | `3` | Runs executing at once across all Sessions |
