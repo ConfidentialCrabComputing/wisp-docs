@@ -83,6 +83,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
+| `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
 
 The answer is one JSON object:
 
@@ -101,6 +102,50 @@ The answer is one JSON object:
   conversation.
 - `toolCalls[].args` is the redacted form from the audit, not the raw arguments.
 - `artifacts` are files the Run wrote, relative to the Project folder.
+
+### A structured answer
+
+Send a JSON Schema as `outputSchema` and the outcome carries the agent's answer as
+`output.structured`, already validated against it, beside `output.text` with the last thing
+the agent said in words:
+
+```json
+{ "input": "triage incident 4711",
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "severity": { "enum": ["low", "high", "critical"] },
+      "summary": { "type": "string" } },
+    "required": ["severity", "summary"],
+    "additionalProperties": false } }
+```
+
+```json
+{ "runId": "…",
+  "status": "completed",
+  "output": { "text": "Done.", "structured": { "severity": "high", "summary": "…" } },
+  … }
+```
+
+The agent ends the Run by handing over a value; one that does not satisfy the schema is
+returned to it with the reasons, and it tries again. The value is in the waited-on answer,
+in the terminal Event and on `GET /v1/runs/{runId}`. It works with `input` or `skill`, in
+either Confirmation Mode, waited on or not.
+
+The schema's root must be `"type": "object"`. For a list or a single value, wrap it in one
+property:
+
+```json
+{ "type": "object",
+  "properties": { "items": { "type": "array", "items": { "type": "string" } } },
+  "required": ["items"] }
+```
+
+A schema the Runtime cannot take is refused `400` before the Run starts: one that does not
+compile, a remote `$ref` (nothing is ever fetched), a `format` the validator does not know
+(it would check nothing), `pattern` or `patternProperties` (a regular expression runs
+inside the Runtime, and a slow one would stall it), a schema above 64 KiB, or a root other
+than an object.
 
 ### A refused tool is not a failed Run
 
