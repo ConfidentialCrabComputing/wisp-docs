@@ -166,6 +166,7 @@ the conversation. `wisp run` prints both on stderr.
 | `stream_stalled` | the model sent nothing for `llmStallTimeoutMs` (5 minutes) | retry |
 | `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
 | `step_ceiling` | the Run hit `graphRecursionLimit` or `toolCallLimit` | split the task, or raise the limit |
+| `output_schema_unsatisfied` | the agent did not hand over a value satisfying `outputSchema` in five attempts | simplify the schema, or say in `input` what each field holds |
 | `confirmation_pending` | the Session is waiting for a tool approval in Wisp Desktop | answer it in the app, then send again |
 | `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
 | `quota_exhausted` | the account's plan is used up | check your account |

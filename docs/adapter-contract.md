@@ -128,7 +128,9 @@ the agent said in words:
 ```
 
 The agent ends the Run by handing over a value; one that does not satisfy the schema is
-returned to it with the reasons, and it tries again. The value is in the waited-on answer,
+returned to it with the reasons, and it tries again; stopping without one, it is reminded.
+After five such attempts the Run fails with `failure.reason` `output_schema_unsatisfied`. A Run
+that runs out of steps first still fails `step_ceiling`. The value is in the waited-on answer,
 in the terminal Event and on `GET /v1/runs/{runId}`. It works with `input` or `skill`, in
 either Confirmation Mode, waited on or not.
 
