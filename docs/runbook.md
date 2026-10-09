@@ -218,3 +218,24 @@ curl -sS -X POST "$URL/v1/attestation/refresh" -H "Authorization: Bearer $TOKEN"
 | `wisp serve` | the terminal it runs in |
 
 Logs never contain conversation content, so they are safe to read and to share.
+
+### Counting Runs and tool calls
+
+There is no metrics endpoint. Two lines carry the counts instead; with
+[`logFormat: json`](./reference.md) each is one object with `ts`, `level`, `component`,
+`msg`, `runId` and `sessionId`, plus the fields below.
+
+| `msg` | Written | Fields |
+| --- | --- | --- |
+| `run.finished` | once when a Run ends | `state`: `completed`, `failed` or `cancelled`; `reason`: the [failure reason](#why-a-run-failed), only when `failed`; `durationMs`: from the Run's acceptance to its end, queueing included |
+| `tool.call` | once per tool call, a subagent's included | `tool`: the tool's name, `mcp__<connector>__<tool>` for a connector's; `outcome`: `ok`, `error`, or `denied` when [Permissions](./permissions.md) refused it; `durationMs` |
+
+Every value is from these closed sets or a tool name. The `final_output` call of a Run with
+an `outputSchema` writes no `tool.call`, as it is not listed in `toolCalls` either.
+
+```sh
+# Runs that failed because the model's environment was not verified, or the plan ran out
+journalctl --user -u wisp -o cat | jq -c 'select(.msg == "run.finished" and (.reason == "attestation_blocked" or .reason == "quota_exhausted"))'
+```
+
+In `text` format the same lines read `run.finished state=failed reason=quota_exhausted durationMs=5310`.
