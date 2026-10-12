@@ -90,6 +90,9 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
 | `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
 | `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
+| `POST` | `/v1/tokens` | make a named token with a `name` and a `capability` (`full` or `run`); the answer is the only time the token is shown; `409` when the name is taken. The one token only |
+| `GET` | `/v1/tokens` | the named tokens: name, capability and creation time, never a token. The one token only |
+| `DELETE` | `/v1/tokens/{name}` | revoke a named token; it is refused (`401`) from its next request on. The one token only |
 
 ### The account
 
@@ -178,6 +181,9 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp sandbox [on\|off \| network on\|off]` | the `bash_run` sandbox switches; `on`/`off` turns the sandbox on or off, `network on`/`off` its network. `off` warns that a command then runs as the Runtime's own user and can read the key source |
+| `wisp tokens create --name <n> --capability full\|run` | make a named token and print it, once; with the one token only |
+| `wisp tokens list` | the named tokens: name, capability and creation time, never a token |
+| `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
 | `wisp audit <session> [--json]` | a Session's audit |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |

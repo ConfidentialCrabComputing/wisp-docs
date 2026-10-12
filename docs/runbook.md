@@ -131,6 +131,26 @@ Runtime to browsers: its CORS allowlist still names only local origins.
 Wisp Desktop ignores `host`. It always listens on loopback and logs that it ignored the
 setting.
 
+## A token per device
+
+Rather than copy the one token to every machine you work from, give each its own named
+token, so that losing one laptop costs you that laptop's token alone. On the Runtime's host:
+
+```sh
+wisp tokens create --name laptop --capability full
+# prints the token, once — it is never shown again
+wisp tokens list
+# laptop  full  2026-10-13T09:12:44.120Z
+wisp tokens revoke laptop
+# revoked laptop
+```
+
+A `full` token reaches everything the one token does except the tokens themselves: only the
+one token creates, lists and revokes them (a named token gets `403`), so no token can mint one
+that outlives its own revocation. A `run` token is for a Channel adapter. A revoked token is
+refused with `401` from its next request on; the one token and every other named token keep
+working. The Runtime keeps only a hash of each token in `global.db`.
+
 ## The encryption key on a server
 
 A server's OS keyring does not survive a reboot, so on a server the Runtime takes its root
