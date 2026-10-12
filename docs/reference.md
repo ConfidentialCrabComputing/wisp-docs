@@ -181,7 +181,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp sandbox [on\|off \| network on\|off]` | the `bash_run` sandbox switches; `on`/`off` turns the sandbox on or off, `network on`/`off` its network. `off` warns that a command then runs as the Runtime's own user and can read the key source |
-| `wisp tokens create --name <n> --capability full\|run` | make a named token and print it, once; with the one token only |
+| `wisp tokens create --name <n> --capability full\|run` | make a named token and print it with its connection string, once; with the one token only |
 | `wisp tokens list` | the named tokens: name, capability and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
 | `wisp audit <session> [--json]` | a Session's audit |

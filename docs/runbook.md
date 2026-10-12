@@ -134,11 +134,15 @@ setting.
 ## A token per device
 
 Rather than copy the one token to every machine you work from, give each its own named
-token, so that losing one laptop costs you that laptop's token alone. On the Runtime's host:
+token, so that losing one laptop costs you that laptop's token alone. Run the command on the
+Runtime's host, over SSH from the device the token is for, so the token is printed where it
+will be used and never travels on its own:
 
 ```sh
-wisp tokens create --name laptop --capability full
-# prints the token, once — it is never shown again
+ssh you@server wisp tokens create --name laptop --capability full
+# prints the token and a connection string, once — neither is shown again
+# Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+# wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
 wisp tokens list
 # laptop  full  2026-10-13T09:12:44.120Z
 wisp tokens revoke laptop
@@ -150,6 +154,16 @@ one token creates, lists and revokes them (a named token gets `403`), so no toke
 that outlives its own revocation. A `run` token is for a Channel adapter. A revoked token is
 refused with `401` from its next request on; the one token and every other named token keep
 working. The Runtime keeps only a hash of each token in `global.db`.
+
+The connection string, `wisp+<url>#<token>`, is the one line a device takes, Wisp Desktop's
+field among them; the bare token is for a script or an adapter's config. The token sits in the
+fragment, so a string pasted into a browser by mistake sends it to no server. The URL is:
+
+- `--url` when you give it (with `--token`, the one token): the address this device reached;
+- else `https://` and the host, when `allowedHosts` names exactly one;
+- else the address `wisp` reaches the Runtime at on its host, `http://127.0.0.1:3008` by
+  default. Reach it from the device through an SSH tunnel on the same port, so the string
+  works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`.
 
 ## The encryption key on a server
 
