@@ -264,13 +264,15 @@ for await (const event of runEvents(baseUrl, token, run.data.runId)) {
 
 The Event stream is the one part a generator does not handle. This reader, saved as
 `events-reader.ts` beside `v1.d.ts`, follows a Run's Events until the terminal one, skips a
-kind it does not know, and resumes a dropped connection with `Last-Event-ID`. It runs
+kind it does not know, and resumes a dropped connection with `Last-Event-ID`; an optional
+`signal` stops it, so a process shutting down is never held by a Run it follows. It runs
 server-side, on Node 18 or later: a browser's `EventSource` cannot send the token.
 
 ```ts
 // Reads a Run's Events from the Wisp Runtime. Server-side: the stream needs the
 // Bearer token, which a browser's EventSource cannot send. `./v1.js` holds the
 // types `openapi-typescript` generates from the release's v1.json.
+import { setTimeout as sleep } from "node:timers/promises";
 import type { paths } from "./v1.js";
 
 export type RunEvent =
@@ -298,7 +300,10 @@ function decode(data: string): RunEvent | undefined {
 
 // Follows a Run's Events until its terminal one. A connection that drops, or
 // ends having brought an Event, is resumed after the last seq with Last-Event-ID.
-export async function* runEvents(baseUrl: string, token: string, runId: string): AsyncGenerator<RunEvent> {
+// `signal` stops it: following a Run never holds a caller that is shutting down.
+export async function* runEvents(
+  baseUrl: string, token: string, runId: string, signal?: AbortSignal,
+): AsyncGenerator<RunEvent> {
   let lastSeq: number | undefined;
   for (let progressed = true; progressed; ) {
     progressed = false;
@@ -307,6 +312,7 @@ export async function* runEvents(baseUrl: string, token: string, runId: string):
         authorization: `Bearer ${token}`,
         ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
       },
+      signal,
     });
     if (!res.ok || !res.body) throw new Error(`events: HTTP ${res.status}`);
     let buffered = "";
@@ -324,9 +330,10 @@ export async function* runEvents(baseUrl: string, token: string, runId: string):
           if (KINDS[event.kind]) return;
         }
       }
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) throw err;
       progressed = true; // the connection dropped: resume, a second later
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sleep(1000, undefined, { signal });
     }
   }
   throw new Error("events: the stream ended before the Run did");

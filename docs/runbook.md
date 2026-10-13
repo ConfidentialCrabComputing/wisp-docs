@@ -165,6 +165,43 @@ fragment, so a string pasted into a browser by mistake sends it to no server. Th
   default. Reach it from the device through an SSH tunnel on the same port, so the string
   works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`.
 
+## A Telegram bot
+
+`wisp telegram` answers you in Telegram. It is the same binary, run as its own process beside
+the Runtime: it reaches the Runtime only over `/v1`, with a `run` token, and reaches Telegram
+by long polling, so it needs no public port and no TLS of its own.
+
+1. Make a bot with [@BotFather](https://t.me/BotFather) and copy the token it gives you.
+2. Allow `interactive` Runs: add it to `confirmationModes` in `runtime.json`
+   (`"confirmationModes": ["policy", "interactive"]`) and restart the Runtime. Without it the
+   bot answers every message with "Could not reach the agent", and its log shows `HTTP 403`.
+3. Give the bot its own token, on the Runtime's host:
+
+```sh
+wisp tokens create --name telegram --capability run
+export TELEGRAM_BOT_TOKEN=123456:ABC-your-bot-token
+export WISP_URL=http://127.0.0.1:3008 WISP_TOKEN=<the run token>
+wisp telegram
+# No owner yet. Open https://t.me/your_bot?start=… and press Start, or send /pair … to the bot.
+```
+
+The bot token is read from `TELEGRAM_BOT_TOKEN` only, never from a flag, which a process listing
+would show; for the same reason prefer `WISP_TOKEN` to `--token`, which `wisp telegram` also takes
+with `--url`.
+
+Open the link on your phone and press Start: you are the bot's owner. The code works once.
+For now the bot answers its owner alone: anyone else, and a bare `/start`, gets "You are not
+let in to this bot." Each private chat is one Session, keyed `telegram:<chat id>`, so the agent
+remembers the conversation; `wisp sessions list --origin telegram` lists them.
+
+The bot keeps its state in `$WISP_HOME/telegram.json` (`--state` puts it elsewhere): the owner,
+the owner code until it is used, and its place in Telegram's queue of messages, so a message
+sent while the bot was down (Telegram keeps them for 24 hours) is answered once it is back.
+Remove the file to pair a new owner. Approval cards are not in the bot yet: a Run that asks
+before a send waits until the confirmation times out (`confirmTimeoutMs`, two hours by default)
+and is then denied; the bot answers nothing else meanwhile. `/cancel` in the chat is not there
+yet either: `wisp cancel <session>` on the host stops it.
+
 ## The encryption key on a server
 
 A server's OS keyring does not survive a reboot, so on a server the Runtime takes its root

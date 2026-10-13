@@ -103,13 +103,14 @@ Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `den
 ```sh
 wisp sessions list                 # Sessions started from this folder by the CLI
 wisp sessions list --all           # every Session, Wisp Desktop's included
+wisp sessions list --origin telegram  # every Session one client opened, e.g. the Telegram bot's
 wisp sessions show <id>            # a Session's messages
 wisp sessions create --title "…"   # start an empty Session and print its id
 wisp sessions delete <id>
 ```
 
-`list` prints one line per Session: id, origin (`cli` or `desktop`), last update, number of
-messages and title.
+`list` prints one line per Session: id, origin (`cli`, `desktop` or `telegram`), last update,
+number of messages and title.
 
 Sessions are kept on disk. They survive restarts and cost nothing while idle.
 
