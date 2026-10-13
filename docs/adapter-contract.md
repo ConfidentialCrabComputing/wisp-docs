@@ -299,7 +299,8 @@ function decode(data: string): RunEvent | undefined {
 }
 
 // Follows a Run's Events until its terminal one. A connection that drops, or
-// ends having brought an Event, is resumed after the last seq with Last-Event-ID.
+// ends having brought an Event, is resumed after the last seq with Last-Event-ID;
+// one refused, as while the Runtime restarts, is tried again each second.
 // `signal` stops it: following a Run never holds a caller that is shutting down.
 export async function* runEvents(
   baseUrl: string, token: string, runId: string, signal?: AbortSignal,
@@ -307,13 +308,21 @@ export async function* runEvents(
   let lastSeq: number | undefined;
   for (let progressed = true; progressed; ) {
     progressed = false;
-    const res = await fetch(`${baseUrl}/v1/runs/${encodeURIComponent(runId)}/events`, {
-      headers: {
-        authorization: `Bearer ${token}`,
-        ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
-      },
-      signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${baseUrl}/v1/runs/${encodeURIComponent(runId)}/events`, {
+        headers: {
+          authorization: `Bearer ${token}`,
+          ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
+        },
+        signal,
+      });
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      progressed = true; // the Runtime is down: tried again a second later, for as long as it is
+      await sleep(1000, undefined, { signal });
+      continue;
+    }
     if (!res.ok || !res.body) throw new Error(`events: HTTP ${res.status}`);
     let buffered = "";
     try {
