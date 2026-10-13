@@ -101,7 +101,8 @@ The answer is one JSON object:
   `reason` ([the list](./runbook.md#why-a-run-failed)) and a message that never quotes the
   conversation.
 - `toolCalls[].args` is the redacted form from the audit, not the raw arguments.
-- `artifacts` are files the Run wrote, relative to the Project folder.
+- `artifacts` are files the Run wrote, relative to the Project folder. `GET
+  /v1/runs/{runId}/artifacts/{index}` answers the `index`-th one's bytes, to send on as a file.
 
 ### A structured answer
 
