@@ -52,6 +52,7 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | --- | --- | --- |
 | `run.queued` | | the Run waits behind another of its Session |
 | `run.started` | | the Run's turn begins |
+| `audio.transcribed` | `index`, `text`, `author` | an `audio` block of the input was heard: its place in `input`, its transcript and whose words they are, before the agent reads them |
 | `text.delta` | `text` | a piece of the main agent's answer as it is written; a subagent's text is not streamed |
 | `tool_call.started` | `name`, `toolCallId` | a call passed the Rules and runs now, a subagent's too; no arguments. A refused call has none |
 | `tool_call` | the outcome's `toolCalls` entry, plus `toolCallId` | a call ended |

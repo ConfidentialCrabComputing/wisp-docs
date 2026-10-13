@@ -77,7 +77,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 
 | Field | Meaning |
 | --- | --- |
-| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`) |
+| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `audio`). An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
 | `skill`, `arguments` | run one of the Project's [Skills](./deploy-an-agent.md#what-the-folder-holds) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
@@ -282,7 +282,7 @@ export type RunEvent =
 // Every kind this reader knows, and whether it ends the stream. Any other kind is skipped.
 const KINDS: Record<RunEvent["kind"], boolean> = {
   "run.queued": false, "run.started": false, "run.parked": false, "run.resumed": false,
-  "text.delta": false, "tool_call.started": false, "tool_call": false, "gap": false,
+  "text.delta": false, "audio.transcribed": false, "tool_call.started": false, "tool_call": false, "gap": false,
   "confirmation.required": false, "confirmation.resolved": false,
   "run.completed": true, "run.failed": true, "run.cancelled": true,
 };
