@@ -262,6 +262,7 @@ the conversation. `wisp run` prints both on stderr.
 | `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
 | `step_ceiling` | the Run hit `graphRecursionLimit` or `toolCallLimit` | split the task, or raise the limit |
 | `output_schema_unsatisfied` | the agent did not hand over a value satisfying `outputSchema` in five attempts | simplify the schema, or say in `input` what each field holds |
+| `unsupported_document` | a `document` block is neither a PDF nor a text type, or does not read as its type says (an encrypted, scanned or corrupt PDF; binary bytes under a text type) | send the text itself, or a PDF with a text layer |
 | `confirmation_pending` | the Session is waiting for a tool approval in Wisp Desktop | answer it in the app, then send again |
 | `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
 | `quota_exhausted` | the account's plan is used up | check your account |
