@@ -102,7 +102,7 @@ A job runs a message on a clock: `schedule` is a five-field cron expression (`{ 
 | method | route | what it does |
 | --- | --- | --- |
 | `POST` | `/v1/schedules` | make a job; answers it with its `id` and `nextAt` |
-| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt` and `lastOutcome` (`runId`, `status`, `at`) |
+| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt` and `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) |
 | `GET` | `/v1/schedules/{id}` | one job |
 | `PATCH` | `/v1/schedules/{id}` | change the fields named; `nextAt` moves only with `schedule` |
 | `DELETE` | `/v1/schedules/{id}` | delete a job; a fire under way runs on |

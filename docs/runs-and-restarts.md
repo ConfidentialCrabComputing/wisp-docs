@@ -68,6 +68,31 @@ If you change the window later, run the installer again with `WISP_SERVICE=1` so
 rewrites the service with the new value. On Linux you can instead edit `TimeoutStopSec` in
 `~/.config/systemd/user/wisp.service` and run `systemctl --user daemon-reload`.
 
+## Scheduled Runs and restarts
+
+A schedule fires each instant at most once. The Runtime writes the job's next instant to
+disk before it starts the fire, and gives the fire's Run the key `<scheduleId>:<instant>`,
+so neither a crash nor a restart fires an instant twice. A drain fires nothing: the
+scheduler stops when the drain starts.
+
+A fire already going when you stop the Runtime is a Run like any other: it gets the drain
+window and is failed with `shutdown` if it outlives it. Fires are not retried. So before a
+planned restart such as `wisp update`, set `shutdownDrainTimeoutMs` to at least your
+longest scheduled job, say `600000` for a ten-minute nightly report, and run the installer
+again with `WISP_SERVICE=1` so the service waits that long too.
+
+While the Runtime is down, nothing fires. When it is back:
+
+- a recurring job fires its latest missed instant once, if that instant is late by no more
+  than half the job's period, kept between 2 minutes and 2 hours. A 09:00 daily job is back
+  in time until 11:00;
+- later than that, it skips to its next instant;
+- missed instants never pile up: a week down is one fire at most;
+- a one-off job fires once, however late.
+
+The job's `lastOutcome` records how many instants were skipped as `skipped`, with or without
+a fire.
+
 ## Concurrency
 
 - **One Run per Session at a time.** Others wait in the Session's queue, up to
