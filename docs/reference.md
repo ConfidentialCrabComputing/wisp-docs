@@ -95,6 +95,21 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/tokens` | the named tokens: name, capability and creation time, never a token. The one token only |
 | `DELETE` | `/v1/tokens/{name}` | revoke a named token; it is refused (`401`) from its next request on. The one token only |
 
+### Schedules
+
+A job runs a message on a clock: `schedule` is a five-field cron expression (`{ "cron": "0 9 * * 1-5", "timezone": "Europe/Berlin" }`, in the host's zone without `timezone`), an interval counted from when it is made or changed (`{ "every": "2h" }`, in `m`, `h` or `d`), or one instant (`{ "at": "2026-11-01T09:00:00Z" }`). Beside `name`, `input` and `schedule` a job may name a `skill` (each fire sends `/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a `deliver` target. A spec that never fires, an instant gone by, a folder that is not one and a schema a Run cannot take are `400`. Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the job's `lastOutcome`. The one token or a `full` token; a `run` token is `403` on all of them.
+
+| method | route | what it does |
+| --- | --- | --- |
+| `POST` | `/v1/schedules` | make a job; answers it with its `id` and `nextAt` |
+| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt` and `lastOutcome` (`runId`, `status`, `at`) |
+| `GET` | `/v1/schedules/{id}` | one job |
+| `PATCH` | `/v1/schedules/{id}` | change the fields named; `nextAt` moves only with `schedule` |
+| `DELETE` | `/v1/schedules/{id}` | delete a job; a fire under way runs on |
+| `POST` | `/v1/schedules/{id}/pause` | stop a job firing until it is resumed |
+| `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
+| `POST` | `/v1/schedules/{id}/run` | fire it now, off the clock; `202` with the Run's `runId`, read on `/v1/runs/{runId}`; `409` when its folder is gone |
+
 ### The account
 
 | method | route | what it does |
@@ -185,6 +200,11 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp tokens create --name <n> --capability full\|run` | make a named token and print it with its connection string, once; with the one token only |
 | `wisp tokens list` | the named tokens: name, capability and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
+| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id; exactly one time spec. `--deliver` is the chat's key, its Channel the prefix: `telegram:<chatId>` |
+| `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
+| `wisp schedules pause\|resume <id>` | stop a job firing, or let it fire again |
+| `wisp schedules run <id>` | fire a job now and print the Run's id, for `wisp runs show` |
+| `wisp schedules remove <id>` | delete a job |
 | `wisp audit <session> [--json]` | a Session's audit |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |
