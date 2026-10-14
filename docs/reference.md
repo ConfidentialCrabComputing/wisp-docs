@@ -111,6 +111,15 @@ A job runs a message on a clock: `schedule` is a five-field cron expression (`{ 
 | `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
 | `POST` | `/v1/schedules/{id}/run` | fire it now, off the clock; `202` with the Run's `runId`, read on `/v1/runs/{runId}`; `409` when its folder is gone |
 
+### Speech
+
+The speech model an `audio` block needs is 643 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. The one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
+
+| method | route | what it does |
+| --- | --- | --- |
+| `GET` | `/v1/speech` | the model's readiness: `absent`, `downloading` with `progress` (`receivedBytes`, `totalBytes` across its four files), `ready`, or `failed` with `lastError` |
+| `POST` | `/v1/speech/download` | start the install; `202` with the readiness. A POST while a download runs joins it, and one already installed downloads nothing |
+
 ### The account
 
 | method | route | what it does |
@@ -197,6 +206,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
+| `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (643 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
 | `wisp sandbox [on\|off \| network on\|off]` | the `bash_run` sandbox switches; `on`/`off` turns the sandbox on or off, `network on`/`off` its network. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp tokens create --name <n> --capability full\|run` | make a named token and print it with its connection string, once; with the one token only |
 | `wisp tokens list` | the named tokens: name, capability and creation time, never a token |
