@@ -226,6 +226,101 @@ before a send waits until the confirmation times out (`confirmTimeoutMs`, two ho
 and is then denied; the bot answers nothing else meanwhile. `/cancel` in the chat is not there
 yet either: `wisp cancel <session>` on the host stops it.
 
+## A Slack app
+
+`wisp slack` answers you and your team in Slack. Like `wisp telegram`, it is the same binary, run
+as its own process beside the Runtime with a `run` token. It reaches Slack over Socket Mode, so
+it needs no public port and no TLS of its own.
+
+1. At [api.slack.com/apps](https://api.slack.com/apps), choose **Create New App → From a
+   manifest**, pick the workspace, and paste:
+
+   ```yaml
+   display_information:
+     name: Wisp
+   features:
+     bot_user:
+       display_name: Wisp
+       always_online: true
+     app_home:
+       messages_tab_enabled: true
+       messages_tab_read_only_enabled: false
+   oauth_config:
+     scopes:
+       bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history]
+   settings:
+     event_subscriptions:
+       bot_events: [message.im, message.channels, message.groups, message.mpim]
+     interactivity:
+       is_enabled: true
+     socket_mode_enabled: true
+   ```
+
+2. **Install to Workspace**, then copy the **Bot User OAuth Token** (`xoxb-…`) from *OAuth &
+   Permissions*.
+3. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write`
+   scope and copy it (`xapp-…`).
+4. Allow `interactive` Runs in `runtime.json`, as for Telegram, and give the app its own token:
+
+```sh
+wisp tokens create --name slack --capability run
+export SLACK_BOT_TOKEN=xoxb-… SLACK_APP_TOKEN=xapp-…
+export WISP_URL=http://127.0.0.1:3008 WISP_TOKEN=<the run token>
+wisp slack
+# No owner yet. Send @wisp a direct message: !pair …
+```
+
+Both Slack tokens are read from the environment only, never from a flag. Send the app the
+`!pair …` line in a direct message: you are its owner. The code works once.
+
+Slack takes a message that starts with `/` for one of its own commands, so the app's commands
+start with `!`. In a thread you can also mention the app and write the command with a `/`, as in
+`@Wisp /new`.
+
+| Command | What it does |
+| --- | --- |
+| `!new` | Your next message starts a fresh Session. |
+| `!sessions` | Lists the last ten Sessions. |
+| `!resume <n>` | Goes back to Session number `n` from that list. |
+| `!cancel` | Stops the running request. |
+
+Where the app answers:
+
+- **A direct message** with the app is one Session, keyed `slack:<DM id>`.
+- **A channel**: first invite the app (`/invite @Wisp`). Slack sends the app nothing from a
+  channel it is not in. The app answers only when mentioned (`@Wisp …`). It replies in a thread under
+  that message, and the thread is its own Session, keyed `slack:<channel id>:<thread ts>`. Anyone
+  let in can carry on in that thread without mentioning the app again. Each new mention starts
+  another thread and another Session.
+- **A channel the owner has not approved**: the first mention there gets a pairing code, and you
+  get a card to approve the channel. Approving a channel lets no one in; its members are let in
+  each on their own.
+- **A thread started by someone not let in**: when a participant asks the app about it, the
+  thread's first message reaches the agent marked as a third party's, as data rather than an
+  instruction.
+
+`wisp sessions list --origin slack` lists the app's Sessions.
+
+Pairing works as it does for Telegram, with Slack ids instead of Telegram's. Anyone else who
+messages the app directly gets a code, and you get an Allow / Deny card. Anyone who is not let in
+and mentions the app in a channel is ignored; they can message the app directly. The same is
+available from the host:
+
+```sh
+wisp slack pairing list
+wisp slack pairing approve K7MZ4QXA
+wisp slack pairing revoke U012ABCDEF
+```
+
+To let people or channels in without pairing, list their ids in `SLACK_ALLOWED_IDS`, separated by
+commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`).
+
+The app keeps its state in `$WISP_HOME/slack.json` (`--state` puts it elsewhere): the owner, the
+users let in, the codes that wait, each Session key's Sessions and the requests it is following.
+A request it was following when it stopped is answered once it is back. Unlike Telegram, a
+message sent while the app is down is answered only if Slack still retries delivering it.
+Cards that approve a send are not in the app yet: such a Run waits until `confirmTimeoutMs`.
+
 ## The encryption key on a server
 
 A server's OS keyring does not survive a reboot, so on a server the Runtime takes its root
