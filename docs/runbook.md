@@ -247,7 +247,7 @@ it needs no public port and no TLS of its own.
        messages_tab_read_only_enabled: false
    oauth_config:
      scopes:
-       bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history]
+       bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history, files:read, files:write]
    settings:
      event_subscriptions:
        bot_events: [message.im, message.channels, message.groups, message.mpim]
@@ -301,6 +301,17 @@ Where the app answers:
 
 `wisp sessions list --origin slack` lists the app's Sessions.
 
+Images (PNG, JPEG, GIF, WebP) and files up to 20 MB that you share with the app reach the
+agent with your message; a PDF or a text file is read as its text. Files the agent writes are
+uploaded into the thread after its answer. The app needs the `files:read` and `files:write`
+scopes for this: an app installed without them must be reinstalled from the manifest above.
+
+A schedule delivers to Slack with `deliver: { channel: "slack", externalKey: … }`, the key
+naming a direct message (`slack:<DM id>`), a channel (`slack:<channel id>`) or a thread in it
+(`slack:<channel id>:<thread ts>`). Every request the app starts carries its direct message's
+or thread's key, so a job created there delivers back there. An outcome that settles while the
+app is down is posted once it is back.
+
 Pairing works as it does for Telegram, with Slack ids instead of Telegram's. Anyone else who
 messages the app directly gets a code, and you get an Allow / Deny card. Anyone who is not let in
 and mentions the app in a channel is ignored; they can message the app directly. The same is
@@ -316,7 +327,8 @@ To let people or channels in without pairing, list their ids in `SLACK_ALLOWED_I
 commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`).
 
 The app keeps its state in `$WISP_HOME/slack.json` (`--state` puts it elsewhere): the owner, the
-users let in, the codes that wait, each Session key's Sessions and the requests it is following.
+users let in, the codes that wait, each Session key's Sessions, the requests it is following and
+how far it has posted delivered outcomes.
 A request it was following when it stopped is answered once it is back. Unlike Telegram, a
 message sent while the app is down is answered only if Slack still retries delivering it.
 Cards that approve a send are not in the app yet: such a Run waits until `confirmTimeoutMs`.
