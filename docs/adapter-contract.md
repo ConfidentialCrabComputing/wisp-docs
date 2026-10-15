@@ -65,6 +65,29 @@ Content-Type: application/json
   `cli`: it keeps your Sessions out of Wisp Desktop's sidebar. It only affects listing, via
   `GET /v1/sessions?origin=`.
 
+A Session without `projectRoot` works on a Desk, a folder of its own; see
+[Sessions and Projects](./sessions-and-projects.md).
+
+### Naming the Project again
+
+The Runtime keeps Sessions in memory and finds a Desk Session again on its own, but it does
+not remember which folder a Project Session's Project is in. Once it has dropped such a
+Session from memory, after a restart for instance, the Session's routes answer `404` unless
+the request names the folder again in the query:
+
+```http
+POST /v1/sessions/{id}/runs?projectRoot=/srv/agents/incidents
+```
+
+`GET /v1/sessions/{id}/history`, `PATCH /v1/sessions/{id}`, `POST /v1/sessions/{id}/runs`,
+`POST /v1/sessions/{id}/cancel` and `POST /v1/runs/{runId}/retry` need it then. `GET
+/v1/sessions/{id}` takes it too, but without it still answers, from the stored rows, with
+`projectRoot: null`. A wrong folder is the same `404`, never another Session. On `PATCH`, the
+query's `projectRoot` finds the Session and the body's is the Project being added. The CLI
+always sends the folder it runs in.
+Calling `POST /v1/sessions` again with the same `externalKey` and `projectRoot` loads the
+Session as well. An adapter that always sends the same `projectRoot` never meets the `404`.
+
 ## A message is a Run
 
 ```http
@@ -83,12 +106,13 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 | Field | Meaning |
 | --- | --- |
 | `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF or a text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
-| `skill`, `arguments` | run one of the Project's [Skills](./deploy-an-agent.md#what-the-folder-holds) |
+| `skill`, `arguments` | run one of the Project's [Skills](./skills.md) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 | `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
+| `deliver` | optional; `{ "channel": "telegram" \| "slack", "externalKey": "…" }`, the chat the outcome goes to — see [delivering an outcome](#delivering-an-outcome) |
 
 The answer is one JSON object:
 
@@ -106,7 +130,9 @@ The answer is one JSON object:
   `reason` ([the list](./runbook.md#why-a-run-failed)) and a message that never quotes the
   conversation.
 - `toolCalls[].args` is the redacted form from the audit, not the raw arguments.
-- `artifacts` are files the Run wrote, relative to the Project folder. `GET
+- `artifacts` are files the Run wrote with `fs_write` or `fs_edit`, relative to the
+  Session's folder (its Project, or its Desk when it has none), with forward slashes. Files a
+  `bash_run` command writes are not listed. `GET
   /v1/runs/{runId}/artifacts/{index}` answers the `index`-th one's bytes, to send on as a file.
 
 ### A structured answer
@@ -185,6 +211,13 @@ answers at once with the Prompts left. A Prompt nobody answers within `confirmTi
 denied and the Run goes on. A Prompt already settled, or one that is not this Run's, is
 `404`; read the Run with `GET /v1/runs/{id}`, which lists a parked Run's `confirmations`.
 
+An approval may carry `text`, which replaces the draft the Prompt offered before the tool
+runs: `{ "decision": "approve", "text": "…" }`. It counts on the tools whose card has a text
+to edit — Gmail's `send_email` (the body) and the Telegram connector's `send_message`,
+`reply_to_message`, `edit_message` and `save_draft` (the text) and `send_file` (the
+caption) — and is ignored elsewhere. A text the tool's own input rules refuse fails that
+call.
+
 The same Prompts go out on the Run's Event stream as `confirmation.required`, and each
 settles there as `confirmation.resolved` with how: `api`, `timeout` or `cancel`. So the
 answer can come from whoever follows the stream, while the first request still waits; the
@@ -214,6 +247,9 @@ answers `202` when something was stopped and `204` when nothing was running. You
 cancel a single queued message. A Run parked on a Prompt is cancelled too: its Prompts are
 denied, and the waiting request answers `cancelled`.
 
+`DELETE /v1/sessions/{id}` is `409` while the Session has a Run going: cancel first, then
+delete.
+
 ## Not waiting
 
 A caller that cannot hold a connection — a serverless function, a queue worker, a CI step
@@ -230,6 +266,37 @@ behind a proxy — sends `"wait": false`. Then:
 A repeat with the same `idempotencyKey` answers `202` with the same `runId` and its status
 now, and starts nothing. Nothing is pushed to you: there are no webhooks — poll the Run or
 follow its Events.
+
+## Delivering an outcome
+
+A Run can name the chat its outcome belongs in with `deliver`: a Channel, `telegram` or
+`slack`, and the chat's key, the same key [`wisp schedules create
+--deliver`](./reference.md#wisp-schedules-create) takes:
+
+```json
+{ "input": "…", "deliver": { "channel": "telegram", "externalKey": "telegram:123456789" } }
+```
+
+The Runtime sends nothing itself. The Channel's adapter, such as the [Telegram
+bot](./telegram-bot.md), polls the Runs addressed to it and posts each one:
+
+```http
+GET /v1/runs?channel=telegram&settledAfter=<cursor>
+```
+
+- It lists only Runs that have ended, oldest first by the order they ended in, from every
+  entrance, schedules included. A Run whose answer begins or ends with a line `[SILENT]` is
+  left out.
+- Each Run carries `settleCursor`. Keep the last one you posted and send it as
+  `settledAfter` next time; leave `settledAfter` out the first time. `limit` pages it as in
+  the plain listing, and `nextCursor` is the next page's `settledAfter`.
+- `channel` takes only `limit` and `settledAfter`: adding `cursor`, `sessionId`, `status`
+  or `origin`, or sending `settledAfter` without `channel`, is `400`.
+- A `run` token reads only its own Channel's deliveries (another Channel is `403`), and
+  never a Run another `run` token started.
+
+A Run's `deliver` shows on `GET /v1/runs/{runId}`, and a Run a schedule fired carries the
+job's name as `schedule`.
 
 ## From TypeScript
 
@@ -372,9 +439,24 @@ compiler tells you what is new.
 ## Health
 
 `GET /v1/health` with the token returns the Runtime's state (`ready`, `login_required` and
-so on; see [Troubleshooting](./runbook.md#the-five-states)). Without a token it still
-answers `200` with an empty body, which is enough for a liveness probe. `GET /v1/ready`
-answers whether the Runtime will accept a Run right now.
+so on; see [Troubleshooting](./runbook.md#the-five-states)), its `version` and `kind`,
+`apiVersion`, and `update` when a newer release exists. Without a token it still answers
+`200` with an empty object, which is enough for a liveness probe. `GET /v1/ready` answers
+whether the Runtime will accept a Run right now.
+
+`apiVersion` is the revision of `/v1` the Runtime speaks, now `1`. It goes up only when a
+route or field is removed or renamed or changes meaning; a new route or optional field
+leaves it as it is. Compare it with the one your adapter was written for.
+
+While a newer release exists, every answer to a request that carries a token also carries
+an `X-Wisp-Update` header naming its version.
+
+## Errors
+
+An error answers a JSON body `{ "error": "…" }`, a sentence for a person. Some carry a
+`code` beside it for a program to match, such as
+`confirmation_mode_interactive_not_allowed`; match the status and the `code`, never the
+sentence.
 
 ## Tokens for an adapter
 

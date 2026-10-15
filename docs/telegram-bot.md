@@ -101,11 +101,24 @@ refuses the bot's Runs with `403`.
   The bot then answers only a message that mentions it, replies to it, or is a command.
   With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
   every message; turn the bot's privacy mode off in @BotFather (`/setprivacy` → Disable) so
-  that Telegram sends them. Each person in a group has their own Session
+  that Telegram sends them, then add the bot to the group again. While privacy mode is on,
+  the bot started with `--all-messages` says so on stderr when it starts (in the service's
+  log). Each person in a group has their own Session
   (`telegram:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
 - **A forum topic** is one shared Session for everyone in it (`telegram:<chat id>:<topic id>`).
 - **A reply to someone not let in**: when a participant replies to such a message, it reaches
   the agent marked as a third party's, as data rather than an instruction.
+
+## Long texts and albums
+
+Telegram cuts a text longer than 4096 characters into several messages, and sends an album
+as one message per photo. The bot waits a moment for the rest and puts them back together:
+
+- texts one person sends in the same chat or topic within two seconds of each other reach
+  the agent as one message, joined by line breaks. A message that answers an approval card
+  is kept apart;
+- the photos of one album reach the agent as one message, with the caption from whichever
+  photo carries it.
 
 ## Files and voice messages
 

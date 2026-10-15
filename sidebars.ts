@@ -31,13 +31,21 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Using Wisp',
       collapsed: false,
-      items: ['cli'],
+      items: ['cli', 'sessions-and-projects', 'configuration'],
     },
     {
       type: 'category',
       label: 'Features',
       collapsed: false,
-      items: ['connectors', 'permissions'],
+      items: [
+        'connectors',
+        'tools',
+        'permissions',
+        'skills',
+        'instructions',
+        'schedules',
+        'voice-and-files',
+      ],
     },
     {
       type: 'category',

@@ -18,9 +18,9 @@ incident-agent/
 └── .wisp/                          # this machine's bookkeeping; never committed
 ```
 
-- **`AGENTS.md`** is read at the start of every Session in this Project. `CLAUDE.md` and
-  `WISP.md` work too.
-- **`.settings/skills/<name>/SKILL.md`** is a Skill. The front matter is flat `key: value`
+- **`AGENTS.md`** is read again before every message in this Project. `CLAUDE.md` and
+  `WISP.md` work too. See [Instructions](./instructions.md).
+- **`.settings/skills/<name>/SKILL.md`** is a [Skill](./skills.md). The front matter is flat `key: value`
   pairs:
 
   | Key | Meaning |

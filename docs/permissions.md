@@ -11,7 +11,9 @@ Every tool call is checked against a decision:
 - **`deny`**: the call is refused.
 
 In Wisp Desktop, `ask` shows a card you approve or reject. A Run started from the CLI or
-over `/v1` has nobody to ask, so there **`ask` is treated as `deny`**: the tool returns a
+over `/v1` has nobody to ask unless it runs in the `interactive` mode (see
+[`--interactive`](./cli.md#long-runs-and-approvals)), so there **`ask` is treated as
+`deny`**: the tool returns a
 refusal, the agent is told, and it carries on without it. Usually it explains what it could
 not do, or drafts the message it was not allowed to send.
 
@@ -27,7 +29,8 @@ cannot talk the agent into an action that you have not allowed in advance.
 Each tool has a default. Tools that only read, such as `fs_read`, `fs_list`, `fs_glob` and
 `fs_grep`, default to `allow`. Tools that change something default to `ask`: `fs_write`,
 `fs_edit`, `bash_run`, and **every connector tool**, the web search and fetch that go through
-the Wisp proxy among them. `wisp permissions get` lists every tool with its decision.
+the Wisp proxy among them. [Tools](./tools.md) lists every tool with its default, and
+`wisp permissions get` shows the decision that applies now.
 
 Rules override the default. The first match in this order wins:
 
@@ -50,7 +53,8 @@ wisp permissions get --project .
 # mcp__github__create_issue  ask
 ```
 
-Every tool with its effective decision. The step is shown only when a Rule or a bypass made
+Each tool with its effective decision; the agent's own mechanics, such as `memory_*` and
+`skill_*`, are left out ([Tools](./tools.md) names them). The step is shown only when a Rule or a bypass made
 the decision; a tool on its own default shows none. Without `--project` you see the global
 picture. `--connector <name>` shows only that connector's tools.
 
@@ -75,7 +79,7 @@ server adds later has no Rule until you run it again. The connector must be conn
 you run it.
 
 A tool's name is `mcp__<connector>__<tool>` for connector tools. `wisp permissions get`
-lists the exact names.
+lists the exact names, and [Tools](./tools.md) lists the built-in ones.
 
 A good pattern for an agent that should read but not act: allow the connector's read tools
 one by one, and leave the tools that send, post or delete at their `ask` default. They
@@ -87,7 +91,8 @@ will be refused, and the agent drafts instead.
 wisp permissions bypass on --project .
 ```
 
-Allows every tool in that Project, except tools with a global `deny`. Use it only for a
+Allows every tool in that Project, except tools with a global `deny`. Creating, changing
+or deleting a scheduled job [still asks](./tools.md#schedules). Use it only for a
 Project where you would approve anything the agent might do.
 
 ## `bash_run`

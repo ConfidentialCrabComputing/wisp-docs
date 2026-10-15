@@ -11,18 +11,26 @@ only lists them.
 ## Routes
 
 Every route is under `/v1` and needs `Authorization: Bearer <token>`. Two exceptions:
-`/v1/health` without a token answers `200` with an empty body, and the OAuth callback is
+`/v1/health` without a token answers `200` with an empty object, and the OAuth callback is
 reached by a browser. The full API, with request and response schemas, is at
 `/v1/openapi.json`; this table is an index of it.
+
+- An error answers `{ "error": "…", "code": "…" }`, with `code` only where a program has
+  something to match, such as `confirmation_mode_<mode>_not_allowed`.
+- While a newer release exists, an answer to a request with a token carries `X-Wisp-Update`
+  with its version.
+- The Session routes that load a Session (history, `PATCH`, runs, cancel, and a Run's retry)
+  take `?projectRoot=<folder>`: a Project Session the Runtime dropped from memory is `404`
+  without it. See [naming the Project again](adapter-contract.md#naming-the-project-again).
 
 ### The Runtime
 
 | method | route | what it does |
 | --- | --- | --- |
 | `GET` | `/v1/openapi.json` | this contract, as OpenAPI |
-| `GET` | `/v1/health` | what the Runtime says about itself — see [the five states](runbook.md#the-five-states) |
+| `GET` | `/v1/health` | what the Runtime says about itself: `status` (see [the five states](runbook.md#the-five-states)), `version`, `kind`, `apiVersion` (the `/v1` revision, now `1`, raised only by a change an existing client cannot follow) and `update` when a newer release exists |
 | `GET` | `/v1/ready` | whether the Runtime will take a Run |
-| `GET` | `/v1/attestation` | the proxy's last attestation |
+| `GET` | `/v1/attestation` | the proxy's last attestation; `?includeQuote=1` adds the raw quote as `quote` |
 | `POST` | `/v1/attestation/refresh` | attest the proxy again |
 
 ### Sessions and Runs
@@ -33,7 +41,7 @@ reached by a browser. The full API, with request and response schemas, is at
 | `GET` | `/v1/sessions` | list Sessions |
 | `GET` | `/v1/sessions/{id}` | one Session |
 | `PATCH` | `/v1/sessions/{id}` | rename a Session, or give a Desk Session a Project with `projectRoot`: once only, never moved again (`409` when it already has one) |
-| `DELETE` | `/v1/sessions/{id}` | delete a Session |
+| `DELETE` | `/v1/sessions/{id}` | delete a Session; `409` while it has a Run going |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
 | `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [running a turn](#running-a-turn) |
 | `GET` | `/v1/runs` | the Runs of every Session, newest first, paged — see [listing Runs](#listing-runs) |
@@ -53,6 +61,10 @@ reached by a browser. The full API, with request and response schemas, is at
 - With `outputSchema` (a JSON Schema, root `type: object`), the outcome carries the validated
   answer as `output.structured` — see [a structured answer](adapter-contract.md#a-structured-answer).
   A schema the Runtime cannot take is `400`.
+- With `deliver` (`{ channel, externalKey }`), the outcome is addressed to a chat of the
+  Telegram or Slack Channel, for its adapter to post — see
+  [delivering an outcome](adapter-contract.md#delivering-an-outcome). A `run` token may name
+  only its own Channel, else `403`.
 - With `confirmationMode: interactive`, the wait ends at the Run's first park too, with
   `{ runId, status: "parked", confirmations }`. It is `403` with
   `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out.
@@ -68,10 +80,25 @@ reached by a browser. The full API, with request and response schemas, is at
 - `sessionId` narrows to one Session, and `status` to a comma-separated set (`running,parked`).
 - `origin` picks the entrance: `v1` when absent, `api` for the desktop's, `all` for both.
 - Runs from before a restart list with the status they ended with.
+- An unknown `cursor` (its Run no longer recorded) is `400`.
+
+`GET /v1/runs?channel=telegram|slack&settledAfter=<settleCursor>` is the delivery listing
+instead: the ended Runs whose `deliver` names that Channel, oldest first in the order they
+ended, past `settledAfter`, from every entrance. See
+[delivering an outcome](adapter-contract.md#delivering-an-outcome).
+
+- It takes only `limit` and `settledAfter`. Any other filter beside `channel`, or
+  `settledAfter` without `channel`, is `400`.
+- A Run whose answer begins or ends with a line `[SILENT]` is left out.
+- A `run` token reads only its own Channel's (`403` otherwise), and none another `run`
+  token started.
 
 `GET /v1/runs/{runId}` reads one Run from its record, across restarts too:
 
-- `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`, `createdAt`,
+- `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`,
+  `hasOutputSchema` (whether it was sent an `outputSchema`), `deliver` (where its outcome
+  goes, when anywhere), `schedule` (the job's name, on a Run a schedule fired),
+  `settleCursor` (once it ended, its place in the delivery listing; opaque), `createdAt`,
   `startedAt`, `settledAt`, and, once it ended, the outcome a waited-on Run answers with;
 - while a `/v1` Run is parked, its pending Prompts as `confirmations`;
 - `404` for an unknown id.
@@ -93,6 +120,10 @@ its outcome.
 `POST /v1/runs/{runId}/confirmations/{promptId}` answers a parked Run's Prompt with
 `{ decision }`: `approve`, `deny`, `allow_project` or `allow_global` (the last two also write
 the Rule).
+
+- An optional `text` replaces the draft before the tool runs, on the tools whose card offers
+  one to edit — see [approvals](adapter-contract.md#approvals).
+- A `run` token answers only `approve` or `deny`, and only on a Run it started; else `403`.
 
 - It waits for the Run's next park or its end, answered as the Run request is. With
   `wait: false` it answers `202 { runId, status }` at once and the Run goes on.

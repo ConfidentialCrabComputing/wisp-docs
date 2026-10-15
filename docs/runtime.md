@@ -28,8 +28,14 @@ and connectors are shared between the two.
 | Install it and get a first answer | [Quickstart](./quickstart.md) |
 | Run it as a service, update it, remove it | [Install, update, uninstall](./install.md) |
 | Use it day to day from the terminal | [Using the CLI](./cli.md) |
+| Know where a conversation's files live, and tie it to a folder | [Sessions and Projects](./sessions-and-projects.md) |
+| Change a setting, open it to the network, pick the default model | [Configuration](./configuration.md) |
 | Give the agent access to GitHub, Drive, your Telegram account, your own MCP servers | [Connectors](./connectors.md) |
+| See which tools the agent has | [Tools](./tools.md) |
 | Decide which tools may run unattended | [Permissions](./permissions.md) |
+| Teach the agent a procedure, or give it standing instructions | [Skills](./skills.md), [Instructions](./instructions.md) |
+| Run a prompt on a timetable | [Schedules](./schedules.md) |
+| Send it voice, images and documents, get files back | [Voice and files](./voice-and-files.md) |
 | Talk to the agent from Telegram or Slack | [Telegram bot](./telegram-bot.md), [Slack app](./slack-app.md) |
 | Reach it from another machine, a token per device, run it on a server | [Remote access](./remote-access.md) |
 | Ship an agent as a folder you can check out on a server | [Deploying an agent](./deploy-an-agent.md) |

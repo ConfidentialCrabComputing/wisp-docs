@@ -39,28 +39,45 @@ the new one waits for it to finish.
 
 ### Choosing a model
 
+`wisp models` lists the models the proxy offers, one per line:
+
 ```sh
 wisp models
 # <id>  <tiers>  <context window>  <capabilities>
-
-wisp run --model <id> "…"
 ```
 
-`--model` takes a model id from `wisp models`, or `tier:<name>` to let the proxy pick a
-model from that tier. Without it, the Run uses `teeLlmModel` from the
-[configuration](./reference.md#configuration).
+The columns are the model's id, the tiers it belongs to, its context window in tokens, and
+what it can do besides text, such as `images`. A `-` means the catalog says nothing. With
+`--json`, `wisp models` prints the catalog as the proxy sent it.
+
+`wisp run --model` picks the model for one Run:
+
+```sh
+wisp run --model <id> "…"           # this model
+wisp run --model tier:<name> "…"    # any model of this tier; the proxy picks which
+```
+
+- **Without `--model`**, the Run uses `teeLlmModel` from the configuration. Its default,
+  `auto:auto:best`, lets the proxy choose. To change it for every Run, see
+  [Configuration](./configuration.md#change-the-default-model).
+- **A retry** with `wisp retry` uses the model its Run asked for.
+- **Over `/v1`**, the same value goes in the Run's `modelPreference`
+  ([the adapter contract](./adapter-contract.md#a-message-is-a-run)).
+
+The Runtime sizes the conversation to the smallest context window among the models your
+choice can reach, so a tier with a small model in it compacts earlier. If none of them lists
+`images`, the agent cannot look at an image file and tells you so.
 
 ### Running a Skill
 
-A Skill is a named procedure stored in the Project. The agent follows its instructions, and
-it may limit which tools the agent can use. See
-[Deploying an agent](./deploy-an-agent.md#what-the-folder-holds) for how to write one.
-
 ```sh
-wisp skills list --project .                   # the Skills this folder has
+wisp skills list --project .                   # the Skills this folder's Sessions get
 wisp run --skill open-case "$(cat alert.json)" # the text after the name is the Skill's arguments
 wisp run 6b4f2a7e-… --skill summarise ""       # a Skill on an existing Session, no arguments
 ```
+
+Where Skills live, how to write one and the other ways to run one are in
+[Skills](./skills.md).
 
 ### Retrying safely
 
@@ -112,7 +129,9 @@ wisp sessions delete <id>
 `list` prints one line per Session: id, origin (`cli`, `desktop`, `telegram`, `slack` or `schedule`), last update,
 number of messages and title.
 
-Sessions are kept on disk. They survive restarts and cost nothing while idle.
+Sessions are kept on disk. They survive restarts and cost nothing while idle. A Session
+with a Project is found again through its folder, so continue it from that folder; see
+[Sessions, Projects and the Desk](./sessions-and-projects.md).
 
 ## Stopping a Run
 

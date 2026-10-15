@@ -150,6 +150,11 @@ This downloads and verifies the newest release next to the current one, then res
 service onto it and waits for it to come up on the new version. If the service does not
 come up within 30 seconds, the release is still installed; `wisp doctor` says why.
 
+Each version in `~/.wisp/versions` is a few hundred megabytes, so `wisp update` then deletes
+the old ones. It keeps the new version, the one it replaced, and the one a running Runtime
+was started from, if that is yet another. A directory it cannot delete is named on stderr,
+and the update still counts as done.
+
 A service you stopped stays stopped, and a `wisp serve` you started by hand keeps running
 the old version until you restart it. When a newer release exists, every `wisp` command
 mentions it once on stderr:
