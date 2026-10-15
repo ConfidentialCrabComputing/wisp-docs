@@ -62,6 +62,12 @@ test("the operator pages name every state, reason and code an operator meets", (
   assert.match(restarts, /TimeoutStopSec/);
 });
 
+test("the site's own search index covers the docs", () => {
+  const index = page("search-index.json");
+  assert.match(index, /telegram-bot/);
+  assert.match(index, /confirmationModes/);
+});
+
 test("the look is Infima variables and the landing's heading font, with nothing ejected", () => {
   const home = page("index.html");
   const stylesheet = home.match(/href=(\/assets\/css\/[^\s>"]+\.css)/)?.[1];

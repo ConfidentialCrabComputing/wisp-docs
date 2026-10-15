@@ -52,6 +52,14 @@ const config: Config = {
     ],
   ],
 
+  // A search index built with the site: no external service.
+  themes: [
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {hashed: true, docsRouteBasePath: '/', indexBlog: false},
+    ],
+  ],
+
   themeConfig: {
     colorMode: {
       respectPrefersColorScheme: true,
