@@ -109,7 +109,7 @@ wisp sessions create --title "…"   # start an empty Session and print its id
 wisp sessions delete <id>
 ```
 
-`list` prints one line per Session: id, origin (`cli`, `desktop` or `telegram`), last update,
+`list` prints one line per Session: id, origin (`cli`, `desktop`, `telegram`, `slack` or `schedule`), last update,
 number of messages and title.
 
 Sessions are kept on disk. They survive restarts and cost nothing while idle.

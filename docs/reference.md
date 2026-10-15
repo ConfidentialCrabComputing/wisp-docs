@@ -32,7 +32,7 @@ reached by a browser. The full API, with request and response schemas, is at
 | `POST` | `/v1/sessions` | open a Session |
 | `GET` | `/v1/sessions` | list Sessions |
 | `GET` | `/v1/sessions/{id}` | one Session |
-| `PATCH` | `/v1/sessions/{id}` | rename a Session or move it |
+| `PATCH` | `/v1/sessions/{id}` | rename a Session, or give a Desk Session a Project with `projectRoot`: once only, never moved again (`409` when it already has one) |
 | `DELETE` | `/v1/sessions/{id}` | delete a Session |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
 | `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md); with `wait: false`, answer `202 { runId, status }` at once and let the Run go on. With `outputSchema` (a JSON Schema, root `type: object`) the outcome carries the validated answer as `output.structured` — see [a structured answer](adapter-contract.md#a-structured-answer); `400` for a schema the Runtime cannot take. With `confirmationMode: interactive` the wait ends at the Run's first park too, with `{ runId, status: "parked", confirmations }`; `403` with `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out. A repeat of the `idempotencyKey` of a parked Run answers at once with the pending Prompts — `200 parked`, or `202 { runId, status: "parked" }` with `wait: false` |
@@ -92,13 +92,15 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
 | `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
 | `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
-| `POST` | `/v1/tokens` | make a named token with a `name` and a `capability` (`full` or `run`); the answer is the only time the token is shown; `409` when the name is taken. The one token only |
-| `GET` | `/v1/tokens` | the named tokens: name, capability and creation time, never a token. The one token only |
+| `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full` or `run`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
+| `GET` | `/v1/tokens` | the named tokens: name, capability, Channel and creation time, never a token. The one token only |
+| `GET` | `/v1/timezone` | the user's time zone (IANA, such as `Europe/Berlin`): the clock the agent is told, and the zone of a cron job made without one |
+| `PUT` | `/v1/timezone` | set it with `{ "timezone": "…" }`; Wisp Desktop writes its own on every connect |
 | `DELETE` | `/v1/tokens/{name}` | revoke a named token; it is refused (`401`) from its next request on. The one token only |
 
 ### Schedules
 
-A job runs a message on a clock: `schedule` is a five-field cron expression (`{ "cron": "0 9 * * 1-5", "timezone": "Europe/Berlin" }`, in the host's zone without `timezone`), an interval counted from when it is made or changed (`{ "every": "2h" }`, in `m`, `h` or `d`), or one instant (`{ "at": "2026-11-01T09:00:00Z" }`). Beside `name`, `input` and `schedule` a job may name a `skill` (each fire sends `/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a `deliver` target. A spec that never fires, an instant gone by, a folder that is not one and a schema a Run cannot take are `400`. Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the job's `lastOutcome`. The one token or a `full` token; a `run` token is `403` on all of them.
+A job runs a message on a clock: `schedule` is a five-field cron expression (`{ "cron": "0 9 * * 1-5", "timezone": "Europe/Berlin" }`; without `timezone`, in the zone of [`/v1/timezone`](#rules-skills-and-the-audit), or the host's when none is set), an interval counted from when it is made or changed (`{ "every": "2h" }`, in `m`, `h` or `d`), or one instant (`{ "at": "2026-11-01T09:00:00Z" }`). Beside `name`, `input` and `schedule` a job may name a `skill` (each fire sends `/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a `deliver` target. A spec that never fires, an instant gone by, a folder that is not one and a schema a Run cannot take are `400`. Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the job's `lastOutcome`. The one token or a `full` token; a `run` token is `403` on all of them.
 
 | method | route | what it does |
 | --- | --- | --- |
@@ -190,14 +192,14 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp runs show <id> [--json]` | one Run: its status and, once it ended, its answer; `--json` for the whole Run |
 | `wisp runs events <id> [--json]` | follow a Run's Events, one line each, and print its answer at the end; `--json` for each Event as sent, one per line. Exits when the Run ends, with `wisp run`'s exit code |
 | `wisp sessions create [--project path] [--title t]` | open a Session |
-| `wisp sessions list [--all]` | list Sessions |
+| `wisp sessions list [--all \| --origin o]` | this folder's Sessions; `--all` for every one, `--origin` for one origin's (`cli`, `desktop`, `telegram`, `slack`, `schedule`) |
 | `wisp sessions show <id>` | one Session and its messages |
 | `wisp sessions delete <id>` | delete a Session |
 | `wisp cancel <session>` | stop a Session's Runs |
 | `wisp permissions get [--project path] [--connector name]` | the Rules; `--connector` shows only that connector's tools |
 | `wisp permissions set <tool> ask\|allow\|deny\|default [--project path]` | write a Rule for a tool; `default` drops it |
 | `wisp permissions allow-connector <name> [--project path]` | allow every tool of a Connector |
-| `wisp permissions bypass on\|off [--project path]` | a Project's bypass |
+| `wisp permissions bypass on\|off --project path` | a Project's bypass |
 | `wisp connectors list` | the Connectors |
 | `wisp connectors add <name> (--http url \| --sse url \| --stdio cmd) [--header k=v]… [--header-stdin k] [--project path] [--allow]` | add one; `--header-stdin` reads a secret from the terminal, `--project` also enables it there, `--allow` also allows its tools |
 | `wisp connectors auth <name> [--project path] [--allow]` | sign a Connector in; `--project` and `--allow` as for `add` |
@@ -207,16 +209,24 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (643 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
-| `wisp sandbox [on\|off \| network on\|off]` | the `bash_run` sandbox switches; `on`/`off` turns the sandbox on or off, `network on`/`off` its network. `off` warns that a command then runs as the Runtime's own user and can read the key source |
-| `wisp tokens create --name <n> --capability full\|run` | make a named token and print it with its connection string, once; with the one token only |
-| `wisp tokens list` | the named tokens: name, capability and creation time, never a token |
+| `wisp sandbox` | whether the `bash_run` sandbox and its network are on |
+| `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
+| `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
+| `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once; with the one token only. `--channel` names the one Channel a `run` token's Runs may deliver to, which the Telegram bot and the Slack app need. `--public-url` is the address the device will reach the Runtime at, put into the connection string |
+| `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
-| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id; exactly one time spec. `--deliver` is the chat's key, its Channel the prefix: `telegram:<chatId>` |
+| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id; exactly one time spec. `--deliver` is the chat's key, its Channel the prefix: `telegram:<chatId>`, `telegram:<chatId>:<topicId>`, `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>` |
 | `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
-| `wisp schedules pause\|resume <id>` | stop a job firing, or let it fire again |
+| `wisp schedules pause <id>`, `wisp schedules resume <id>` | stop a job firing, or let it fire again |
 | `wisp schedules run <id>` | fire a job now and print the Run's id, for `wisp runs show` |
 | `wisp schedules remove <id>` | delete a job |
 | `wisp audit <session> [--json]` | a Session's audit |
+| `wisp telegram setup [--url u --token t] [--state file]` | ask for the bot's token from @BotFather, mint a `run` token for the Telegram Channel (with the one token given, or from `runtime.lock`; on another host, paste a connection string instead), store both in the state file and print the owner link |
+| `wisp telegram install [--all-messages]`, `wisp telegram uninstall` | run the bot as a user service, restarted on failure, after `setup`; or stop and remove it |
+| `wisp telegram [--all-messages] [--url u --token t] [--state file]` | run the [Telegram bot](runbook.md#a-telegram-bot) in this terminal from what `setup` stored, or from `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`; in a group it answers only a mention, a reply or a command, every message with `--all-messages` |
+| `wisp telegram pairing list\|approve <code>\|revoke <user id>` | who waits and who is let in; let in a stranger by their code; shut a user out |
+| `wisp slack [--url u --token t] [--state file]` | run the [Slack app](runbook.md#a-slack-app) over Socket Mode; `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are its tokens |
+| `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |
 | `wisp update` | install the newest release beside the running one and restart the service onto it; without a running service, it takes effect on the next `wisp serve` |
@@ -241,9 +251,10 @@ pipe. See [Install, update, uninstall](install.md).
 
 `$WISP_HOME/runtime.json` (`~/.wisp/runtime.json` by default) holds these keys, and the
 environment variable next to each overrides the file. The installer creates the file with
-`agentToken` only. A key not in this list, invalid JSON, or a file owned by another user
-stops `wisp serve` with exit **78**. A file holding `agentToken` should be readable only by
-you (`chmod 600`).
+`agentToken` only. A key not in this list, invalid JSON, a file owned by another user, or a
+file holding `agentToken` that others can read (`chmod 600` it) stops `wisp serve` with exit
+**78**. A `.env` file in the folder `wisp serve` starts in is read into the environment
+first.
 
 | key | environment | default | what it sets |
 | --- | --- | --- | --- |

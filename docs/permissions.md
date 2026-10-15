@@ -24,9 +24,12 @@ cannot talk the agent into an action that you have not allowed in advance.
 
 ## Where a decision comes from
 
-Each tool has a default. Most built-in tools, such as the file tools, default to `allow`.
-`bash_run` and **every connector tool** default to `ask`. Rules override the default. The first match in
-this order wins:
+Each tool has a default. Tools that only read, such as `fs_read`, `fs_list`, `fs_glob` and
+`fs_grep`, default to `allow`. Tools that change something default to `ask`: `fs_write`,
+`fs_edit`, `bash_run`, and **every connector tool**, the web search and fetch that go through
+the Wisp proxy among them. `wisp permissions get` lists every tool with its decision.
+
+Rules override the default. The first match in this order wins:
 
 | Step | Set with |
 | --- | --- |

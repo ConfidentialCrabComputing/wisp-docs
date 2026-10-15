@@ -5,8 +5,10 @@ description: How your code turns events into Runs over /v1, what it gets back, a
 # The adapter contract
 
 An **adapter** is your code that connects Wisp to the outside world: a chat bot, a webhook
-handler, a scheduler. Wisp has no triggers, schedules or messaging channels of its own. It
-runs when it is called, one Run at a time, and returns the result.
+handler, a scheduler. Wisp ships a few of its own — [schedules](./reference.md#schedules), a
+[Telegram bot](./runbook.md#a-telegram-bot) and a [Slack app](./runbook.md#a-slack-app) —
+and they use this same contract. Anything else is yours to write: Wisp runs when it is
+called, one Run at a time, and returns the result.
 
 That keeps an adapter small. It translates three things:
 
@@ -22,8 +24,10 @@ audit, and one answer per Run.
 
 ## Connecting
 
-The Runtime listens on `127.0.0.1` only. Every request carries
-`Authorization: Bearer <token>`.
+The Runtime listens on `127.0.0.1` unless you [open it to another
+machine](./runbook.md#reaching-it-from-another-machine). Every request carries
+`Authorization: Bearer <token>`: the one token, a named `full` token, or a `run` token made
+for an adapter (see [Tokens for an adapter](#tokens-for-an-adapter)).
 
 An adapter on the same machine reads the address and token from
 `$WISP_HOME/runtime.lock`, exactly as the CLI does. It is a JSON file, readable only by its
@@ -57,8 +61,9 @@ Content-Type: application/json
   hash anything longer.
 - **`projectRoot`** is the folder the agent works in for the whole life of the Session.
   See [Deploying an agent](./deploy-an-agent.md).
-- **`origin`** is `desktop` (the default) or `cli`. Send `cli`: it keeps your Sessions out
-  of Wisp Desktop's sidebar. It only affects listing, via `GET /v1/sessions?origin=`.
+- **`origin`** is `desktop` (the default), `cli`, `telegram`, `slack` or `schedule`. Send
+  `cli`: it keeps your Sessions out of Wisp Desktop's sidebar. It only affects listing, via
+  `GET /v1/sessions?origin=`.
 
 ## A message is a Run
 
@@ -77,7 +82,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 
 | Field | Meaning |
 | --- | --- |
-| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `audio`). An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
+| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF or a text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
 | `skill`, `arguments` | run one of the Project's [Skills](./deploy-an-agent.md#what-the-folder-holds) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
@@ -196,11 +201,13 @@ A Session runs one Run at a time. A message that arrives while a Run is going wa
 queue, and its connection stays open while it waits. You do not have to serialise anything
 yourself.
 
-`409 Conflict` has exactly two causes:
+`409 Conflict` on a new Run means one of these:
 
 - the Session's queue is full (`maxQueuedRunsPerSession`, 10 by default): back off, or drop
   the message;
-- the same `idempotencyKey` came with a different request. The error names the key.
+- the same `idempotencyKey` came with a different request. The error names the key;
+- the key's message is already in the Session but its Run's record is gone, or the record
+  lost its outcome: the message may have acted, so it is never run again.
 
 `POST /v1/sessions/{id}/cancel` stops the current Run and everything queued behind it. It
 answers `202` when something was stopped and `204` when nothing was running. You cannot
@@ -361,28 +368,44 @@ so on; see [Troubleshooting](./runbook.md#the-five-states)). Without a token it 
 answers `200` with an empty body, which is enough for a liveness probe. `GET /v1/ready`
 answers whether the Runtime will accept a Run right now.
 
+## Tokens for an adapter
+
+Give each adapter its own `run` token instead of the one token, so a leak costs only that
+adapter and `wisp tokens revoke` shuts it out alone:
+
+```sh
+wisp tokens create --name my-bot --capability run
+```
+
+A `run` token reaches only what an adapter needs:
+
+- it opens Sessions on the Desk only (a `projectRoot` is `403`) and starts Runs in those;
+- it reads Runs, their Events and artifacts, and cancels a Session's Runs;
+- it answers only the Prompts of Runs it started, with `approve` or `deny`;
+- it reads and starts the speech model's install;
+- with `--channel telegram` or `--channel slack` it may name a `deliver` target, of that
+  Channel only. Without `--channel`, a Run that names `deliver` is `403`.
+
+Everything else (Rules, connectors, schedules, tokens) is `403`.
+
 ## Not available yet
 
-What is there today: turning a message into a Session and a Run, waiting for it or not,
-reading a Run back by id (`GET /v1/runs/{id}`, across restarts too), following its Events
-while it works (`GET /v1/runs/{id}/events`; see the [reference](./reference.md)), and a
-person approving a tool mid-Run through the `interactive` mode. What is not there yet:
-
-- **No author marking on input.** Everything in `input` is treated as the account owner's
-  own words. If you relay a message from someone else, the agent reads it as yours. Either
-  relay it knowing that, or keep it out of the input.
-- **No webhooks, no scoped tokens, no listening beyond loopback.** One token can do
-  everything, on the machine the Runtime runs on. To reach it from elsewhere, tunnel to its
-  loopback port.
+There are no webhooks: the Runtime never calls your adapter. Poll `GET /v1/runs/{runId}` or
+follow its Events instead.
 
 ## Who wrote what
 
 Wisp strips control characters, invisible characters and its own framing tags from every
 connector result, so a tool's output cannot pretend to be part of the conversation's
-structure. What Wisp cannot know is **who wrote** a piece of text; only the connector knows
-that. The Telegram connector marks every message with `fromMe`. If you write MCP servers,
-mark authorship the same way, as a field next to the text, so the agent can tell an
-instruction from a quote of one.
+structure. What Wisp cannot know is **who wrote** a piece of text; only the connector or the
+adapter knows that.
+
+- **In `input`**, mark a message you relay from someone other than the account owner with
+  `"author": "third_party"`. The agent then reads it as data, never as an instruction. A
+  block without `author` is the owner's own words.
+- **In a connector**, the Telegram connector marks every message with `fromMe`. If you write
+  MCP servers, mark authorship the same way, as a field next to the text, so the agent can
+  tell an instruction from a quote of one.
 
 ## A scheduler is an adapter too
 

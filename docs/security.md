@@ -10,13 +10,14 @@ Wisp trusts every process running as the same operating-system user as the Runti
 the same line Chrome, Docker Desktop and password managers draw: if something hostile
 already runs as you, the Runtime's token is not what stands between it and your data.
 
-The token, the loopback-only listener, and the `Host` and CORS checks protect against
+The token, the loopback listener, and the `Host` and CORS checks protect against
 everything that is **not** your user:
 
 - a web page in your browser calling `http://127.0.0.1:3008/v1/…`;
 - other accounts on the same machine;
-- anything on the network. The Runtime only listens on `127.0.0.1`, and any other `host`
-  setting is refused.
+- anything on the network. By default the Runtime listens on `127.0.0.1` only. A `host`
+  other than loopback works only together with `allowedHosts`, and the token must then reach
+  it over TLS: see [Reaching it from another machine](./runbook.md#reaching-it-from-another-machine).
 
 Protecting against your own user (checking which program is calling, guarding the Project
 folder or the binary) is outside what Wisp does.
@@ -31,10 +32,19 @@ which could already read the Runtime's environment, and nothing to other users.
 On Windows there are no Unix file modes; both files sit under your user profile, which only
 you can read.
 
-A token can do what Wisp Desktop's chat can do: run prompts, change Rules, manage
-connectors, read the audit. It cannot stop the Runtime, because there is no stop endpoint.
-Treat a leaked token like a leaked password: change `agentToken` in `runtime.json` and
-restart.
+There are three kinds of token:
+
+| Token | What it can do |
+| --- | --- |
+| the one token (`agentToken`) | everything Wisp Desktop's chat can do — run prompts, change Rules, manage connectors, read the audit — and create, list and revoke the named tokens |
+| a named `full` token | the same, except the named tokens themselves |
+| a named `run` token | only what a Channel adapter needs: open Sessions on the Desk, start Runs in them, read Runs, answer the Prompts of Runs it started (approve or deny only), deliver to its own Channel, and install the speech model |
+
+No token can stop the Runtime: there is no stop endpoint.
+
+Treat a leaked token like a leaked password. A named one: `wisp tokens revoke <name>`, and
+the others keep working. The one token: change `agentToken` in `runtime.json` and restart.
+See [A token per device](./runbook.md#a-token-per-device).
 
 ## Nobody approves anything mid-Run, unless you allow it
 
@@ -59,22 +69,26 @@ and bidirectional characters, and Wisp's own framing tags, so a tool's output ca
 to be part of the conversation's structure. What the filter cannot tell is who wrote a line;
 see [Who wrote what](./adapter-contract.md#who-wrote-what).
 
-Approval requests carry ids and fields Wisp names itself, never text the model chose.
+An approval request names the tool and its arguments. The arguments are what the model
+wrote, a drafted message among them, so read them before you approve.
 
 The model runs inside a trusted execution environment, and Wisp sends it nothing unless that
 environment is verified. See [Attestation](./runbook.md#attestation).
 
 ## Secrets
 
-- **On disk:** the stores are encrypted with SQLCipher, and the key is kept in the OS
-  keychain. Connector secrets live in that encrypted store, never in a Project folder.
+- **On disk:** the stores are encrypted with SQLCipher. The key is kept in the OS keychain,
+  or, for `wisp serve` on Linux, in a [key file](./runbook.md#the-encryption-key-on-a-server)
+  outside the data directory. Connector secrets live in that encrypted store, never in a
+  Project folder.
 - **On the way in:** `--header-stdin` and `--api-hash-stdin` read a secret from the
   terminal, because a command line can be seen by other users on the machine.
-- **`runtime.json`:** a file owned by another user is refused (exit 78). A file of yours
-  that others can read gets a warning to `chmod 600` it.
+- **`runtime.json`:** a file owned by another user is refused (exit 78), and so is a file
+  holding a secret that others can read: `chmod 600` it.
+- **`telegram.json`** holds the bot's token and its `run` token once `wisp telegram setup`
+  has run, and is written readable only by you.
 
 ## Not available yet
 
-Named tokens with narrower permissions, listening beyond loopback, and TLS are planned. Until
-then, if something on another machine has to reach a Runtime, tunnel to its loopback port
-(for example with `ssh -L`) instead of exposing it.
+The Runtime does not terminate TLS itself. To reach it from another machine, put a reverse
+proxy with TLS in front of it, or tunnel to its loopback port (for example with `ssh -L`).
