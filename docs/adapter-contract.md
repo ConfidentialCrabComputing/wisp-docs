@@ -272,7 +272,8 @@ for await (const event of runEvents(baseUrl, token, run.data.runId)) {
 
 The Event stream is the one part a generator does not handle. This reader, saved as
 `events-reader.ts` beside `v1.d.ts`, follows a Run's Events until the terminal one, skips a
-kind it does not know, and resumes a dropped connection with `Last-Event-ID`; an optional
+kind it does not know, and resumes with `Last-Event-ID` a dropped connection or one a proxy
+answers 5xx or 429, as a Run waiting on a Prompt is not over; an optional
 `signal` stops it, so a process shutting down is never held by a Run it follows. It runs
 server-side, on Node 18 or later: a browser's `EventSource` cannot send the token.
 
@@ -308,7 +309,7 @@ function decode(data: string): RunEvent | undefined {
 
 // Follows a Run's Events until its terminal one. A connection that drops, or
 // ends having brought an Event, is resumed after the last seq with Last-Event-ID;
-// one refused, as while the Runtime restarts, is tried again each second.
+// one refused, as while the Runtime restarts, or answered 5xx or 429, is tried again each second.
 // `signal` stops it: following a Run never holds a caller that is shutting down.
 export async function* runEvents(
   baseUrl: string, token: string, runId: string, signal?: AbortSignal,
@@ -328,6 +329,13 @@ export async function* runEvents(
     } catch (err) {
       if (signal?.aborted) throw err;
       progressed = true; // the Runtime is down: tried again a second later, for as long as it is
+      await sleep(1000, undefined, { signal });
+      continue;
+    }
+    // A proxy's 5xx or a 429 is not the Run's end: it may wait on a Prompt. Only a 4xx is.
+    if (res.status >= 500 || res.status === 429) {
+      await res.body?.cancel();
+      progressed = true;
       await sleep(1000, undefined, { signal });
       continue;
     }
