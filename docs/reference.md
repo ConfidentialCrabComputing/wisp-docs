@@ -35,14 +35,71 @@ reached by a browser. The full API, with request and response schemas, is at
 | `PATCH` | `/v1/sessions/{id}` | rename a Session, or give a Desk Session a Project with `projectRoot`: once only, never moved again (`409` when it already has one) |
 | `DELETE` | `/v1/sessions/{id}` | delete a Session |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
-| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [the adapter contract](adapter-contract.md); with `wait: false`, answer `202 { runId, status }` at once and let the Run go on. With `outputSchema` (a JSON Schema, root `type: object`) the outcome carries the validated answer as `output.structured` — see [a structured answer](adapter-contract.md#a-structured-answer); `400` for a schema the Runtime cannot take. With `confirmationMode: interactive` the wait ends at the Run's first park too, with `{ runId, status: "parked", confirmations }`; `403` with `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out. A repeat of the `idempotencyKey` of a parked Run answers at once with the pending Prompts — `200 parked`, or `202 { runId, status: "parked" }` with `wait: false` |
-| `GET` | `/v1/runs` | the Runs of every Session, newest first, as Run resources, paged by `limit` (up to 200, default 50) and `cursor` (the `nextCursor` of the previous page, `null` on the last). `sessionId` narrows to one Session, `status` to a comma-separated set (`running,parked`), and `origin` picks the entrance: `v1` when absent, `api` for the desktop's, `all` for both. Runs from before a restart list with the status they ended with |
-| `GET` | `/v1/runs/{runId}` | one Run, read from its record, across restarts too: `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`, `createdAt`, `startedAt`, `settledAt`, and once it ended the outcome a waited-on Run answers with; while a `/v1` Run is parked, its pending Prompts as `confirmations`; `404` for an unknown id |
+| `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [running a turn](#running-a-turn) |
+| `GET` | `/v1/runs` | the Runs of every Session, newest first, paged — see [listing Runs](#listing-runs) |
+| `GET` | `/v1/runs/{runId}` | one Run, read from its record, across restarts too — see [listing Runs](#listing-runs) |
 | `GET` | `/v1/runs/{runId}/events` | the Run's Events over SSE, each frame's `data` one JSON Event and its `id` the Event's `seq`, ending with exactly one terminal Event, after which the stream closes; `Last-Event-ID` resumes. See [the Event stream](#the-event-stream) |
 | `GET` | `/v1/runs/{runId}/artifacts/{index}` | the bytes of the `index`-th path of the Run's `artifacts`, with its media type and filename (`Content-Disposition`); only what that list names, never another file in the folder. `404` when the Run is unknown or has not ended, the index is past the list, or the file is gone since or is now a link out of the folder. A `run` token reads any Run's artifacts |
-| `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again and wait for its outcome; with `{ "wait": false }`, answer `202 { runId, status }` for the new Run at once; `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its message's latest Run, or something was sent after it. A second retry of the same Run answers with the Run the first one started. The retry inherits the Run's `confirmationMode`, and is `403` when `confirmationModes` no longer has it |
-| `POST` | `/v1/runs/{runId}/confirmations/{promptId}` | answer a parked Run's Prompt with `{ decision }` — `approve`, `deny`, `allow_project` or `allow_global` (the last two also write the Rule) — and wait for the Run's next park or its end, answered as the Run request is; with `wait: false` it answers `202 { runId, status }` at once and the Run goes on. While another Prompt of the same step is pending it answers at once with `status: parked` and the Prompts left. `404`, the same for each, when the Prompt is unknown, already settled, of another Run, of a desktop Run, or of a Run that has ended |
+| `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again — see [retrying a Run](#retrying-a-run) |
+| `POST` | `/v1/runs/{runId}/confirmations/{promptId}` | answer a parked Run's Prompt — see [answering a Prompt](#answering-a-prompt) |
 | `POST` | `/v1/sessions/{id}/cancel` | stop the Session's Runs |
+
+#### Running a turn
+
+`POST /v1/sessions/{id}/runs` runs a turn and waits for its outcome. See
+[the adapter contract](adapter-contract.md).
+
+- With `wait: false`, it answers `202 { runId, status }` at once and lets the Run go on.
+- With `outputSchema` (a JSON Schema, root `type: object`), the outcome carries the validated
+  answer as `output.structured` — see [a structured answer](adapter-contract.md#a-structured-answer).
+  A schema the Runtime cannot take is `400`.
+- With `confirmationMode: interactive`, the wait ends at the Run's first park too, with
+  `{ runId, status: "parked", confirmations }`. It is `403` with
+  `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out.
+- A repeat of the `idempotencyKey` of a parked Run answers at once with the pending Prompts:
+  `200 parked`, or `202 { runId, status: "parked" }` with `wait: false`.
+
+#### Listing Runs
+
+`GET /v1/runs` lists the Runs of every Session, newest first, as Run resources.
+
+- It is paged by `limit` (up to 200, default 50) and `cursor` (the `nextCursor` of the
+  previous page, `null` on the last).
+- `sessionId` narrows to one Session, and `status` to a comma-separated set (`running,parked`).
+- `origin` picks the entrance: `v1` when absent, `api` for the desktop's, `all` for both.
+- Runs from before a restart list with the status they ended with.
+
+`GET /v1/runs/{runId}` reads one Run from its record, across restarts too:
+
+- `status`, `sessionId`, `origin`, `confirmationMode`, `toolsRan`, `retryOf`, `createdAt`,
+  `startedAt`, `settledAt`, and, once it ended, the outcome a waited-on Run answers with;
+- while a `/v1` Run is parked, its pending Prompts as `confirmations`;
+- `404` for an unknown id.
+
+#### Retrying a Run
+
+`POST /v1/runs/{runId}/retry` runs a failed or cancelled Run's message again and waits for
+its outcome.
+
+- With `{ "wait": false }`, it answers `202 { runId, status }` for the new Run at once.
+- It is `409` when the Run is not failed or cancelled, failed on `context_overflow`, is not its
+  message's latest Run, or something was sent after it.
+- A second retry of the same Run answers with the Run the first one started.
+- The retry inherits the Run's `confirmationMode`, and is `403` when `confirmationModes` no
+  longer has it.
+
+#### Answering a Prompt
+
+`POST /v1/runs/{runId}/confirmations/{promptId}` answers a parked Run's Prompt with
+`{ decision }`: `approve`, `deny`, `allow_project` or `allow_global` (the last two also write
+the Rule).
+
+- It waits for the Run's next park or its end, answered as the Run request is. With
+  `wait: false` it answers `202 { runId, status }` at once and the Run goes on.
+- While another Prompt of the same step is pending, it answers at once with `status: parked`
+  and the Prompts left.
+- It is `404`, the same for each, when the Prompt is unknown, already settled, of another Run,
+  of a desktop Run, or of a Run that has ended.
 
 ### The Event stream
 
@@ -100,7 +157,24 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 
 ### Schedules
 
-A job runs a message on a clock: `schedule` is a five-field cron expression (`{ "cron": "0 9 * * 1-5", "timezone": "Europe/Berlin" }`; without `timezone`, in the zone of [`/v1/timezone`](#rules-skills-and-the-audit), or the host's when none is set), an interval counted from when it is made or changed (`{ "every": "2h" }`, in `m`, `h` or `d`), or one instant (`{ "at": "2026-11-01T09:00:00Z" }`). Beside `name`, `input` and `schedule` a job may name a `skill` (each fire sends `/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a `deliver` target. A spec that never fires, an instant gone by, a folder that is not one and a schema a Run cannot take are `400`. Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the job's `lastOutcome`. The one token or a `full` token; a `run` token is `403` on all of them.
+A job runs a message on a clock. Its `schedule` is one of:
+
+- a five-field cron expression: `{ "cron": "0 9 * * 1-5", "timezone": "Europe/Berlin" }`.
+  Without `timezone`, it runs in the zone of [`/v1/timezone`](#rules-skills-and-the-audit), or
+  the host's when none is set;
+- an interval counted from when the job is made or changed: `{ "every": "2h" }`, in `m`, `h`
+  or `d`;
+- one instant: `{ "at": "2026-11-01T09:00:00Z" }`.
+
+Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
+`/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a
+`deliver` target.
+
+- A spec that never fires, an instant gone by, a folder that is not one and a schema a Run
+  cannot take are `400`.
+- Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the
+  job's `lastOutcome`.
+- The routes take the one token or a `full` token; a `run` token is `403` on all of them.
 
 | method | route | what it does |
 | --- | --- | --- |
@@ -185,7 +259,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
-| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file]` | one Run, waited on; without a session it opens one for the current folder, and prints `session <id>` on stderr first. `--detach` prints the Run's id and returns without waiting. `--interactive` runs it in the `interactive` mode: on a park it prints each pending Prompt as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer. `--output-schema` sends the file's JSON Schema as `outputSchema` and prints only `output.structured`, as JSON; a file that cannot be read or is not JSON is a usage error |
+| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
@@ -212,20 +286,20 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp sandbox` | whether the `bash_run` sandbox and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
-| `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once; with the one token only. `--channel` names the one Channel a `run` token's Runs may deliver to, which the Telegram bot and the Slack app need. `--public-url` is the address the device will reach the Runtime at, put into the connection string |
+| `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
 | `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
-| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id; exactly one time spec. `--deliver` is the chat's key, its Channel the prefix: `telegram:<chatId>`, `telegram:<chatId>:<topicId>`, `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>` |
+| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
 | `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
 | `wisp schedules pause <id>`, `wisp schedules resume <id>` | stop a job firing, or let it fire again |
 | `wisp schedules run <id>` | fire a job now and print the Run's id, for `wisp runs show` |
 | `wisp schedules remove <id>` | delete a job |
 | `wisp audit <session> [--json]` | a Session's audit |
-| `wisp telegram setup [--url u --token t] [--state file]` | ask for the bot's token from @BotFather, mint a `run` token for the Telegram Channel (with the one token given, or from `runtime.lock`; on another host, paste a connection string instead), store both in the state file and print the owner link |
+| `wisp telegram setup [--url u --token t] [--state file]` | set the bot up and print the owner link — see [`wisp telegram setup`](#wisp-telegram-setup) |
 | `wisp telegram install [--all-messages]`, `wisp telegram uninstall` | run the bot as a user service, restarted on failure, after `setup`; or stop and remove it |
-| `wisp telegram [--all-messages] [--url u --token t] [--state file]` | run the [Telegram bot](runbook.md#a-telegram-bot) in this terminal from what `setup` stored, or from `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`; in a group it answers only a mention, a reply or a command, every message with `--all-messages` |
+| `wisp telegram [--all-messages] [--url u --token t] [--state file]` | run the [Telegram bot](telegram-bot.md) in this terminal from what `setup` stored, or from `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`; in a group it answers only a mention, a reply or a command, every message with `--all-messages` |
 | `wisp telegram pairing list\|approve <code>\|revoke <user id>` | who waits and who is let in; let in a stranger by their code; shut a user out |
-| `wisp slack [--url u --token t] [--state file]` | run the [Slack app](runbook.md#a-slack-app) over Socket Mode; `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are its tokens |
+| `wisp slack [--url u --token t] [--state file]` | run the [Slack app](slack-app.md) over Socket Mode; `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are its tokens |
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
 | `wisp logout` | sign out |
@@ -233,6 +307,46 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp uninstall` | remove what the installer put down (service, `bin`, `versions`, `runtime.json`, the `PATH` line); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
+
+### `wisp run`
+
+One Run, waited on.
+
+- Without a session, it opens one for the current folder, and prints `session <id>` on stderr
+  first.
+- `--detach` prints the Run's id and returns without waiting.
+- `--interactive` runs it in the `interactive` mode: on a park it prints each pending Prompt
+  as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer.
+- `--output-schema` sends the file's JSON Schema as `outputSchema` and prints only
+  `output.structured`, as JSON. A file that cannot be read or is not JSON is a usage error.
+
+### `wisp tokens create`
+
+Makes a named token and prints it with its connection string, once. Only the one token can
+run it.
+
+- `--channel` names the one Channel a `run` token's Runs may deliver to, which the
+  [Telegram bot](telegram-bot.md) and the [Slack app](slack-app.md) need.
+- `--public-url` is the address the device will reach the Runtime at, put into the
+  connection string. See [a token per device](remote-access.md#a-token-per-device).
+
+### `wisp schedules create`
+
+Makes a job and prints its id. It takes exactly one time spec: `--cron`, `--every` or `--at`.
+
+`--deliver` is the chat's key, its Channel the prefix:
+
+- `telegram:<chatId>`, or `telegram:<chatId>:<topicId>` for a forum topic;
+- `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`.
+
+### `wisp telegram setup`
+
+- Asks for the bot's token from @BotFather.
+- Mints a `run` token for the Telegram Channel, with the one token given, or from
+  `runtime.lock`. On another host, you paste a connection string instead.
+- Stores both in the state file and prints the owner link.
+
+See [the Telegram bot](telegram-bot.md).
 
 ## Installer
 
@@ -261,7 +375,7 @@ first.
 | `agentToken` | `WISP_AGENT_TOKEN` | — required | the bearer token; at least 32 characters |
 | `port` | `PORT` | `3008` | the port the Runtime listens on |
 | `host` | `HOST` | `127.0.0.1` | the address it listens on; anything but loopback needs `allowedHosts`. Wisp Desktop ignores it |
-| `allowedHosts` | `ALLOWED_HOSTS` (comma-separated) | `[]` | host names, without a port, a request's `Host` may carry besides loopback; the name your [reverse proxy](runbook.md#reaching-it-from-another-machine) is reached by |
+| `allowedHosts` | `ALLOWED_HOSTS` (comma-separated) | `[]` | host names, without a port, a request's `Host` may carry besides loopback; the name your [reverse proxy](remote-access.md#reaching-it-from-another-machine) is reached by |
 | `wispHome` | `WISP_HOME` | `~/.wisp` | the data directory; only from `--config` or the environment, never from a `runtime.json` found through it |
 | `teeLlmModel` | `TEE_LLM_MODEL` | `auto:auto:best` | the model a Run uses when it does not name one |
 | `maxConcurrentRuns` | `MAX_CONCURRENT_RUNS` | `3` | Runs executing at once across all Sessions |

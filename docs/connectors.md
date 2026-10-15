@@ -73,6 +73,12 @@ and `--allow` to enable it and allow its tools in the same command.
 
 ## Telegram
 
+:::tip[The connector is not the Telegram bot]
+The connector is a tool: **the agent reads your own Telegram account**, its chats and
+messages. The [Telegram bot](./telegram-bot.md) is a Channel: **you write to the agent** in
+Telegram. They are set up apart, and you can use either without the other.
+:::
+
 Telegram signs in as your own account, so it needs API keys from
 [my.telegram.org](https://my.telegram.org) and a login code:
 

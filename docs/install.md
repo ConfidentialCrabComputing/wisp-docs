@@ -113,7 +113,7 @@ wisp stop      # stops it from another terminal
 :::warning[Linux]
 On Linux, `wisp serve` keeps its encryption key in a file and stops with exit code 78 until
 you name one with `WISP_MASTER_KEY_FILE`. The service sets this up for you; without it, see
-[the encryption key on a server](./runbook.md#the-encryption-key-on-a-server).
+[the encryption key on a server](./remote-access.md#the-encryption-key-on-a-server).
 :::
 
 ## Next to Wisp Desktop

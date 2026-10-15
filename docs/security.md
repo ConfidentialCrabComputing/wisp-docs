@@ -17,7 +17,7 @@ everything that is **not** your user:
 - other accounts on the same machine;
 - anything on the network. By default the Runtime listens on `127.0.0.1` only. A `host`
   other than loopback works only together with `allowedHosts`, and the token must then reach
-  it over TLS: see [Reaching it from another machine](./runbook.md#reaching-it-from-another-machine).
+  it over TLS: see [Reaching it from another machine](./remote-access.md#reaching-it-from-another-machine).
 
 Protecting against your own user (checking which program is calling, guarding the Project
 folder or the binary) is outside what Wisp does.
@@ -44,7 +44,7 @@ No token can stop the Runtime: there is no stop endpoint.
 
 Treat a leaked token like a leaked password. A named one: `wisp tokens revoke <name>`, and
 the others keep working. The one token: change `agentToken` in `runtime.json` and restart.
-See [A token per device](./runbook.md#a-token-per-device).
+See [A token per device](./remote-access.md#a-token-per-device).
 
 ## Nobody approves anything mid-Run, unless you allow it
 
@@ -78,7 +78,7 @@ environment is verified. See [Attestation](./runbook.md#attestation).
 ## Secrets
 
 - **On disk:** the stores are encrypted with SQLCipher. The key is kept in the OS keychain,
-  or, for `wisp serve` on Linux, in a [key file](./runbook.md#the-encryption-key-on-a-server)
+  or, for `wisp serve` on Linux, in a [key file](./remote-access.md#the-encryption-key-on-a-server)
   outside the data directory. Connector secrets live in that encrypted store, never in a
   Project folder.
 - **On the way in:** `--header-stdin` and `--api-hash-stdin` read a secret from the

@@ -31,8 +31,21 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Using Wisp',
       collapsed: false,
-      items: ['cli', 'connectors', 'permissions', 'deploy-an-agent'],
+      items: ['cli'],
     },
+    {
+      type: 'category',
+      label: 'Features',
+      collapsed: false,
+      items: ['connectors', 'permissions'],
+    },
+    {
+      type: 'category',
+      label: 'Messaging',
+      collapsed: false,
+      items: ['telegram-bot', 'slack-app'],
+    },
+    'remote-access',
     {
       type: 'category',
       label: 'Building on Wisp',
@@ -43,8 +56,9 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Operating',
       collapsed: false,
-      items: ['runs-and-restarts', 'runbook', 'security'],
+      items: ['deploy-an-agent', 'runs-and-restarts', 'security'],
     },
+    'runbook',
     'reference',
   ],
 };

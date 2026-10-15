@@ -1,6 +1,6 @@
 ---
 sidebar_label: Troubleshooting
-description: Health states, exit codes, why a Run failed, attestation, the audit and logs.
+description: Health states, exit codes, why a Run failed, attestation, the audit, logs, and answers to common problems.
 ---
 
 # Troubleshooting
@@ -40,7 +40,7 @@ wisp doctor
 One line per check: the config, the encryption key, the service, the Runtime, the login, the
 proxy, the `bash_run` sandbox (Linux only) and `PATH`. The key line follows how the data
 directory was made: `keyring` for one whose keys are in the OS keyring, `key` for one made
-with a [key file](#the-encryption-key-on-a-server). `key` checks the file `wisp serve` would
+with a [key file](./remote-access.md#the-encryption-key-on-a-server). `key` checks the file `wisp serve` would
 open, named by `WISP_MASTER_KEY_FILE` in your shell or else by the systemd service, and fails
 with the reason `wisp serve` would refuse it; the key itself is never printed. Every `✗`
 names what fixes it. It exits `0` when every check passes and `1` otherwise. `wisp doctor` needs no
@@ -83,13 +83,13 @@ configuration problem. It exits before serving anything and says which of these 
 - `wispHome` is set inside a `runtime.json` that was itself found through `WISP_HOME`;
 - the port is already taken;
 - `host` is not a loopback address and `allowedHosts` is empty (see
-  [reaching it from another machine](#reaching-it-from-another-machine));
+  [reaching it from another machine](./remote-access.md#reaching-it-from-another-machine));
 - on a Mac, the keychain cannot store the encryption keys. `wisp doctor` names the command
   that unlocks it;
 - on Linux, `WISP_MASTER_KEY_FILE` is not set: `wisp serve` there keeps its key in a
-  [key file](#the-encryption-key-on-a-server), never in a keyring. The installer's service
+  [key file](./remote-access.md#the-encryption-key-on-a-server), never in a keyring. The installer's service
   sets it for you;
-- the [key file](#the-encryption-key-on-a-server) is inside the data directory, belongs to
+- the [key file](./remote-access.md#the-encryption-key-on-a-server) is inside the data directory, belongs to
   another user, is readable by others, or does not hold 32 bytes of base64;
 - the key does not open the data directory's stored keys (a different key from the one it
   was made with), or the directory has data but its stored keys are missing;
@@ -99,331 +99,6 @@ configuration problem. It exits before serving anything and says which of these 
 
 Restarting does not fix any of these, which is why the systemd service does not restart
 after a 78.
-
-## Reaching it from another machine
-
-The Runtime speaks plain HTTP, and one token authorises everything it does, `bash` included.
-**That token must never cross a network in clear.** Put a reverse proxy that terminates TLS
-in front of the Runtime, and give callers its `https://` address.
-
-The proxy forwards the name the caller used (`wisp.example.com`) as the `Host` header. The
-Runtime refuses any `Host` that is not loopback or listed in `allowedHosts`, which keeps a
-web page from reaching it through DNS rebinding, so list that name. With the proxy on the
-same machine, the Runtime stays on loopback:
-
-```json
-{ "agentToken": "…", "allowedHosts": ["wisp.example.com"] }
-```
-
-A [Caddy](https://caddyserver.com) site in front of it, which gets and renews the
-certificate itself and streams the Event stream without buffering:
-
-```text
-wisp.example.com {
-    reverse_proxy 127.0.0.1:3008
-}
-```
-
-Then, from anywhere: `wisp status --url https://wisp.example.com --token …`.
-
-With the proxy on another machine, also set `host` to the address the proxy connects to,
-a private network address rather than `0.0.0.0`, and list that address in `allowedHosts`
-as well: `wisp` on the Runtime's own machine finds it there. A non-loopback `host` with an empty
-`allowedHosts` stops `wisp serve` with exit **78**. Opening the listener does not open the
-Runtime to browsers: its CORS allowlist still names only local origins.
-
-Wisp Desktop ignores `host`. It always listens on loopback and logs that it ignored the
-setting.
-
-## A token per device
-
-Rather than copy the one token to every machine you work from, give each its own named
-token, so that losing one laptop costs you that laptop's token alone. Run the command on the
-Runtime's host, over SSH from the device the token is for, so the token is printed where it
-will be used and never travels on its own:
-
-```sh
-ssh you@server wisp tokens create --name laptop --capability full
-# prints the token and a connection string, once — neither is shown again
-# Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
-# wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
-wisp tokens list
-# laptop  full  -  2026-10-13T09:12:44.120Z
-wisp tokens revoke laptop
-# revoked laptop
-```
-
-A `full` token reaches everything the one token does except the tokens themselves: only the
-one token creates, lists and revokes them (a named token gets `403`), so no token can mint one
-that outlives its own revocation. A `run` token is for a Channel adapter: it reaches only
-Desk Sessions, their Runs and its own Prompts, and with `--channel` delivers to that Channel
-alone (see [Tokens for an adapter](./adapter-contract.md#tokens-for-an-adapter)). The third
-column of `wisp tokens list` is that Channel, `-` for none. A revoked token is
-refused with `401` from its next request on; the one token and every other named token keep
-working. The Runtime keeps only a hash of each token in `global.db`.
-
-The connection string, `wisp+<url>#<token>`, is the one line a device takes, Wisp Desktop's
-field among them; the bare token is for a script or an adapter's config. The token sits in the
-fragment, so a string pasted into a browser by mistake sends it to no server. The URL is:
-
-- `--url` when you give it (with `--token`, the one token): the address this device reached;
-- else `https://` and the host, when `allowedHosts` names exactly one;
-- else the address `wisp` reaches the Runtime at on its host, `http://127.0.0.1:3008` by
-  default. Reach it from the device through an SSH tunnel on the same port, so the string
-  works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`.
-
-## A Telegram bot
-
-`wisp telegram` answers you in Telegram. It is the same binary, run as its own process beside
-the Runtime: it reaches the Runtime only over `/v1`, with a `run` token, and reaches Telegram
-by long polling, so it needs no public port and no TLS of its own.
-
-1. Make a bot with [@BotFather](https://t.me/BotFather) and copy the token it gives you.
-2. Allow `interactive` Runs: add it to `confirmationModes` in `runtime.json`
-   (`"confirmationModes": ["policy", "interactive"]`) and restart the Runtime. Without it the
-   bot answers every message with "Could not reach the agent", and its log shows `HTTP 403`.
-3. Set the bot up and start it as a service, on the Runtime's host:
-
-```sh
-wisp telegram setup
-# paste the bot's token from @BotFather, then press Enter
-# @your_bot is set up.
-# No owner yet. Open https://t.me/your_bot?start=… and press Start, or send /pair … to the bot.
-wisp telegram install
-```
-
-`setup` checks the bot token with Telegram, mints the bot its own `run` token for the
-Telegram Channel (`wisp tokens create --name telegram --capability run --channel telegram`,
-done for you through `runtime.lock`), and stores both in the bot's state file, readable only
-by you. Run it again to change the bot token; a different bot starts with no owner and no one
-let in.
-
-`install` runs the bot as a user service beside the Runtime's, restarted if it fails: a
-systemd unit `wisp-telegram.service` on Linux (`journalctl --user -u wisp-telegram -f`), a
-launchd agent `io.usewisp.telegram` on a Mac (log in `~/.wisp/logs/telegram.log`). `wisp update`
-restarts it onto the new release, and `wisp telegram uninstall` or `wisp uninstall` removes it.
-Without `install`, `wisp telegram` runs the bot in this terminal.
-
-:::note[The bot on another machine]
-On a host with no Runtime, `setup` asks instead for a connection string. Make one on the
-Runtime's host with `wisp tokens create --name telegram --capability run --channel telegram`
-and paste the `wisp+…` line. You can also skip `setup` and pass everything in the
-environment: `TELEGRAM_BOT_TOKEN`, and `WISP_URL` with `WISP_TOKEN` (a `run` token made with
-`--channel telegram`). Without `--channel` the Runtime refuses the bot's Runs with `403`.
-:::
-
-Open the link on your phone and press Start: you are the bot's owner. The code works once.
-
-The bot answers only the people let in, and each of them drives the agent as you do, with the
-same Connectors and memory.
-
-| Command | What it does |
-| --- | --- |
-| `/new` | Your next message starts a fresh Session. |
-| `/sessions` | Lists the earlier Sessions. |
-| `/resume <n>` | Goes back to Session number `n` from that list. |
-| `/cancel` | Stops the running request. |
-
-Where the bot answers:
-
-- **A private chat** is one Session, keyed `telegram:<chat id>`, so the agent remembers the
-  conversation. `wisp sessions list --origin telegram` lists them.
-- **A group** must first be approved by the owner: the first message addressed to the bot
-  there sends you a card.
-  The bot then answers only a message that mentions it, replies to it, or is a command.
-  With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
-  every message; turn the bot's privacy mode off in @BotFather (`/setprivacy` → Disable) so
-  that Telegram sends them. Each person in a group has their own Session
-  (`telegram:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
-- **A forum topic** is one shared Session for everyone in it (`telegram:<chat id>:<topic id>`).
-- **A reply to someone not let in**: when a participant replies to such a message, it reaches
-  the agent marked as a third party's, as data rather than an instruction.
-
-Photos, documents, voice messages and audio files up to 20 MB reach the agent with your
-message; a PDF or a text file is read as its text. Videos are refused. A voice message needs
-the [speech model](./reference.md#speech): until it is installed, the owner gets a card to
-install it (643 MB) and sees the progress. Files the agent writes are sent back as documents
-after its answer.
-
-When the agent wants to use a tool whose decision is `ask`, the bot sends a card with **Allow**
-and **Deny**. A typed "yes" approves the one card sent just before it; any other message denies
-the cards still waiting, so a card scrolled away never holds the chat. A card nobody answers is
-denied after `confirmTimeoutMs` (two hours by default). Anyone else who writes, a bare `/start` included, gets a pairing
-code, and you get a card "Let @alice in?" with Allow and Deny. Allow lets them in and tells them
-so; Deny, or no answer, leaves them out. Past that one reply the bot ignores them.
-
-The same from the host, on the bot's state file, whether the bot is running or not:
-
-```sh
-wisp telegram pairing list               # who waits, and who is let in
-wisp telegram pairing approve K7MZ4QXA   # the code the stranger passes on to you
-wisp telegram pairing revoke 123456789   # a user id from the list
-```
-
-Someone let in from the command line is not told; their next message is simply answered. A
-revoked user's next message starts no Run. A code expires in an hour;
-a person gets one code per ten minutes; at most three wait at once, and a fourth is told to try
-later; five wrong codes in a row given to `pairing approve` lock approving by code, and new
-requests, for an hour, while the cards already sent still work.
-
-To let people in without pairing, list their user ids, or a chat's id, in
-`TELEGRAM_ALLOWED_IDS`, separated by commas (`TELEGRAM_ALLOWED_IDS=123456789,987654321`). An id
-on the list is answered at once, even before the bot has an owner; to shut it out, take it off
-the list and restart the bot.
-
-The bot keeps its state in `$WISP_HOME/telegram.json` (`--state` puts it elsewhere): the bot
-token, the Runtime's address and the bot's `run` token, the owner, the owner code until it is
-used, the users let in, the codes that wait, and its place in Telegram's queue of messages, so
-a message sent while the bot was down (Telegram keeps them for 24 hours) is answered once it
-is back. `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`, when set, win over the file.
-Removing the file pairs a new owner and shuts out everyone let in by pairing; run `setup`
-again after it.
-
-A schedule delivers to Telegram with `--deliver telegram:<chat id>`, or
-`telegram:<chat id>:<topic id>` for a forum topic. The bot prints the owner's key once
-paired.
-
-## A Slack app
-
-`wisp slack` answers you and your team in Slack. Like `wisp telegram`, it is the same binary, run
-as its own process beside the Runtime with a `run` token. It reaches Slack over Socket Mode, so
-it needs no public port and no TLS of its own.
-
-1. At [api.slack.com/apps](https://api.slack.com/apps), choose **Create New App → From a
-   manifest**, pick the workspace, and paste:
-
-   ```yaml
-   display_information:
-     name: Wisp
-   features:
-     bot_user:
-       display_name: Wisp
-       always_online: true
-     app_home:
-       messages_tab_enabled: true
-       messages_tab_read_only_enabled: false
-   oauth_config:
-     scopes:
-       bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history, files:read, files:write]
-   settings:
-     event_subscriptions:
-       bot_events: [message.im, message.channels, message.groups, message.mpim]
-     interactivity:
-       is_enabled: true
-     socket_mode_enabled: true
-   ```
-
-2. **Install to Workspace**, then copy the **Bot User OAuth Token** (`xoxb-…`) from *OAuth &
-   Permissions*.
-3. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write`
-   scope and copy it (`xapp-…`).
-4. Allow `interactive` Runs in `runtime.json`, as for Telegram, and give the app its own token:
-
-```sh
-wisp tokens create --name slack --capability run --channel slack
-export SLACK_BOT_TOKEN=xoxb-… SLACK_APP_TOKEN=xapp-…
-export WISP_URL=http://127.0.0.1:3008 WISP_TOKEN=<the run token>
-wisp slack
-# No owner yet. Send @wisp a direct message: !pair …
-```
-
-Both Slack tokens are read from the environment only, never from a flag. The `run` token must
-be made with `--channel slack`: without it the Runtime refuses the app's Runs with `403`. Send the app the
-`!pair …` line in a direct message: you are its owner. The code works once.
-
-Slack takes a message that starts with `/` for one of its own commands, so the app's commands
-start with `!`. In a thread you can also mention the app and write the command with a `/`, as in
-`@Wisp /new`. In a channel, a command works only inside a thread.
-
-| Command | What it does |
-| --- | --- |
-| `!new` | Your next message starts a fresh Session. |
-| `!sessions` | Lists the last ten Sessions. |
-| `!resume <n>` | Goes back to Session number `n` from that list. |
-| `!cancel` | Stops the running request. |
-
-Where the app answers:
-
-- **A direct message** with the app is one Session, keyed `slack:<DM id>`.
-- **A channel**: first invite the app (`/invite @Wisp`). Slack sends the app nothing from a
-  channel it is not in. The app answers only when mentioned (`@Wisp …`). It replies in a thread under
-  that message, and the thread is its own Session, keyed `slack:<channel id>:<thread ts>`. Anyone
-  let in can carry on in that thread without mentioning the app again. Each new mention starts
-  another thread and another Session.
-- **A channel the owner has not approved**: the first mention there gets a pairing code, and you
-  get a card to approve the channel. Approving a channel lets no one in; its members are let in
-  each on their own.
-- **A thread started by someone not let in**: when a participant asks the app about it, the
-  thread's first message reaches the agent marked as a third party's, as data rather than an
-  instruction.
-
-`wisp sessions list --origin slack` lists the app's Sessions.
-
-Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you share with the app reach the
-agent with your message; a PDF or a text file is read as its text. Files the agent writes are
-uploaded into the thread after its answer. The app needs the `files:read` and `files:write`
-scopes for this: an app installed without them must be reinstalled from the manifest above.
-
-A schedule delivers to Slack with `deliver: { channel: "slack", externalKey: … }`, the key
-naming a direct message (`slack:<DM id>`), a channel (`slack:<channel id>`) or a thread in it
-(`slack:<channel id>:<thread ts>`). Every request the app starts carries its direct message's
-or thread's key, so a job created there delivers back there. An outcome that settles while the
-app is down is posted once it is back.
-
-Pairing works as it does for Telegram, with Slack ids instead of Telegram's. Anyone else who
-messages the app directly gets a code, and you get an Allow / Deny card. Anyone who is not let in
-and mentions the app in a channel is ignored; they can message the app directly. The same is
-available from the host:
-
-```sh
-wisp slack pairing list
-wisp slack pairing approve K7MZ4QXA
-wisp slack pairing revoke U012ABCDEF
-```
-
-To let people or channels in without pairing, list their ids in `SLACK_ALLOWED_IDS`, separated by
-commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`).
-
-The app keeps its state in `$WISP_HOME/slack.json` (`--state` puts it elsewhere): the owner, the
-users let in, the codes that wait, each Session key's Sessions, the requests it is following and
-how far it has posted delivered outcomes.
-A request it was following when it stopped is answered once it is back. Unlike Telegram, a
-message sent while the app is down is answered only if Slack still retries delivering it.
-
-When the agent wants to use a tool whose decision is `ask`, the app posts a card with
-**Allow** and **Deny**, answered as in Telegram: a typed "yes" approves the one card just
-before it, and a card nobody answers is denied after `confirmTimeoutMs`.
-
-## The encryption key on a server
-
-A Linux keyring does not survive a reboot on a server, so `wisp serve` on Linux never uses
-one: it takes its root key from a file, 32 random bytes as one base64 line.
-
-**With the installer's service you have nothing to do.** It writes the key to
-`~/.config/wisp/master.key` once, never replaces it, and sets `WISP_MASTER_KEY_FILE` in
-`wisp.service`. It refuses to install over a data directory whose key file is gone, rather
-than make a new key over your data.
-
-Without the service, make the key yourself before the first `wisp serve`:
-
-```bash
-mkdir -p ~/.config/wisp
-(umask 077; openssl rand -base64 32 > ~/.config/wisp/master.key)
-```
-
-Pass it with `WISP_MASTER_KEY_FILE=/home/you/.config/wisp/master.key`, an absolute path:
-a systemd `Environment=` line does not expand `~`. The file must belong to the
-user running `wisp serve`, be readable by nobody else (`chmod 600`), and live outside the
-data directory. Everything the Runtime would otherwise keep in the keyring, the login
-among it, is stored encrypted under this key in `WISP_HOME/keys/`.
-
-`WISP_MASTER_KEY` takes the same line directly. Prefer the file: an environment variable
-can be read from `/proc/<pid>/environ` and shows up in a service manager's output
-(`systemctl show`, a unit file).
-
-**Back the key file up.** Without it the data directory cannot be opened: the Runtime
-refuses to start (exit 78) rather than make new keys over your data. It makes them only in
-an empty data directory.
 
 ## Why a Run failed
 
@@ -512,3 +187,37 @@ journalctl --user -u wisp -o cat | jq -c 'select(.msg == "run.finished" and (.re
 ```
 
 In `text` format the same lines read `run.finished state=failed reason=quota_exhausted durationMs=5310`.
+
+## FAQ
+
+**The Telegram bot or the Slack app answers "Could not reach the agent".**
+Its log says why. Usually `HTTP 403`: `interactive` is missing from `confirmationModes`, or
+its `run` token was made without `--channel`. See [the Telegram bot](./telegram-bot.md#2-allow-interactive-runs)
+and [the Slack app](./slack-app.md#3-allow-interactive-runs).
+
+**`wisp serve` on Linux exits with 78.**
+It names the reason; the list is under [Exit codes](#exit-codes). Most often
+`WISP_MASTER_KEY_FILE` is not set, or the key file is readable by others. See
+[the encryption key on a server](./remote-access.md#the-encryption-key-on-a-server).
+
+**The agent cannot search the web from `wisp run`.**
+The web search and fetch tools default to `ask`, and a CLI Run has nobody to ask, so they
+are refused. `wisp permissions get --project .` lists their names; allow them with
+`wisp permissions set <tool> allow --project .`. See
+[Permissions](./permissions.md#where-a-decision-comes-from).
+
+**The agent sees a connector's tools, but every call is refused.**
+The connector is enabled but its tools are not allowed:
+`wisp permissions allow-connector <name> --project .`. See [Connectors](./connectors.md).
+
+**A voice message is not transcribed.**
+The Run failed with `speech_not_installed`: the speech model is installed only on request.
+Run `wisp speech install`, then send the message again. See [Speech](./reference.md#speech).
+
+**Another machine cannot reach the Runtime.**
+It listens on loopback only. Put a TLS reverse proxy in front of it and list its name in
+`allowedHosts`: see [Reaching it from another machine](./remote-access.md#reaching-it-from-another-machine).
+
+**A laptop with a token was lost.**
+Revoke that device's token with `wisp tokens revoke <name>`; the others keep working. See
+[A token per device](./remote-access.md#a-token-per-device).

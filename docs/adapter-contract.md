@@ -6,7 +6,7 @@ description: How your code turns events into Runs over /v1, what it gets back, a
 
 An **adapter** is your code that connects Wisp to the outside world: a chat bot, a webhook
 handler, a scheduler. Wisp ships a few of its own — [schedules](./reference.md#schedules), a
-[Telegram bot](./runbook.md#a-telegram-bot) and a [Slack app](./runbook.md#a-slack-app) —
+[Telegram bot](./telegram-bot.md) and a [Slack app](./slack-app.md) —
 and they use this same contract. Anything else is yours to write: Wisp runs when it is
 called, one Run at a time, and returns the result.
 
@@ -25,7 +25,7 @@ audit, and one answer per Run.
 ## Connecting
 
 The Runtime listens on `127.0.0.1` unless you [open it to another
-machine](./runbook.md#reaching-it-from-another-machine). Every request carries
+machine](./remote-access.md#reaching-it-from-another-machine). Every request carries
 `Authorization: Bearer <token>`: the one token, a named `full` token, or a `run` token made
 for an adapter (see [Tokens for an adapter](#tokens-for-an-adapter)).
 
