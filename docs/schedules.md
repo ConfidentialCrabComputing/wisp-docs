@@ -93,13 +93,19 @@ wisp schedules create --name standup --cron "0 9 * * 1-5" --deliver telegram:123
 The key's prefix names the Channel:
 
 - `telegram:<chat id>`, or `telegram:<chat id>:<topic id>` for a forum topic;
-- `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`.
+- `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`;
+- `desktop`, Wisp Desktop, which shows each outcome as a system notification.
 
 The bot and the app print the owner's key when they start: "Outcomes reach the owner with
 --deliver …". The Runtime sends nothing itself: the bot or app picks the outcome up, so it must
 be running. An outcome that settles while it is down is posted once it is back.
 
 Over HTTP, `deliver` is `{ "channel": "telegram", "externalKey": "telegram:123456789" }`.
+
+Wisp Desktop reads its outcomes from `GET /v1/fires?channel=desktop&settledAfter=<sequence>`:
+each settled fire of a job addressed to it, oldest first, with the job's name, the instant,
+the outcome, the first line of the answer and the fire's `sequence`, which the next request
+passes as `settledAfter`.
 
 ## Asking the agent from a chat
 
@@ -121,9 +127,9 @@ turns that into a time spec and calls its schedule tools:
   as a chat with the Telegram bot or the Slack app. A Run under `policy`, a fired job's own
   included, does not see them, so a job cannot plant more jobs.
 - **A job made in a chat posts back to that chat.** The agent cannot name another one. Each
-  fire opens on the conversation's Project, or on the Desk when it has none. A job made where
-  there is no chat to post to, such as Wisp Desktop or `wisp run --interactive`, is kept as
-  its last outcome only, and the agent says so.
+  fire opens on the conversation's Project, or on the Desk when it has none. A job made in a
+  Wisp Desktop chat notifies the desktop. A job made where there is no chat to post to, such
+  as `wisp run --interactive`, is kept as its last outcome only, and the agent says so.
 - **A job belongs to its chat.** In a chat, the agent sees, changes and deletes only the jobs
   that post to that chat. Everyone let in to that chat manages them as their maker would: in
   a Telegram group, the key is the group, not the person. Let people in to a chat that holds
