@@ -274,8 +274,12 @@ A Run can name the chat its outcome belongs in with `deliver`: a Channel, `teleg
 --deliver`](./reference.md#wisp-schedules-create) takes:
 
 ```json
-{ "input": "…", "deliver": { "channel": "telegram", "externalKey": "telegram:123456789" } }
+{ "input": "…", "deliver": { "channel": "telegram", "externalKey": "telegram:123456789", "label": "DM with @anna" } }
 ```
+
+`label`, optional and up to 200 characters, is the chat's name as you see it ("Wisp team",
+"#ops"). It is kept with the Run only, never with a job the Run makes, and Wisp Desktop shows
+the newest one a chat was sent with, from `GET /v1/delivery-targets`.
 
 The Runtime sends nothing itself. The Channel's adapter, such as the [Telegram
 bot](./telegram-bot.md), polls the Runs addressed to it and posts each one:

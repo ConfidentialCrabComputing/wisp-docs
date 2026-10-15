@@ -26,7 +26,7 @@ features:
     messages_tab_read_only_enabled: false
 oauth_config:
   scopes:
-    bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history, files:read, files:write]
+    bot: [chat:write, im:write, im:history, channels:history, groups:history, mpim:history, files:read, files:write, channels:read, groups:read, users:read]
 settings:
   event_subscriptions:
     bot_events: [message.im, message.channels, message.groups, message.mpim]

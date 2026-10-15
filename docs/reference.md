@@ -218,6 +218,7 @@ Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
 | `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
 | `POST` | `/v1/schedules/{id}/run` | fire it now, off the clock; `202` with the Run's `runId`, read on `/v1/runs/{runId}`; `409` when its folder is gone |
 | `GET` | `/v1/fires` | with `channel=desktop`, the settled fires of jobs addressed to that Channel, oldest first, each with its `sequence`, job, instant, outcome and first line of the answer; `settledAfter=<sequence>` lists only those after it |
+| `GET` | `/v1/delivery-targets` | each place a job or a kept Run delivers, once: its `channel` and `externalKey`, the newest `label` a Run addressed there sent, and `group`, whether everyone in that chat reads it |
 
 ### Speech
 
