@@ -92,10 +92,10 @@ start with `!`. In a thread you can also mention the app and write the command w
 
 ## Where the app answers
 
-- **A direct message** with the app is one Session, keyed `slack:<DM id>`.
+- **A direct message** with the app is one Session, keyed `slack:<bot user id>:<DM id>`.
 - **A channel**: first invite the app (`/invite @Wisp`). Slack sends the app nothing from a
   channel it is not in. The app answers only when mentioned (`@Wisp …`). It replies in a thread under
-  that message, and the thread is its own Session, keyed `slack:<channel id>:<thread ts>`. Anyone
+  that message, and the thread is its own Session, keyed `slack:<bot user id>:<channel id>:<thread ts>`. Anyone
   let in can carry on in that thread without mentioning the app again. Each new mention starts
   another thread and another Session.
 - **A channel the owner has not approved**: the first mention there gets a pairing code, and you
@@ -152,6 +152,7 @@ the app is down is answered only if Slack still retries delivering it.
 
 A schedule delivers to Slack with `deliver: { channel: "slack", externalKey: … }`, the key
 naming a direct message (`slack:<DM id>`), a channel (`slack:<channel id>`) or a thread in it
-(`slack:<channel id>:<thread ts>`). Every request the app starts carries its direct message's
-or thread's key, so a job created there delivers back there. An outcome that settles while the
+(`slack:<channel id>:<thread ts>`), followed by `@<bot user id>` so that only this app posts it;
+without it, every app running on the Runtime does. Every request the app starts carries its
+direct message's or thread's key with its own bot user, so a job created there delivers back there. An outcome that settles while the
 app is down is posted once it is back.

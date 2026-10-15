@@ -96,7 +96,11 @@ The key's prefix names the Channel:
 - `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`;
 - `desktop`, Wisp Desktop, which shows each outcome as a system notification.
 
-The bot and the app print the owner's key when they start: "Outcomes reach the owner with
+A Telegram or Slack key may end with `@<bot id>` (Telegram's numeric bot id, Slack's bot user
+id): only that bot posts the outcome. Without it, every bot of the Channel running on the
+Runtime does.
+
+The bot and the app print the owner's key, with their own id, when they start: "Outcomes reach the owner with
 --deliver …". The Runtime sends nothing itself: the bot or app picks the outcome up, so it must
 be running. An outcome that settles while it is down is posted once it is back.
 

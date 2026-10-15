@@ -369,7 +369,10 @@ Makes a job and prints its id. It takes exactly one time spec: `--cron`, `--ever
 `--deliver` is the chat's key, its Channel the prefix:
 
 - `telegram:<chatId>`, or `telegram:<chatId>:<topicId>` for a forum topic;
-- `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`.
+- `slack:<DM id>`, `slack:<channel id>` or `slack:<channel id>:<thread ts>`;
+
+each optionally followed by `@<bot id>` (Telegram's numeric bot id, Slack's bot user id), so that only
+that bot posts it.
 
 ### `wisp telegram setup`
 

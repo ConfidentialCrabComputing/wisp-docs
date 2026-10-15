@@ -94,7 +94,7 @@ refuses the bot's Runs with `403`.
 
 ## Where the bot answers
 
-- **A private chat** is one Session, keyed `telegram:<chat id>`, so the agent remembers the
+- **A private chat** is one Session, keyed `telegram:<bot id>:<chat id>`, so the agent remembers the
   conversation. `wisp sessions list --origin telegram` lists them.
 - **A group** must first be approved by the owner: the first message addressed to the bot
   there sends you a card.
@@ -104,8 +104,8 @@ refuses the bot's Runs with `403`.
   that Telegram sends them, then add the bot to the group again. While privacy mode is on,
   the bot started with `--all-messages` says so on stderr when it starts (in the service's
   log). Each person in a group has their own Session
-  (`telegram:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
-- **A forum topic** is one shared Session for everyone in it (`telegram:<chat id>:<topic id>`).
+  (`telegram:<bot id>:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
+- **A forum topic** is one shared Session for everyone in it (`telegram:<bot id>:<chat id>:<topic id>`).
 - **A reply to someone not let in**: when a participant replies to such a message, it reaches
   the agent marked as a third party's, as data rather than an instruction.
 
@@ -172,6 +172,6 @@ again after it.
 
 ## Schedules
 
-A schedule delivers to Telegram with `--deliver telegram:<chat id>`, or
-`telegram:<chat id>:<topic id>` for a forum topic. The bot prints the owner's key once
-paired.
+A schedule delivers to Telegram with `--deliver telegram:<chat id>@<bot id>`, or
+`telegram:<chat id>:<topic id>@<bot id>` for a forum topic. The bot prints the owner's key once
+paired. Without `@<bot id>`, every bot running on the Runtime posts the outcome.
