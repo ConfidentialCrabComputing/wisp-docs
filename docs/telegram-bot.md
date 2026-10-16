@@ -178,6 +178,27 @@ is back. `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`, when set, win over t
 Removing the file pairs a new owner and shuts out everyone let in by pairing; run `setup`
 again after it.
 
+## More than one bot
+
+One Runtime can serve several bots, say a private one for your DMs and another for a group.
+Each bot is its own `wisp telegram` with its own state file, so give the second one
+`--state` everywhere:
+
+```sh
+wisp telegram setup --state ~/.wisp/telegram-group.json
+wisp telegram --state ~/.wisp/telegram-group.json
+wisp telegram pairing list --state ~/.wisp/telegram-group.json
+```
+
+`setup` mints the second bot a `run` token of its own (named `telegram-…` beside the first's),
+and the bot pairs its own owner: open the link it prints, even if you own the first bot. Its
+Sessions are its own too.
+
+`wisp telegram install` runs only the bot in `$WISP_HOME/telegram.json`: its service has one
+fixed name and takes no `--state`. Run any other bot in a terminal, or under a service of your
+own whose command passes `--state`; `wisp update` does not restart such a service, so restart
+it yourself after an update.
+
 ## Schedules
 
 A schedule delivers to Telegram with `--deliver telegram:<chat id>@<bot id>`, or
