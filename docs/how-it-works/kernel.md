@@ -25,7 +25,7 @@ Before anything executes, the Kernel checks:
   directories (for example `/etc/passwd` or `~/.ssh/`) or into `~/.wisp`.
 - **Bash command check**: a bash command that names `../`, `~/` or an absolute path outside
   the project is refused before it runs. What holds a command in after that, `cd ..`
-  included, is the [sandbox](../permissions.md#bash_run): it sees the project and read-only
+  included, is the [sandbox](../sandbox.md): it sees the project and read-only
   system folders, nothing else of yours.
 
 **Schema and permissions**

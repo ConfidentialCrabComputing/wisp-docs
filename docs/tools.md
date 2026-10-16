@@ -34,10 +34,10 @@ Project, a folder of its own under `~/Wisp`.
 
 | Tool | What it does | Default |
 | --- | --- | --- |
-| `bash_run` | runs a shell command, in a sandbox | `ask` |
+| `bash_run` | runs a shell command, in a [sandbox](./sandbox.md) | `ask` |
 
-Read [`bash_run`](./permissions.md#bash_run) before you allow it: the sandbox keeps a
-command inside its folder, but its network is on.
+Read [`bash_run`](./permissions.md#bash_run) before you allow it: the
+[sandbox](./sandbox.md) keeps a command inside its folder, but its network is on.
 
 ## Schedules
 

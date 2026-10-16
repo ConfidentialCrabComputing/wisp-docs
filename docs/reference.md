@@ -318,7 +318,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
 | `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (670 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
-| `wisp sandbox` | whether the `bash_run` sandbox and its network are on |
+| `wisp sandbox` | whether the `bash_run` [sandbox](./sandbox.md) and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
 | `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |

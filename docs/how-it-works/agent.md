@@ -62,7 +62,7 @@ did, when, and whether a human approved it. Deleting a Session deletes its audit
 - Call recordings: list, read and search
 
 **Sandbox.** Shell commands are sandboxed by default: with `sandbox-exec` on macOS and
-bubblewrap on Linux. A Windows sandbox is in development.
+bubblewrap on Linux. A Windows sandbox is in development. See [Sandbox](../sandbox.md).
 
 **Remote tools** (through the [Wisp Proxy](./proxy.md), inside the TEE)
 

@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
         'connectors',
         'tools',
         'permissions',
+        'sandbox',
         'skills',
         'instructions',
         'schedules',
