@@ -42,22 +42,7 @@ settings:
 2. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write`
    scope and copy it (`xapp-…`).
 
-## 3. Allow `interactive` Runs
-
-The app's Runs are `interactive`, which `confirmationModes` allows by default. Only a
-`runtime.json` that sets the list without it shuts the app out:
-
-```json
-{ "agentToken": "…", "confirmationModes": ["policy", "interactive"] }
-```
-
-:::warning
-Without `interactive` in `confirmationModes` the app answers every message with "This Wisp
-takes no chat messages: its confirmationModes leave out interactive." Add it and restart the
-Runtime.
-:::
-
-## 4. Give it a token and run it
+## 3. Give it a token and run it
 
 ```sh
 wisp tokens create --name slack --capability run --channel slack
@@ -78,9 +63,15 @@ The `run` token must be made with `--channel slack`. Without `--channel` the Run
 the app's Runs with `403`.
 :::
 
-## 5. Become its owner
+## 4. Become its owner
 
 Send the app the `!pair …` line in a direct message: you are its owner. The code works once.
+
+:::note[If the app says it takes no chat messages]
+Someone set [`confirmationModes`](./configuration.md) in `~/.wisp/runtime.json` to a list
+without `interactive`, which the app's Runs need. Add it back, or remove the key to take the
+default, and restart the Runtime.
+:::
 
 ## Commands
 

@@ -20,22 +20,7 @@ without the other.
 
 Make a bot with [@BotFather](https://t.me/BotFather) and copy the token it gives you.
 
-## 2. Allow `interactive` Runs
-
-The bot's Runs are `interactive`, which `confirmationModes` allows by default. Only a
-`runtime.json` that sets the list without it shuts the bot out:
-
-```json
-{ "agentToken": "…", "confirmationModes": ["policy", "interactive"] }
-```
-
-:::warning
-Without `interactive` in `confirmationModes` the bot answers every message with "This Wisp
-takes no chat messages: its confirmationModes leave out interactive." Add it and restart the
-Runtime.
-:::
-
-## 3. Set the bot up
+## 2. Set the bot up
 
 On the Runtime's host:
 
@@ -52,7 +37,7 @@ done for you through `runtime.lock`), and stores both in the bot's
 [state file](#its-state), readable only by you. Run it again to change the bot token; a
 different bot starts with no owner and no one let in.
 
-## 4. Start it as a service
+## 3. Start it as a service
 
 ```sh
 wisp telegram install
@@ -64,10 +49,16 @@ launchd agent `io.usewisp.telegram` on a Mac (log in `~/.wisp/logs/telegram.log`
 restarts it onto the new release, and `wisp telegram uninstall` or `wisp uninstall` removes it.
 Without `install`, `wisp telegram` runs the bot in this terminal.
 
-## 5. Become its owner
+## 4. Become its owner
 
 Open the link `setup` printed on your phone and press Start: you are the bot's owner. The code
 works once.
+
+:::note[If the bot says it takes no chat messages]
+Someone set [`confirmationModes`](./configuration.md) in `~/.wisp/runtime.json` to a list
+without `interactive`, which the bot's Runs need. Add it back, or remove the key to take the
+default, and restart the Runtime.
+:::
 
 The bot answers only the people let in, and each of them drives the agent as you do, with the
 same Connectors and memory.
