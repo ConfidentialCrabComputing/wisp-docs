@@ -28,8 +28,16 @@ and connectors are shared between the two.
 | Install it and get a first answer | [Quickstart](./quickstart.md) |
 | Run it as a service, update it, remove it | [Install, update, uninstall](./install.md) |
 | Use it day to day from the terminal | [Using the CLI](./cli.md) |
-| Give the agent access to GitHub, Drive, Telegram, your own MCP servers | [Connectors](./connectors.md) |
+| Know where a conversation's files live, and tie it to a folder | [Sessions and Projects](./sessions-and-projects.md) |
+| Change a setting, open it to the network, pick the default model | [Configuration](./configuration.md) |
+| Give the agent access to GitHub, Drive, your Telegram account, your own MCP servers | [Connectors](./connectors.md) |
+| See which tools the agent has | [Tools](./tools.md) |
 | Decide which tools may run unattended | [Permissions](./permissions.md) |
+| Teach the agent a procedure, or give it standing instructions | [Skills](./skills.md), [Instructions](./instructions.md) |
+| Run a prompt on a timetable | [Schedules](./schedules.md) |
+| Send it voice, images and documents, get files back | [Voice and files](./voice-and-files.md) |
+| Talk to the agent from Telegram or Slack | [Telegram bot](./telegram-bot.md), [Slack app](./slack-app.md) |
+| Reach it from another machine, a token per device, run it on a server | [Remote access](./remote-access.md) |
 | Ship an agent as a folder you can check out on a server | [Deploying an agent](./deploy-an-agent.md) |
 | Call Wisp from your own code | [The adapter contract](./adapter-contract.md) and [a worked example](./incident-bot.md) |
 | Keep it running | [Runs and restarts](./runs-and-restarts.md), [Troubleshooting](./runbook.md), [Security](./security.md) |
@@ -41,5 +49,7 @@ and connectors are shared between the two.
 - **Session**: one conversation. It keeps its history between Runs and across restarts.
 - **Run**: one prompt sent to a Session, and the agent's work until it answers.
 - **Project**: the folder a Session works in. The agent's file tools are confined to it.
-- **Connector**: an MCP server, or Telegram, that gives the agent more tools.
+- **Connector**: an MCP server that gives the agent more tools. The built-in Telegram
+  connector signs in as your own account, so the agent can read it.
+- **Channel**: a messenger you write to the agent through: `wisp telegram` or `wisp slack`.
 - **Rule**: a decision (`allow`, `ask` or `deny`) for one tool, globally or for one Project.

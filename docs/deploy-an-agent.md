@@ -15,12 +15,12 @@ incident-agent/
 ├── AGENTS.md                       # standing instructions for every Session
 ├── .settings/skills/
 │   └── open-case/SKILL.md          # a named procedure: wisp run --skill open-case
-└── .wisp/                          # this machine's bookkeeping; never committed
+└── .wisp/                          # the Project's bookkeeping; never committed
 ```
 
-- **`AGENTS.md`** is read at the start of every Session in this Project. `CLAUDE.md` and
-  `WISP.md` work too.
-- **`.settings/skills/<name>/SKILL.md`** is a Skill. The front matter is flat `key: value`
+- **`AGENTS.md`** is read again before every message in this Project. `CLAUDE.md` and
+  `WISP.md` work too. See [Instructions](./instructions.md).
+- **`.settings/skills/<name>/SKILL.md`** is a [Skill](./skills.md). The front matter is flat `key: value`
   pairs:
 
   | Key | Meaning |
@@ -34,8 +34,9 @@ incident-agent/
   | `paths` | file patterns the Skill relates to |
 
 - **`.wisp/`** is created by the Runtime the first time the folder is used. It holds the
-  Project's id, which connectors are enabled, and its Rules. It contains its own
-  `.gitignore` with `*`, so it is never committed.
+  Project's id and which connectors are enabled (`.wisp/mcp.json`). It contains its own
+  `.gitignore` with `*`, so it is never committed, but a plain copy of the folder carries
+  it.
 
 ## Deploying to a server
 
@@ -70,9 +71,11 @@ once on each machine:
 
 - **The login:** `wisp login`, or `wisp login --manual` on a server.
 - **Connectors and their secrets:** `wisp connectors add`.
-- **Enabled connectors and Rules:** `wisp connectors enable` and `wisp permissions`. These
-  are tied to the Project's id on this machine, so a copy of the folder never inherits
-  someone else's permissions.
+- **Enabled connectors:** `wisp connectors enable`. The list lives in `.wisp/`, which a
+  checkout does not bring.
+- **Rules:** `wisp permissions`. They are kept in this machine's data directory, tied to
+  the Project's id, so a checkout on another machine never inherits someone else's
+  permissions.
 - **`bash_run`:** refused until a Rule allows it, and on Linux it also needs bubblewrap.
   See [Permissions](./permissions.md#bash_run).
 
@@ -83,8 +86,10 @@ second folder, and the data directory lock would refuse it anyway.
 
 The Project is chosen per Session, by whoever starts it:
 
-- the CLI uses the current folder (`cd` before `wisp run`), or `--project`;
+- `wisp run` uses the current folder (`cd` before it), and `wisp sessions create` takes
+  `--project`;
 - an adapter passes `projectRoot` to `POST /v1/sessions`.
 
 Sessions in different Projects run side by side, up to `maxConcurrentRuns` at once. The
-folder `wisp serve` was started from does not matter.
+folder `wisp serve` was started from matters only to connectors added with `--stdio`: they
+start there, so give their command absolute paths.
