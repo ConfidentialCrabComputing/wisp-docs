@@ -20,9 +20,10 @@ supplies the hardware, can see inside.
 
 ## Attestation
 
-Before anything leaves your device, the Wisp desktop app asks the TEE for an
-*attestation*: cryptographic proof that the TEE is running *this exact code* on *this
-exact hardware*.
+Before anything goes to the [Wisp Proxy](./proxy.md), the Wisp Runtime (inside the desktop
+app, or under `wisp serve`) asks the proxy's TEE for an *attestation*: cryptographic proof
+that it is running *this exact code* on *this exact hardware*. It asks again every
+15 minutes.
 
 1. Wisp asks the TEE to attest, sending a fresh nonce.
 2. The TEE returns a quote covering a hardware attestation and a measurement of the code
@@ -32,7 +33,9 @@ exact hardware*.
 4. Wisp matches the code measurement against the published build: the exact image digest
    our CI produced from the code. We'll open-source it soon, so anyone will be able to
    rebuild it and check the hash themselves.
-5. On any mismatch, Wisp refuses to send a single byte off your device.
+5. On any mismatch, Wisp sends the proxy nothing: no prompt, no web search, no Gmail,
+   Calendar or Drive call. A connector you added yourself does not go through the proxy, and
+   is not held back.
 
 ## TEE vs FHE
 

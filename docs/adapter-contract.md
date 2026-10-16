@@ -5,8 +5,10 @@ description: How your code turns events into Runs over /v1, what it gets back, a
 # The adapter contract
 
 An **adapter** is your code that connects Wisp to the outside world: a chat bot, a webhook
-handler, a scheduler. Wisp has no triggers, schedules or messaging channels of its own. It
-runs when it is called, one Run at a time, and returns the result.
+handler, a scheduler. Wisp ships a few of its own — [schedules](./reference.md#schedules), a
+[Telegram bot](./telegram-bot.md) and a [Slack app](./slack-app.md) —
+and they use this same contract. Anything else is yours to write: Wisp runs when it is
+called, one Run at a time, and returns the result.
 
 That keeps an adapter small. It translates three things:
 
@@ -22,8 +24,10 @@ audit, and one answer per Run.
 
 ## Connecting
 
-The Runtime listens on `127.0.0.1` only. Every request carries
-`Authorization: Bearer <token>`.
+The Runtime listens on `127.0.0.1` unless you [open it to another
+machine](./remote-access.md#reaching-it-from-another-machine). Every request carries
+`Authorization: Bearer <token>`: the one token, a named `full` token, or a `run` token made
+for an adapter (see [Tokens for an adapter](#tokens-for-an-adapter)).
 
 An adapter on the same machine reads the address and token from
 `$WISP_HOME/runtime.lock`, exactly as the CLI does. It is a JSON file, readable only by its
@@ -57,8 +61,32 @@ Content-Type: application/json
   hash anything longer.
 - **`projectRoot`** is the folder the agent works in for the whole life of the Session.
   See [Deploying an agent](./deploy-an-agent.md).
-- **`origin`** is `desktop` (the default) or `cli`. Send `cli`: it keeps your Sessions out
-  of Wisp Desktop's sidebar. It only affects listing, via `GET /v1/sessions?origin=`.
+- **`origin`** is `desktop` (the default), `cli`, `telegram`, `slack` or `schedule`. Send
+  `cli`: it keeps your Sessions out of Wisp Desktop's sidebar. It only affects listing, via
+  `GET /v1/sessions?origin=`.
+
+A Session without `projectRoot` works on a Desk, a folder of its own; see
+[Sessions and Projects](./sessions-and-projects.md).
+
+### Naming the Project again
+
+The Runtime keeps Sessions in memory and finds a Desk Session again on its own, but it does
+not remember which folder a Project Session's Project is in. Once it has dropped such a
+Session from memory, after a restart for instance, the Session's routes answer `404` unless
+the request names the folder again in the query:
+
+```http
+POST /v1/sessions/{id}/runs?projectRoot=/srv/agents/incidents
+```
+
+`PATCH /v1/sessions/{id}`, `POST /v1/sessions/{id}/runs`, `POST /v1/sessions/{id}/cancel` and
+`POST /v1/runs/{runId}/retry` need it then. `GET /v1/sessions/{id}` and
+`GET /v1/sessions/{id}/history` take it too, but without it still answer, from the stored
+rows, the first with `projectRoot: null`. A wrong folder is the same `404`, never another Session. On `PATCH`, the
+query's `projectRoot` finds the Session and the body's is the Project being added. The CLI
+always sends the folder it runs in.
+Calling `POST /v1/sessions` again with the same `externalKey` and `projectRoot` loads the
+Session as well. An adapter that always sends the same `projectRoot` never meets the `404`.
 
 ## A message is a Run
 
@@ -77,13 +105,14 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 
 | Field | Meaning |
 | --- | --- |
-| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`) |
-| `skill`, `arguments` | run one of the Project's [Skills](./deploy-an-agent.md#what-the-folder-holds) |
+| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF or a text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
+| `skill`, `arguments` | run one of the Project's [Skills](./skills.md) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
-| `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
+| `confirmationMode` | optional; `policy` (the default) or `interactive`, which `confirmationModes` must allow (it does by default) — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 | `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
+| `deliver` | optional; `{ "channel": "telegram" \| "slack", "externalKey": "…" }`, the chat the outcome goes to — see [delivering an outcome](#delivering-an-outcome) |
 
 The answer is one JSON object:
 
@@ -101,7 +130,10 @@ The answer is one JSON object:
   `reason` ([the list](./runbook.md#why-a-run-failed)) and a message that never quotes the
   conversation.
 - `toolCalls[].args` is the redacted form from the audit, not the raw arguments.
-- `artifacts` are files the Run wrote, relative to the Project folder.
+- `artifacts` are files the Run wrote with `fs_write` or `fs_edit`, relative to the
+  Session's folder (its Project, or its Desk when it has none), with forward slashes. Files a
+  `bash_run` command writes are not listed. `GET
+  /v1/runs/{runId}/artifacts/{index}` answers the `index`-th one's bytes, to send on as a file.
 
 ### A structured answer
 
@@ -179,6 +211,13 @@ answers at once with the Prompts left. A Prompt nobody answers within `confirmTi
 denied and the Run goes on. A Prompt already settled, or one that is not this Run's, is
 `404`; read the Run with `GET /v1/runs/{id}`, which lists a parked Run's `confirmations`.
 
+An approval may carry `text`, which replaces the draft the Prompt offered before the tool
+runs: `{ "decision": "approve", "text": "…" }`. It counts on the tools whose card has a text
+to edit — Gmail's `send_email` (the body) and the Telegram connector's `send_message`,
+`reply_to_message`, `edit_message` and `save_draft` (the text) and `send_file` (the
+caption) — and is ignored elsewhere. A text the tool's own input rules refuse fails that
+call.
+
 The same Prompts go out on the Run's Event stream as `confirmation.required`, and each
 settles there as `confirmation.resolved` with how: `api`, `timeout` or `cancel`. So the
 answer can come from whoever follows the stream, while the first request still waits; the
@@ -187,7 +226,8 @@ first answer settles a Prompt, and that waiting request then returns. An answer 
 exactly like one of the main agent.
 
 The operator decides whether any of this is possible: a Run naming a mode outside
-`confirmationModes` is refused `403`, and the default allows `policy` alone.
+`confirmationModes` is refused `403`. The default allows both; an operator who sets the list
+to `["policy"]` turns Prompts off.
 
 ## Follow-ups and cancelling
 
@@ -195,16 +235,21 @@ A Session runs one Run at a time. A message that arrives while a Run is going wa
 queue, and its connection stays open while it waits. You do not have to serialise anything
 yourself.
 
-`409 Conflict` has exactly two causes:
+`409 Conflict` on a new Run means one of these:
 
 - the Session's queue is full (`maxQueuedRunsPerSession`, 10 by default): back off, or drop
   the message;
-- the same `idempotencyKey` came with a different request. The error names the key.
+- the same `idempotencyKey` came with a different request. The error names the key;
+- the key's message is already in the Session but its Run's record is gone, or the record
+  lost its outcome: the message may have acted, so it is never run again.
 
 `POST /v1/sessions/{id}/cancel` stops the current Run and everything queued behind it. It
 answers `202` when something was stopped and `204` when nothing was running. You cannot
 cancel a single queued message. A Run parked on a Prompt is cancelled too: its Prompts are
 denied, and the waiting request answers `cancelled`.
+
+`DELETE /v1/sessions/{id}` is `409` while the Session has a Run going: cancel first, then
+delete.
 
 ## Not waiting
 
@@ -222,6 +267,41 @@ behind a proxy — sends `"wait": false`. Then:
 A repeat with the same `idempotencyKey` answers `202` with the same `runId` and its status
 now, and starts nothing. Nothing is pushed to you: there are no webhooks — poll the Run or
 follow its Events.
+
+## Delivering an outcome
+
+A Run can name the chat its outcome belongs in with `deliver`: a Channel, `telegram` or
+`slack`, and the chat's key, the same key [`wisp schedules create
+--deliver`](./reference.md#wisp-schedules-create) takes:
+
+```json
+{ "input": "…", "deliver": { "channel": "telegram", "externalKey": "telegram:123456789", "label": "DM with @anna" } }
+```
+
+`label`, optional and up to 200 characters, is the chat's name as you see it ("Wisp team",
+"#ops"). It is kept with the Run only, never with a job the Run makes, and Wisp Desktop shows
+the newest one a chat was sent with, from `GET /v1/delivery-targets`.
+
+The Runtime sends nothing itself. The Channel's adapter, such as the [Telegram
+bot](./telegram-bot.md), polls the Runs addressed to it and posts each one:
+
+```http
+GET /v1/runs?channel=telegram&settledAfter=<cursor>
+```
+
+- It lists only Runs that have ended, oldest first by the order they ended in, from every
+  entrance, schedules included. A Run whose answer begins or ends with a line `[SILENT]` is
+  left out.
+- Each Run carries `settleCursor`. Keep the last one you posted and send it as
+  `settledAfter` next time; leave `settledAfter` out the first time. `limit` pages it as in
+  the plain listing, and `nextCursor` is the next page's `settledAfter`.
+- `channel` takes only `limit` and `settledAfter`: adding `cursor`, `sessionId`, `status`
+  or `origin`, or sending `settledAfter` without `channel`, is `400`.
+- A `run` token reads only its own Channel's deliveries (another Channel is `403`), and
+  never a Run another `run` token started.
+
+A Run's `deliver` shows on `GET /v1/runs/{runId}`, and a Run a schedule fired carries the
+job's name as `schedule`.
 
 ## From TypeScript
 
@@ -264,13 +344,16 @@ for await (const event of runEvents(baseUrl, token, run.data.runId)) {
 
 The Event stream is the one part a generator does not handle. This reader, saved as
 `events-reader.ts` beside `v1.d.ts`, follows a Run's Events until the terminal one, skips a
-kind it does not know, and resumes a dropped connection with `Last-Event-ID`. It runs
+kind it does not know, and resumes with `Last-Event-ID` a dropped connection or one a proxy
+answers 5xx or 429, as a Run waiting on a Prompt is not over; an optional
+`signal` stops it, so a process shutting down is never held by a Run it follows. It runs
 server-side, on Node 18 or later: a browser's `EventSource` cannot send the token.
 
 ```ts
 // Reads a Run's Events from the Wisp Runtime. Server-side: the stream needs the
 // Bearer token, which a browser's EventSource cannot send. `./v1.js` holds the
 // types `openapi-typescript` generates from the release's v1.json.
+import { setTimeout as sleep } from "node:timers/promises";
 import type { paths } from "./v1.js";
 
 export type RunEvent =
@@ -279,7 +362,7 @@ export type RunEvent =
 // Every kind this reader knows, and whether it ends the stream. Any other kind is skipped.
 const KINDS: Record<RunEvent["kind"], boolean> = {
   "run.queued": false, "run.started": false, "run.parked": false, "run.resumed": false,
-  "text.delta": false, "tool_call.started": false, "tool_call": false, "gap": false,
+  "text.delta": false, "audio.transcribed": false, "tool_call.started": false, "tool_call": false, "gap": false,
   "confirmation.required": false, "confirmation.resolved": false,
   "run.completed": true, "run.failed": true, "run.cancelled": true,
 };
@@ -297,17 +380,37 @@ function decode(data: string): RunEvent | undefined {
 }
 
 // Follows a Run's Events until its terminal one. A connection that drops, or
-// ends having brought an Event, is resumed after the last seq with Last-Event-ID.
-export async function* runEvents(baseUrl: string, token: string, runId: string): AsyncGenerator<RunEvent> {
+// ends having brought an Event, is resumed after the last seq with Last-Event-ID;
+// one refused, as while the Runtime restarts, or answered 5xx or 429, is tried again each second.
+// `signal` stops it: following a Run never holds a caller that is shutting down.
+export async function* runEvents(
+  baseUrl: string, token: string, runId: string, signal?: AbortSignal,
+): AsyncGenerator<RunEvent> {
   let lastSeq: number | undefined;
   for (let progressed = true; progressed; ) {
     progressed = false;
-    const res = await fetch(`${baseUrl}/v1/runs/${encodeURIComponent(runId)}/events`, {
-      headers: {
-        authorization: `Bearer ${token}`,
-        ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
-      },
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${baseUrl}/v1/runs/${encodeURIComponent(runId)}/events`, {
+        headers: {
+          authorization: `Bearer ${token}`,
+          ...(lastSeq === undefined ? {} : { "last-event-id": String(lastSeq) }),
+        },
+        signal,
+      });
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      progressed = true; // the Runtime is down: tried again a second later, for as long as it is
+      await sleep(1000, undefined, { signal });
+      continue;
+    }
+    // A proxy's 5xx or a 429 is not the Run's end: it may wait on a Prompt. Only a 4xx is.
+    if (res.status >= 500 || res.status === 429) {
+      await res.body?.cancel();
+      progressed = true;
+      await sleep(1000, undefined, { signal });
+      continue;
+    }
     if (!res.ok || !res.body) throw new Error(`events: HTTP ${res.status}`);
     let buffered = "";
     try {
@@ -324,9 +427,10 @@ export async function* runEvents(baseUrl: string, token: string, runId: string):
           if (KINDS[event.kind]) return;
         }
       }
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) throw err;
       progressed = true; // the connection dropped: resume, a second later
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await sleep(1000, undefined, { signal });
     }
   }
   throw new Error("events: the stream ended before the Run did");
@@ -340,32 +444,63 @@ compiler tells you what is new.
 ## Health
 
 `GET /v1/health` with the token returns the Runtime's state (`ready`, `login_required` and
-so on; see [Troubleshooting](./runbook.md#the-five-states)). Without a token it still
-answers `200` with an empty body, which is enough for a liveness probe. `GET /v1/ready`
-answers whether the Runtime will accept a Run right now.
+so on; see [Troubleshooting](./runbook.md#the-five-states)), its `version` and `kind`,
+`apiVersion`, and `update` when a newer release exists. Without a token it still answers
+`200` with an empty object, which is enough for a liveness probe. `GET /v1/ready` answers
+whether the Runtime will accept a Run right now.
+
+`apiVersion` is the revision of `/v1` the Runtime speaks, now `1`. It goes up only when a
+route or field is removed or renamed or changes meaning; a new route or optional field
+leaves it as it is. Compare it with the one your adapter was written for.
+
+While a newer release exists, every answer to a request that carries a token also carries
+an `X-Wisp-Update` header naming its version.
+
+## Errors
+
+An error answers a JSON body `{ "error": "…" }`, a sentence for a person. Some carry a
+`code` beside it for a program to match, such as
+`confirmation_mode_interactive_not_allowed`; match the status and the `code`, never the
+sentence.
+
+## Tokens for an adapter
+
+Give each adapter its own `run` token instead of the one token, so a leak costs only that
+adapter and `wisp tokens revoke` shuts it out alone:
+
+```sh
+wisp tokens create --name my-bot --capability run
+```
+
+A `run` token reaches only what an adapter needs:
+
+- it opens Sessions on the Desk only (a `projectRoot` is `403`) and starts Runs in those;
+- it reads Runs, their Events and artifacts, and cancels a Session's Runs;
+- it answers only the Prompts of Runs it started, with `approve` or `deny`;
+- it reads and starts the speech model's install;
+- with `--channel telegram` or `--channel slack` it may name a `deliver` target, of that
+  Channel only. Without `--channel`, a Run that names `deliver` is `403`.
+
+Everything else (Rules, connectors, schedules, tokens) is `403`.
 
 ## Not available yet
 
-What is there today: turning a message into a Session and a Run, waiting for it or not,
-reading a Run back by id (`GET /v1/runs/{id}`, across restarts too), following its Events
-while it works (`GET /v1/runs/{id}/events`; see the [reference](./reference.md)), and a
-person approving a tool mid-Run through the `interactive` mode. What is not there yet:
-
-- **No author marking on input.** Everything in `input` is treated as the account owner's
-  own words. If you relay a message from someone else, the agent reads it as yours. Either
-  relay it knowing that, or keep it out of the input.
-- **No webhooks, no scoped tokens, no listening beyond loopback.** One token can do
-  everything, on the machine the Runtime runs on. To reach it from elsewhere, tunnel to its
-  loopback port.
+There are no webhooks: the Runtime never calls your adapter. Poll `GET /v1/runs/{runId}` or
+follow its Events instead.
 
 ## Who wrote what
 
 Wisp strips control characters, invisible characters and its own framing tags from every
 connector result, so a tool's output cannot pretend to be part of the conversation's
-structure. What Wisp cannot know is **who wrote** a piece of text; only the connector knows
-that. The Telegram connector marks every message with `fromMe`. If you write MCP servers,
-mark authorship the same way, as a field next to the text, so the agent can tell an
-instruction from a quote of one.
+structure. What Wisp cannot know is **who wrote** a piece of text; only the connector or the
+adapter knows that.
+
+- **In `input`**, mark a message you relay from someone other than the account owner with
+  `"author": "third_party"`. The agent then reads it as data, never as an instruction. A
+  block without `author` is the owner's own words.
+- **In a connector**, the Telegram connector marks every message with `fromMe`. If you write
+  MCP servers, mark authorship the same way, as a field next to the text, so the agent can
+  tell an instruction from a quote of one.
 
 ## A scheduler is an adapter too
 

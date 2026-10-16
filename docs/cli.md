@@ -15,7 +15,8 @@ wisp run "summarise the open TODOs in this repo"
 ```
 
 `wisp run` sends the prompt, waits for the agent to finish, prints the answer and exits.
-There is no time limit on the wait. Ctrl-C or `wisp cancel` ends it.
+There is no time limit on the wait. Ctrl-C ends only the wait: the Run goes on in the
+Runtime. `wisp cancel` stops it.
 
 - **Without a Session id** it starts a new Session whose Project is the current folder.
 - **stderr** gets `session <id>` first, before the wait, so you can cancel or continue that
@@ -39,28 +40,45 @@ the new one waits for it to finish.
 
 ### Choosing a model
 
+`wisp models` lists the models the proxy offers, one per line:
+
 ```sh
 wisp models
 # <id>  <tiers>  <context window>  <capabilities>
-
-wisp run --model <id> "…"
 ```
 
-`--model` takes a model id from `wisp models`, or `tier:<name>` to let the proxy pick a
-model from that tier. Without it, the Run uses `teeLlmModel` from the
-[configuration](./reference.md#configuration).
+The columns are the model's id, the tiers it belongs to, its context window in tokens, and
+what it can do besides text, such as `images`. A `-` means the catalog says nothing. With
+`--json`, `wisp models` prints the catalog as the proxy sent it.
+
+`wisp run --model` picks the model for one Run:
+
+```sh
+wisp run --model <id> "…"           # this model
+wisp run --model tier:<name> "…"    # any model of this tier; the proxy picks which
+```
+
+- **Without `--model`**, the Run uses `teeLlmModel` from the configuration. Its default,
+  `auto:auto:best`, lets the proxy choose. To change it for every Run, see
+  [Configuration](./configuration.md#change-the-default-model).
+- **A retry** with `wisp retry` uses the model its Run asked for.
+- **Over `/v1`**, the same value goes in the Run's `modelPreference`
+  ([the adapter contract](./adapter-contract.md#a-message-is-a-run)).
+
+The Runtime sizes the conversation to the smallest context window among the models your
+choice can reach, so a tier with a small model in it compacts earlier. If none of them lists
+`images`, the agent cannot look at an image file and tells you so.
 
 ### Running a Skill
 
-A Skill is a named procedure stored in the Project. The agent follows its instructions, and
-it may limit which tools the agent can use. See
-[Deploying an agent](./deploy-an-agent.md#what-the-folder-holds) for how to write one.
-
 ```sh
-wisp skills list --project .                   # the Skills this folder has
+wisp skills list --project .                   # the Skills this folder's Sessions get
 wisp run --skill open-case "$(cat alert.json)" # the text after the name is the Skill's arguments
 wisp run 6b4f2a7e-… --skill summarise ""       # a Skill on an existing Session, no arguments
 ```
+
+Where Skills live, how to write one and the other ways to run one are in
+[Skills](./skills.md).
 
 ### Retrying safely
 
@@ -93,7 +111,8 @@ wisp retry <run>                                # run a failed or cancelled Run'
 ```
 
 `--interactive` lets a tool the Rules hold for a person wait for an answer instead of being
-refused — the operator must allow it in `confirmationModes`. On a park `wisp run` prints each
+refused; it is refused only when the operator left `interactive` out of
+`confirmationModes`. On a park `wisp run` prints each
 Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `deny`,
 `allow-project`, `allow-global`), which waits for the next park or the end, exactly like
 `wisp run`. Add `--detach` to answer and return at once.
@@ -103,15 +122,18 @@ Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `den
 ```sh
 wisp sessions list                 # Sessions started from this folder by the CLI
 wisp sessions list --all           # every Session, Wisp Desktop's included
+wisp sessions list --origin telegram  # every Session one client opened, e.g. the Telegram bot's
 wisp sessions show <id>            # a Session's messages
 wisp sessions create --title "…"   # start an empty Session and print its id
 wisp sessions delete <id>
 ```
 
-`list` prints one line per Session: id, origin (`cli` or `desktop`), last update, number of
-messages and title.
+`list` prints one line per Session: id, origin (`cli`, `desktop`, `telegram`, `slack` or `schedule`), last update,
+number of messages and title.
 
-Sessions are kept on disk. They survive restarts and cost nothing while idle.
+Sessions are kept on disk. They survive restarts and cost nothing while idle. A Session
+with a Project is found again through its folder, so continue it from that folder; see
+[Sessions, Projects and the Desk](./sessions-and-projects.md).
 
 ## Stopping a Run
 
@@ -131,14 +153,16 @@ wisp audit <session>
 ```
 
 Every tool call of the Session, newest first: when it happened, the tool, whether it
-succeeded, how long it took, and the Rule's decision. The audit never records what a tool
-received or returned. A row like the second one is a tool that was refused because no Rule
+succeeded, how long it took, and the Rule's decision. The audit also keeps what each tool
+was given and what it returned, in the encrypted store: long strings cut short, and values
+under names such as `token` or `password` masked. `--json` shows the arguments. A row like
+the second one is a tool that was refused because no Rule
 allowed it. See [Permissions](./permissions.md).
 
 ## From scripts
 
-- `--json` makes any command print a single JSON document on stdout and nothing else there.
-  For `wisp run` it is the full [Run outcome](./adapter-contract.md#a-message-is-a-run) plus
+- `--json` makes a command that lists or shows something print a single JSON document on
+  stdout and nothing else there. For `wisp run` it is the full [Run outcome](./adapter-contract.md#a-message-is-a-run) plus
   `sessionId`.
 - Exit codes are stable: `0` done, `1` failed, `2` bad command line, `4` no Runtime
   reachable, `5` token refused. See [the full table](./runbook.md#exit-codes).

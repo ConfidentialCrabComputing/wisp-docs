@@ -66,6 +66,10 @@ Then nothing is running yet. Start the Runtime yourself and keep that terminal o
 wisp serve
 ```
 
+On Linux, `wisp serve` first needs a key file for its encryption key; see
+[the encryption key on a server](./remote-access.md#the-encryption-key-on-a-server). The service
+makes one for you, which is one more reason to say yes to it.
+
 Run the remaining commands in a second terminal. To get the background service later, see
 [Install, update, uninstall](./install.md#run-it-as-a-service).
 

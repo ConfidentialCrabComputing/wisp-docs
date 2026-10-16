@@ -16,8 +16,9 @@ cloud or the agent. The binary holds zero API keys or credentials, so there are 
 secrets to leak. See [The desktop app](../desktop/app.md).
 
 **Storage (encrypted).** At rest, your chats, audit log, memory and connector tokens live
-in a ChaCha20-Poly1305 encrypted database on your machine. The encryption key exists only in your
-OS keyring: it's never written to disk and Wisp doesn't keep a copy. See
+in a ChaCha20-Poly1305 encrypted database on your machine. The encryption key lives in your
+OS keyring, or, on a server without one, under a [key file](../remote-access.md#the-encryption-key-on-a-server)
+you keep. Wisp doesn't keep a copy. See
 [Data encryption](./encryption.md).
 
 **Wisp agent.** The Wisp agent runs entirely on your machine. It plans and executes each
