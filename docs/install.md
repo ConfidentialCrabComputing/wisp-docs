@@ -110,6 +110,12 @@ wisp serve     # runs in this terminal; Ctrl-C stops it
 wisp stop      # stops it from another terminal
 ```
 
+:::warning[Linux]
+On Linux, `wisp serve` keeps its encryption key in a file and stops with exit code 78 until
+you name one with `WISP_MASTER_KEY_FILE`. The service sets this up for you; without it, see
+[the encryption key on a server](./remote-access.md#the-encryption-key-on-a-server).
+:::
+
 ## Next to Wisp Desktop
 
 Wisp Desktop and the CLI share one data directory, `~/.wisp`. That means one set of
@@ -134,6 +140,24 @@ you), and every other `wisp` command reads them from there.
 To use a different token, edit `agentToken` in `~/.wisp/runtime.json`. It must be at least
 32 characters long. Then restart the Runtime.
 
+## What `~/.wisp` holds
+
+| path | what it is |
+| --- | --- |
+| `runtime.json` | the settings — see [Configuration](./configuration.md) |
+| `runtime.lock` | the running Runtime's address and token, for the other `wisp` commands |
+| `data.db`, `global.db` | Sessions, messages, memory, Rules, schedules and the audit, encrypted |
+| `keys/` | how the encryption keys are kept: in the OS keyring, or sealed with the [key file](./remote-access.md#the-encryption-key-on-a-server) |
+| `mcp.json` | the connectors |
+| `telegram.json`, `slack.json` | the [Telegram bot](./telegram-bot.md)'s and the [Slack app](./slack-app.md)'s owner, users and tokens |
+| `models/` | the speech model, once installed |
+| `logs/` | the service logs on macOS and the Telegram bot's log |
+| `bin/`, `versions/` | the installed `wisp` |
+
+To back up or move a Runtime, stop it and copy the whole directory. The databases open only
+with their keys: on a server, take the key file too
+(`~/.config/wisp/master.key`); the OS keyring does not travel with the folder.
+
 ## Update
 
 ```sh
@@ -142,7 +166,13 @@ wisp update
 
 This downloads and verifies the newest release next to the current one, then restarts the
 service onto it and waits for it to come up on the new version. If the service does not
-come up within 30 seconds, the release is still installed; `wisp doctor` says why.
+come up within 30 seconds, the release is still installed; `wisp doctor` says why. A running
+[Telegram bot service](./telegram-bot.md) is restarted onto the new version too.
+
+Each version in `~/.wisp/versions` is a few hundred megabytes, so `wisp update` then deletes
+the old ones. It keeps the new version, the one it replaced, and the one a running Runtime
+was started from, if that is yet another. A directory it cannot delete is named on stderr,
+and the update still counts as done.
 
 A service you stopped stays stopped, and a `wisp serve` you started by hand keeps running
 the old version until you restart it. When a newer release exists, every `wisp` command
@@ -158,8 +188,10 @@ wisp 0.2.0 is available — run `wisp update`
 wisp uninstall
 ```
 
-This removes the service, `~/.wisp/bin`, `~/.wisp/versions`, `runtime.json` and the `PATH`
-line the installer added. At a terminal it first asks what to do with your data:
+This removes the service, the Telegram bot's service, `~/.wisp/bin/wisp`, `~/.wisp/versions`
+and the `PATH` line the installer added. It removes `runtime.json` only while it holds
+nothing but the installer's `agentToken`: a file you edited is kept. At a terminal it first
+asks what to do with your data:
 
 ```
   1) Keep data: remove the Runtime; Sessions, connectors and settings stay

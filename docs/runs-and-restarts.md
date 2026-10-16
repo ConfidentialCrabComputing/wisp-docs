@@ -6,13 +6,16 @@ description: What happens to a Run when the connection drops or the Runtime rest
 
 ## A Run happens at most once
 
-Wisp never retries a Run on its own, and it does not save Runs to disk. A Run's answer is
-the response to the request that started it. If that connection drops, or the Runtime
-stops, the answer is gone. The Session's history is on disk and survives, even when the
-turn itself finished.
+Wisp never retries a Run on its own. It does keep a record of every Run on disk, with its
+status and, once it ended, its outcome. If the connection that started a Run drops, the
+Run goes on, and `GET /v1/runs/{runId}` (or `wisp runs show`) reads its answer afterwards —
+after a restart too. A Run the Runtime stopped in the middle reads `failed` with
+`failure.reason: shutdown`, a Run parked on a Prompt among them. Records are kept for
+`runRecordRetentionMs` (7 days).
 
-So retrying is always the caller's decision. The idempotency key is what makes a retry
-safe.
+So retrying is always the caller's decision: `POST /v1/runs/{runId}/retry` (or
+`wisp retry`) runs a failed or cancelled Run's message again. The idempotency key is what
+makes sending the same request twice safe.
 
 ## The key
 
@@ -22,13 +25,16 @@ Skill, and the model preference). Then:
 
 - **a repeat while the Run is still going** joins it: two requests, one Run, the same
   answer;
+- **a repeat while the Run is parked** on a Prompt answers at once with the pending
+  Prompts, so a lost park response does not leave you waiting on Prompts only you answer;
 - **a repeat after it ended** gets the stored answer, and the Session's history does not
   get a second turn;
 - **the same key with a different request** is refused with `409`, and nothing runs.
 
-Keys are kept in memory for `idempotencyTtlMs` (24 hours), and the oldest are dropped first
-when there are many. **A restart forgets every key**, so a repeat after a restart starts a
-new Run.
+A key lives in the Run's record for `idempotencyTtlMs` (24 hours), **restarts included**: a
+repeat after a restart finds its Run and starts nothing new — except a Run a shutdown ended
+while it still waited in its queue: nothing of it ran, so the repeat runs it. With `"wait": false` a repeat
+answers `202` with the same `runId` and the Run's status now.
 
 How to retry after a dropped connection: wait until `wisp status` (or `GET /v1/health`)
 says `ready`, then send the identical request with the identical key.
@@ -43,7 +49,9 @@ says `ready`, then send the identical request with the identical key.
 3. A Run still going when the window ends is stopped, also `failed` with `shutdown`.
 4. Connectors disconnect and the stores close.
 
-`wisp stop` finds the Runtime's process id in `$WISP_HOME/runtime.lock` and signals it. On
+`wisp stop` finds the Runtime's process id in `$WISP_HOME/runtime.lock` and signals it,
+then returns without waiting for the drain. It works only through the lock, so it refuses
+while `WISP_URL` or `WISP_TOKEN` is set. On
 purpose there is no "stop" endpoint in `/v1`: a token should not be enough to take the
 Runtime down. `wisp stop` refuses to stop Wisp Desktop's Runtime; quit the app instead.
 
@@ -61,6 +69,31 @@ sets the service's stop timeout to the window plus 5 seconds (`TimeoutStopSec` f
 If you change the window later, run the installer again with `WISP_SERVICE=1` so it
 rewrites the service with the new value. On Linux you can instead edit `TimeoutStopSec` in
 `~/.config/systemd/user/wisp.service` and run `systemctl --user daemon-reload`.
+
+## Scheduled Runs and restarts
+
+A schedule fires each instant at most once. The Runtime writes the job's next instant to
+disk before it starts the fire, and gives the fire's Run the key `<scheduleId>:<instant>`,
+so neither a crash nor a restart fires an instant twice. A drain fires nothing: the
+scheduler stops when the drain starts.
+
+A fire already going when you stop the Runtime is a Run like any other: it gets the drain
+window and is failed with `shutdown` if it outlives it. Fires are not retried. So before a
+planned restart such as `wisp update`, set `shutdownDrainTimeoutMs` to at least your
+longest scheduled job, say `600000` for a ten-minute nightly report, and run the installer
+again with `WISP_SERVICE=1` so the service waits that long too.
+
+While the Runtime is down, nothing fires. When it is back:
+
+- a recurring job fires its latest missed instant once, if that instant is late by no more
+  than half the job's period, kept between 2 minutes and 2 hours. A 09:00 daily job is back
+  in time until 11:00;
+- later than that, it skips to its next instant;
+- missed instants never pile up: a week down is one fire at most;
+- a one-off job fires once, however late.
+
+The job's `lastOutcome` records how many instants were skipped as `skipped`, with or without
+a fire.
 
 ## Concurrency
 

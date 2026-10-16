@@ -23,8 +23,10 @@ Before anything executes, the Kernel checks:
 - **Absolute path resolution**: absolute paths aren't rejected outright. The Kernel
   resolves them and refuses only those that lead outside the project, into sensitive
   directories (for example `/etc/passwd` or `~/.ssh/`) or into `~/.wisp`.
-- **Bash working directory lock**: bash commands run with the working directory locked to
-  the project root, so `cd ..` or `cd /` doesn't let the agent wander.
+- **Bash command check**: a bash command that names `../`, `~/` or an absolute path outside
+  the project is refused before it runs. What holds a command in after that, `cd ..`
+  included, is the [sandbox](../sandbox.md): it sees the project and read-only
+  system folders, nothing else of yours.
 
 **Schema and permissions**
 
