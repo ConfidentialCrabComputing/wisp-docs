@@ -68,6 +68,17 @@ test("the site's own search index covers the docs", () => {
   assert.match(index, /confirmationModes/);
 });
 
+test("agents get /llms.txt, /llms-full.txt and a .md of every page it links", () => {
+  const index = page("llms.txt");
+  const links = [...index.matchAll(/\]\(https:\/\/docs\.usewisp\.io\/([^)]+\.md)\)/g)].map((m) => m[1]);
+  assert.ok(links.includes("how-it-works/overview.md"), "llms.txt leaves out the overview");
+  for (const path of links) {
+    assert.ok(existsSync(new URL(`../build/${path}`, import.meta.url)), `${path} is linked but not built`);
+  }
+  assert.match(page("how-it-works/overview.md"), /^# /m);
+  assert.match(page("llms-full.txt"), /confirmationModes/);
+});
+
 test("the look is Infima variables and the landing's heading font, with nothing ejected", () => {
   const home = page("index.html");
   const stylesheet = home.match(/href=(\/assets\/css\/[^\s>"]+\.css)/)?.[1];

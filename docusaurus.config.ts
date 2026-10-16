@@ -60,6 +60,9 @@ const config: Config = {
     ],
   ],
 
+  // For agents: /llms.txt, /llms-full.txt and a `.md` beside every page.
+  plugins: [['docusaurus-plugin-llms', {generateMarkdownFiles: true}]],
+
   themeConfig: {
     colorMode: {
       respectPrefersColorScheme: true,
