@@ -153,7 +153,14 @@ Each fire's message is the job's own, with a few lines from the Runtime after it
   the previous fire read. A `[SILENT]` answer, an empty one, or a failed fire does not replace
   it.
 - **No one to ask.** A fire runs under `policy`: a tool whose decision is `ask` is refused,
-  not asked. [Allow](./permissions.md) what the job needs, in its Project when it has one.
+  not asked. [Allow](./permissions.md) what the job needs, in its Project when it has one. A
+  fire refused a tool this way is recorded as `failed` whatever it answered, and its chat is
+  sent "Needs `<tool>` allowed to run unattended…", with the `wisp permissions set` to run, in
+  place of the answer.
+
+A fire's Session is kept for `runRecordRetentionMs` (7 days) after it was last touched; then a
+daily sweep deletes it, with its messages, its audit and the memories it stored. A Session
+someone has open, or whose Desk folder still exists, is kept.
 
 ## When a fire is skipped
 

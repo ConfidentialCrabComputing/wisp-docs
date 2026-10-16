@@ -156,6 +156,17 @@ A mistyped code or password asks again. An expired code makes Telegram send a ne
 Messages the Telegram connector returns carry `fromMe`, so the agent can tell what you wrote
 from what others wrote.
 
+Its tools read (`get_me`, `list_chats`, `get_chat`, `get_messages`, `search_messages`,
+`search_global`, `get_message_context`, `get_message_link`, `resolve_chat`, `list_contacts`,
+`search_contacts`, `download_media`, `transcribe_voice`) and write (`send_message`,
+`reply_to_message`, `forward_message`, `send_file`, `save_draft`, `edit_message`,
+`delete_message`) as your account. Reading marks nothing read. `transcribe_voice` needs
+Telegram Premium on the account.
+
+`POST /v1/connectors/telegram/disconnect` signs the account out at Telegram and keeps the API
+keys; `wisp connectors remove telegram` signs it out and deletes the keys too. If Telegram
+cannot be reached, remove the Wisp device by hand under Settings › Devices.
+
 ## Enabling per Project
 
 ```sh
@@ -166,8 +177,10 @@ A connector is available in a Project only after it is enabled there. If you ask
 for something a connected but not-enabled connector would do, it says the connector is not
 enabled in this Project and gives you the `enable` command to run.
 
-Enabling is stored on this machine, not in the Project folder, so a fresh checkout on
-another server has to be enabled there too. See
+Enabling is stored in the Project folder, in `.wisp/mcp.json`, as a list of connector names.
+A copy of the folder carries the list, but not the connectors themselves: they, and their
+secrets, stay in the Runtime's data directory, so another server must add them before the
+list means anything there. See
 [Deploying an agent](./deploy-an-agent.md#what-a-deploy-does-not-carry).
 
 ## Checking and removing

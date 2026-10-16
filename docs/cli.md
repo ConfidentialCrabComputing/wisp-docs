@@ -15,7 +15,8 @@ wisp run "summarise the open TODOs in this repo"
 ```
 
 `wisp run` sends the prompt, waits for the agent to finish, prints the answer and exits.
-There is no time limit on the wait. Ctrl-C or `wisp cancel` ends it.
+There is no time limit on the wait. Ctrl-C ends only the wait: the Run goes on in the
+Runtime. `wisp cancel` stops it.
 
 - **Without a Session id** it starts a new Session whose Project is the current folder.
 - **stderr** gets `session <id>` first, before the wait, so you can cancel or continue that
@@ -110,7 +111,8 @@ wisp retry <run>                                # run a failed or cancelled Run'
 ```
 
 `--interactive` lets a tool the Rules hold for a person wait for an answer instead of being
-refused — the operator must allow it in `confirmationModes`. On a park `wisp run` prints each
+refused; it is refused only when the operator left `interactive` out of
+`confirmationModes`. On a park `wisp run` prints each
 Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `deny`,
 `allow-project`, `allow-global`), which waits for the next park or the end, exactly like
 `wisp run`. Add `--detach` to answer and return at once.
@@ -151,14 +153,16 @@ wisp audit <session>
 ```
 
 Every tool call of the Session, newest first: when it happened, the tool, whether it
-succeeded, how long it took, and the Rule's decision. The audit never records what a tool
-received or returned. A row like the second one is a tool that was refused because no Rule
+succeeded, how long it took, and the Rule's decision. The audit also keeps what each tool
+was given and what it returned, in the encrypted store: long strings cut short, and values
+under names such as `token` or `password` masked. `--json` shows the arguments. A row like
+the second one is a tool that was refused because no Rule
 allowed it. See [Permissions](./permissions.md).
 
 ## From scripts
 
-- `--json` makes any command print a single JSON document on stdout and nothing else there.
-  For `wisp run` it is the full [Run outcome](./adapter-contract.md#a-message-is-a-run) plus
+- `--json` makes a command that lists or shows something print a single JSON document on
+  stdout and nothing else there. For `wisp run` it is the full [Run outcome](./adapter-contract.md#a-message-is-a-run) plus
   `sessionId`.
 - Exit codes are stable: `0` done, `1` failed, `2` bad command line, `4` no Runtime
   reachable, `5` token refused. See [the full table](./runbook.md#exit-codes).

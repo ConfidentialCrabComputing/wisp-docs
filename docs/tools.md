@@ -36,8 +36,8 @@ Project, a folder of its own under `~/Wisp`.
 | --- | --- | --- |
 | `bash_run` | runs a shell command, in a sandbox | `ask` |
 
-Read [`bash_run`](./permissions.md#bash_run) before you allow it: the sandbox limits the
-filesystem, not the network.
+Read [`bash_run`](./permissions.md#bash_run) before you allow it: the sandbox keeps a
+command inside its folder, but its network is on.
 
 ## Schedules
 
@@ -88,7 +88,7 @@ wisp permissions set skill_fs_write ask
 
 | Tool | What it does | Default |
 | --- | --- | --- |
-| `memory_store` | saves a memory, for this Project or for every Project | `allow` |
+| `memory_store` | saves a memory, tied to this Session or kept for good | `allow` |
 | `memory_recall` | finds memories by text, tag or type | `allow` |
 | `memory_update` | changes a memory | `allow` |
 | `memory_delete` | deletes a memory | `allow` |
@@ -102,8 +102,16 @@ wisp permissions set skill_fs_write ask
 | `recording_search` | searches recordings for a topic | `allow` |
 | `recording_delete` | deletes a recording and its transcript | `ask` |
 
-A subagent's tool calls go through the same Rules as the agent's own. By default it stops
-after 200 steps or 5 minutes.
+The agent also remembers on its own. After each turn in which it stored nothing itself, the
+Runtime asks the model what in the turn is worth keeping and saves that. Before each turn
+it adds the memories and preferences that look relevant, from every Session and Project, and
+points the agent at recordings that do. A memory the agent marks `project` is not limited
+to the Project: it is offered everywhere, and it is deleted with the Session that stored it.
+A `global` one stays until it is deleted.
+
+A subagent can use every tool the agent has, writing files included, unless the agent
+narrows it to the read tools and `bash_run`. Its tool calls go through the same Rules as the
+agent's own. By default it stops after 200 steps or 5 minutes.
 
 ## Connector tools
 

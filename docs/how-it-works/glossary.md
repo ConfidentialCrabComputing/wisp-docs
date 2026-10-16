@@ -14,11 +14,11 @@ and with what arguments, but does not execute actions directly: all execution go
 through the Kernel.
 
 **Attestation**: a hardware-signed cryptographic report that proves what code is running
-inside a TEE. Your machine verifies the attestation before sending any data to the cloud
-enclave. If the fingerprint doesn't match the published code, the connection is refused.
+inside a TEE. Your machine verifies the Wisp Proxy's attestation before sending it any data.
+If the fingerprint doesn't match the published code, the connection is refused.
 
 **Confirmation gate**: the Kernel step after the schema and Rule checks. A tool call whose
-decision is `ask` (by default shell commands and every connector tool) waits until you see
+decision is `ask` (by default writing files, shell commands and every connector tool) waits until you see
 the exact action and approve it. An `allow` Rule or a Project bypass skips it, and an
 unanswered confirmation is denied. See [Permissions](../permissions.md).
 
@@ -26,7 +26,8 @@ unanswered confirmation is denied. See [Permissions](../permissions.md).
 system and the system administrator. In Wisp, the LLM and the Proxy run inside an enclave.
 
 **Encrypted storage**: local on-disk storage (chat history, audit log, tokens, keys)
-encrypted with a key held only in the OS keyring. Wisp holds no copy of the key.
+encrypted with a key held in the OS keyring, or, on a server, under a key file you keep.
+Wisp holds no copy of the key.
 
 **End-to-end verifiable**: Wisp's security property. Your machine verifies the cloud
 enclave's identity before sending data, instead of relying on transport encryption alone.

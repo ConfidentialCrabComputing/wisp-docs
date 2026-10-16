@@ -132,15 +132,17 @@ wisp sessions list          # the Sessions this folder has
 wisp audit "$SESSION"       # every tool call: when, which, ok, how long, and the decision
 ```
 
-Audit rows never contain what a tool sent or received, so they are safe to read and to ship
-elsewhere.
+With `--json`, audit rows also carry each call's arguments, cut short and with
+secret-looking values replaced by `[REDACTED]`. A drafted message is in them, so treat the
+audit like the conversation before you ship it elsewhere.
 
 ## 7. A restart in the middle
 
 If the Runtime stops while a Run is going, the caller's connection closes and that Run's
 answer is lost. The Session's history is on disk, so nothing else is. Once `wisp status`
-says `ready`, send the alert again with the same key. After a restart the Runtime has
-forgotten its keys, so this starts a new Run; [Runs and restarts](./runs-and-restarts.md)
+says `ready`, send the alert again with the same key. The Runtime still knows the key, so
+the repeat starts nothing new: it gets that Run's outcome, `failed` with `shutdown` if the
+stop cut it short. Then `wisp retry` runs it again; [Runs and restarts](./runs-and-restarts.md)
 explains why.
 
 What stayed on your side the whole time: the alert source, the incident id, the retry and

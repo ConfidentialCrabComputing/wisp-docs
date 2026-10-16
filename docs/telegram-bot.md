@@ -22,15 +22,17 @@ Make a bot with [@BotFather](https://t.me/BotFather) and copy the token it gives
 
 ## 2. Allow `interactive` Runs
 
-Add `interactive` to `confirmationModes` in `runtime.json` and restart the Runtime:
+The bot's Runs are `interactive`, which `confirmationModes` allows by default. Only a
+`runtime.json` that sets the list without it shuts the bot out:
 
 ```json
 { "agentToken": "…", "confirmationModes": ["policy", "interactive"] }
 ```
 
 :::warning
-Without `interactive` in `confirmationModes` the bot answers every message with "Could not
-reach the agent", and its log shows `HTTP 403`.
+Without `interactive` in `confirmationModes` the bot answers every message with "This Wisp
+takes no chat messages: its confirmationModes leave out interactive." Add it and restart the
+Runtime.
 :::
 
 ## 3. Set the bot up
@@ -97,7 +99,9 @@ refuses the bot's Runs with `403`.
 - **A private chat** is one Session, keyed `telegram:<bot id>:<chat id>`, so the agent remembers the
   conversation. `wisp sessions list --origin telegram` lists them.
 - **A group** must first be approved by the owner: the first message addressed to the bot
-  there sends you a card.
+  there sends you a card. Approving a group lets no one in; its members are let in each on
+  their own, by writing to the bot privately. The bot ignores a group message from someone
+  not let in.
   The bot then answers only a message that mentions it, replies to it, or is a command.
   With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
   every message; turn the bot's privacy mode off in @BotFather (`/setprivacy` → Disable) so
@@ -125,15 +129,19 @@ as one message per photo. The bot waits a moment for the rest and puts them back
 Photos, documents, voice messages and audio files up to 20 MB reach the agent with your
 message; a PDF or a text file is read as its text. Videos are refused. A voice message needs
 the [speech model](./reference.md#speech): until it is installed, the owner gets a card to
-install it (643 MB) and sees the progress. Files the agent writes are sent back as documents
+install it (about 670 MB) and sees the progress. Files the agent writes are sent back as documents
 after its answer.
 
 ## Approving tools
 
 When the agent wants to use a tool whose decision is `ask`, the bot sends a card with **Allow**
-and **Deny**. A typed "yes" approves the one card sent just before it; any other message denies
-the cards still waiting, so a card scrolled away never holds the chat. A card nobody answers is
-denied after `confirmTimeoutMs` (two hours by default).
+and **Deny**. Only the person whose message started the request, or the owner, may answer it;
+anyone else is told "This request is not yours to answer."
+
+A typed "yes" (or "да", "ok", 👍) approves the one card sent just before it; "no" (or "нет",
+👎) denies every card still waiting, and so does any other message, so a card scrolled away
+never holds the chat. A card nobody answers is denied after `confirmTimeoutMs` (two hours by
+default).
 
 ## Letting people in
 
@@ -149,10 +157,10 @@ wisp telegram pairing approve K7MZ4QXA   # the code the stranger passes on to yo
 wisp telegram pairing revoke 123456789   # a user id from the list
 ```
 
-Someone let in from the command line is not told; their next message is simply answered. A
+Someone let in from the command line is told "The owner let you in" by the running bot. A
 revoked user's next message starts no Run. A code expires in an hour;
-a person gets one code per ten minutes; at most three wait at once, and a fourth is told to try
-later; five wrong codes in a row given to `pairing approve` lock approving by code, and new
+a person gets one code per ten minutes; at most a hundred wait at once, and the next is told to
+try later; five wrong codes in a row given to `pairing approve` lock approving by code, and new
 requests, for an hour, while the cards already sent still work.
 
 To let people in without pairing, list their user ids, or a chat's id, in

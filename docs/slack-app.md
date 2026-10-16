@@ -44,15 +44,17 @@ settings:
 
 ## 3. Allow `interactive` Runs
 
-Add `interactive` to `confirmationModes` in `runtime.json` and restart the Runtime:
+The app's Runs are `interactive`, which `confirmationModes` allows by default. Only a
+`runtime.json` that sets the list without it shuts the app out:
 
 ```json
 { "agentToken": "…", "confirmationModes": ["policy", "interactive"] }
 ```
 
 :::warning
-Without `interactive` in `confirmationModes` the app answers every message with "Could not
-reach the agent", and its log shows `HTTP 403`.
+Without `interactive` in `confirmationModes` the app answers every message with "This Wisp
+takes no chat messages: its confirmationModes leave out interactive." Add it and restart the
+Runtime.
 :::
 
 ## 4. Give it a token and run it
@@ -67,6 +69,9 @@ wisp slack
 
 Both Slack tokens are read from the environment only, never from a flag. To run the app on
 another machine than the Runtime, see [Remote access](./remote-access.md).
+
+There is no `wisp slack install`: `wisp slack` runs in this terminal, so keep it running under
+your own supervisor (a systemd unit, launchd, `tmux`) to keep the app answering.
 
 :::warning
 The `run` token must be made with `--channel slack`. Without `--channel` the Runtime refuses
@@ -110,16 +115,20 @@ start with `!`. In a thread you can also mention the app and write the command w
 ## Files
 
 Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you share with the app reach the
-agent with your message; a PDF or a text file is read as its text. Files the agent writes are
-uploaded into the thread after its answer. The app needs the `files:read` and `files:write`
-scopes for this: an app installed without them must be reinstalled from the manifest above.
+agent with your message; a PDF or a text file is read as its text. Any other file, a voice
+message or an audio file included, fails the request with `unsupported_document`: the Slack app
+does not transcribe speech. Files the agent writes are uploaded into the thread after its
+answer. The app needs the `files:read` and `files:write` scopes for this: an app installed
+without them must be reinstalled from the manifest above, and until then its log says "Slack
+sent its sign-in page; the app needs the files:read scope".
 
 ## Approving tools
 
 When the agent wants to use a tool whose decision is `ask`, the app posts a card with
-**Allow** and **Deny**. A typed "yes" approves the one card posted just before it; any other
-message denies the cards still waiting. A card nobody answers is denied after
-`confirmTimeoutMs` (two hours by default).
+**Allow** and **Deny**. Only the person whose message started the request, or the owner, may
+answer it. A typed "yes" (or `:+1:`, "да", "ok") approves the one card posted just before it;
+"no" (or "нет", `:-1:`), or any other message, denies the cards still waiting. A card nobody
+answers is denied after `confirmTimeoutMs` (two hours by default).
 
 ## Letting people in
 

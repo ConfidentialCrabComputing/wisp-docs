@@ -79,10 +79,10 @@ the request names the folder again in the query:
 POST /v1/sessions/{id}/runs?projectRoot=/srv/agents/incidents
 ```
 
-`GET /v1/sessions/{id}/history`, `PATCH /v1/sessions/{id}`, `POST /v1/sessions/{id}/runs`,
-`POST /v1/sessions/{id}/cancel` and `POST /v1/runs/{runId}/retry` need it then. `GET
-/v1/sessions/{id}` takes it too, but without it still answers, from the stored rows, with
-`projectRoot: null`. A wrong folder is the same `404`, never another Session. On `PATCH`, the
+`PATCH /v1/sessions/{id}`, `POST /v1/sessions/{id}/runs`, `POST /v1/sessions/{id}/cancel` and
+`POST /v1/runs/{runId}/retry` need it then. `GET /v1/sessions/{id}` and
+`GET /v1/sessions/{id}/history` take it too, but without it still answer, from the stored
+rows, the first with `projectRoot: null`. A wrong folder is the same `404`, never another Session. On `PATCH`, the
 query's `projectRoot` finds the Session and the body's is the Project being added. The CLI
 always sends the folder it runs in.
 Calling `POST /v1/sessions` again with the same `externalKey` and `projectRoot` loads the
@@ -108,7 +108,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 | `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF or a text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
 | `skill`, `arguments` | run one of the Project's [Skills](./skills.md) |
 | `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
-| `confirmationMode` | optional; `policy` (the default) or `interactive`, which the operator must allow in `confirmationModes` — see [approvals](#approvals) |
+| `confirmationMode` | optional; `policy` (the default) or `interactive`, which `confirmationModes` must allow (it does by default) — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 | `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
@@ -226,7 +226,8 @@ first answer settles a Prompt, and that waiting request then returns. An answer 
 exactly like one of the main agent.
 
 The operator decides whether any of this is possible: a Run naming a mode outside
-`confirmationModes` is refused `403`, and the default allows `policy` alone.
+`confirmationModes` is refused `403`. The default allows both; an operator who sets the list
+to `["policy"]` turns Prompts off.
 
 ## Follow-ups and cancelling
 

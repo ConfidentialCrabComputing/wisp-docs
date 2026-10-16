@@ -19,7 +19,7 @@ reached by a browser. The full API, with request and response schemas, is at
   something to match, such as `confirmation_mode_<mode>_not_allowed`.
 - While a newer release exists, an answer to a request with a token carries `X-Wisp-Update`
   with its version.
-- The Session routes that load a Session (history, `PATCH`, runs, cancel, and a Run's retry)
+- The Session routes that load a Session (`PATCH`, runs, cancel, and a Run's retry)
   take `?projectRoot=<folder>`: a Project Session the Runtime dropped from memory is `404`
   without it. See [naming the Project again](adapter-contract.md#naming-the-project-again).
 
@@ -222,7 +222,7 @@ Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
 
 ### Speech
 
-The speech model an `audio` block needs is 643 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. The one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
+The speech model an `audio` block needs is 670 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. The one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
 
 | method | route | what it does |
 | --- | --- | --- |
@@ -279,10 +279,12 @@ flow of its own. `wisp connectors telegram keys` and `wisp connectors auth teleg
 
 ## Commands
 
-One program. `wisp serve` (or `wisp` with no argument) runs the Runtime. Every other command
+One program. `wisp serve` runs the Runtime. Every other command
 talks to a running one, which it finds through `$WISP_HOME/runtime.lock`, or through
-`--url` and `--token` (or `WISP_URL` and `WISP_TOKEN`) given together. `--json` makes a
-command print one JSON document on stdout and nothing else there. `wisp --help` lists the
+`--url` and `--token` (or `WISP_URL` and `WISP_TOKEN`) given together. On a command that
+lists or shows something, `--json` makes it print one JSON document on stdout and nothing
+else there; a command that only acts, such as `wisp cancel` or `wisp stop`, prints its line
+either way. `wisp --help` lists the
 commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit codes are in
 [Troubleshooting](runbook.md#exit-codes).
 
@@ -291,7 +293,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp serve [--home dir] [--config file]` | run the Runtime in the foreground |
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
-| `wisp stop` | stop the Runtime this data directory holds, draining its Runs |
+| `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
@@ -315,7 +317,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
-| `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (643 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
+| `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (670 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
 | `wisp sandbox` | whether the `bash_run` sandbox and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
@@ -334,10 +336,10 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp telegram pairing list\|approve <code>\|revoke <user id>` | who waits and who is let in; let in a stranger by their code; shut a user out |
 | `wisp slack [--url u --token t] [--state file]` | run the [Slack app](slack-app.md) over Socket Mode; `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are its tokens |
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
-| `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does |
+| `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
 | `wisp update` | install the newest release beside the running one and restart the service onto it; without a running service, it takes effect on the next `wisp serve` |
-| `wisp uninstall` | remove what the installer put down (service, `bin`, `versions`, `runtime.json`, the `PATH` line); at a terminal it asks whether to delete the data too |
+| `wisp uninstall` | remove what the installer put down (service, the Telegram bot's service, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
 
@@ -401,10 +403,11 @@ pipe. See [Install, update, uninstall](install.md).
 
 `$WISP_HOME/runtime.json` (`~/.wisp/runtime.json` by default) holds these keys, and the
 environment variable next to each overrides the file. The installer creates the file with
-`agentToken` only. A key not in this list, invalid JSON, a file owned by another user, or a
-file holding `agentToken` that others can read (`chmod 600` it) stops `wisp serve` with exit
-**78**. A `.env` file in the folder `wisp serve` starts in is read into the environment
-first.
+`agentToken` only. A key the Runtime does not know, invalid JSON, a file owned by another
+user, or a file holding `agentToken` that others can read (`chmod 600` it) stops `wisp serve`
+with exit **78**. The Runtime knows a few more keys than this list names: they tune its
+internals, or are set by Wisp Desktop or the build, and are not for operators. The installed
+`wisp` reads no `.env` file.
 
 | key | environment | default | what it sets |
 | --- | --- | --- | --- |
@@ -420,7 +423,7 @@ first.
 | `runRecordRetentionMs` | `RUN_RECORD_RETENTION_MS` | `604800000` (7 days) | how long an ended Run's record is kept; a daily sweep deletes it after this, never sooner than `idempotencyTtlMs` after it began |
 | `shutdownDrainTimeoutMs` | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `5000` | how long a stop lets running Runs finish before it aborts them |
 | `confirmTimeoutMs` | `CONFIRM_TIMEOUT_MS` | `7200000` (2 h) | how long an unanswered confirmation waits before it is denied |
-| `confirmationModes` | `CONFIRMATION_MODES` (comma-separated) | `["policy"]` | the confirmation modes a `/v1` Run may name; `policy` is always one. Add `interactive` to let a caller answer Prompts; a Run naming a mode left out is refused `403` |
+| `confirmationModes` | `CONFIRMATION_MODES` (comma-separated) | `["policy", "interactive"]` | the confirmation modes a `/v1` Run may name; `policy` is always one. `["policy"]` stops callers from answering Prompts, the Telegram bot and the Slack app included; a Run naming a mode left out is refused `403` |
 | `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | silence from the model after which a Run fails `stream_stalled` |
 | `llmRequestTimeoutMs` | `LLM_REQUEST_TIMEOUT_MS` | `120000` | how long a model request may take to start answering |
 | `contextWindowTokens` | `CONTEXT_WINDOW_TOKENS` | `262144` | the context window assumed when the model's own is not known |

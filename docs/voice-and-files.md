@@ -16,7 +16,7 @@ called.
 ## Voice messages
 
 Voice needs a speech model on the Runtime's host. It is not installed with Wisp: it is a
-one-time 643 MB download, made only when you ask for it.
+one-time 670 MB download, made only when you ask for it.
 
 ```sh
 wisp speech            # whether it is installed, downloading or failed
@@ -72,7 +72,7 @@ A `document` block carries a file's bytes, and the Runtime turns it into text be
 reads it, so an adapter needs no parser:
 
 - **PDF** (`application/pdf`) is read as its text. A PDF with no text to extract, such as a
-  scan without a text layer or one with a password, does not fail the Run: the agent is told
+  scan without a text layer, one with a password or a damaged one, does not fail the Run: the agent is told
   no text could be extracted.
 - **Text**: any `text/*` type, `application/json`, `application/xml` and
   `application/yaml`, read as UTF-8.

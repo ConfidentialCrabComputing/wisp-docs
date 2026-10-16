@@ -25,8 +25,9 @@ POST /v1/sessions
 ```
 
 The first time a folder is used, the Runtime writes `.wisp/project-id` in it. That id is
-what ties the folder to its Rules and its enabled connectors, which are kept on this
-machine, not in the folder (see [Deploying an agent](./deploy-an-agent.md#what-the-folder-holds)).
+what ties the folder to its Rules, which are kept on this machine, not in the folder. The
+list of connectors enabled there is kept in the folder, in `.wisp/mcp.json` (see
+[Deploying an agent](./deploy-an-agent.md#what-the-folder-holds)).
 
 The folder must exist and be a directory. A Desk, or the folder that holds the Desks, is
 refused as a Project with `400`: what the agent wrote there must not become the next turn's
@@ -92,8 +93,9 @@ POST /v1/sessions/{id}/runs?projectRoot=/srv/agents/incidents
   `GET /v1/sessions/{id}/history`, `POST /v1/sessions/{id}/runs`,
   `POST /v1/sessions/{id}/cancel` and `POST /v1/runs/{runId}/retry`.
 - Without it, or with a folder that holds another Project, a Session with a Project that
-  is not in memory is `404 Session not found`. Only `GET /v1/sessions/{id}` still answers,
-  from the stored messages, with `projectRoot: null`.
+  is not in memory is `404 Session not found`. Only `GET /v1/sessions/{id}` and
+  `GET /v1/sessions/{id}/history` still answer, from the stored messages, the first with
+  `projectRoot: null`.
 - It is ignored when the Session is already in memory, and a Desk Session needs none.
 - Do not confuse it with `projectRoot` in the body of a `PATCH`, which is the Project being
   given to the Session.
@@ -121,7 +123,8 @@ one file's bytes, read from the folder the Run worked in, so it needs no `projec
 wisp sessions delete <id>
 ```
 
-`DELETE /v1/sessions/{id}` removes the Session and its messages. It answers `409`
+`DELETE /v1/sessions/{id}` removes the Session, its messages, its audit and the memories the
+agent stored in it. It answers `409`
 while a Run is going on in the Session: cancel it first with `wisp cancel <id>` or
 `POST /v1/sessions/{id}/cancel`. It needs no `projectRoot`, and works even for a Session
 whose Project folder is gone. It deletes no files, from a Project or a Desk.

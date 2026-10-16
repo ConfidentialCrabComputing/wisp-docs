@@ -49,7 +49,9 @@ says `ready`, then send the identical request with the identical key.
 3. A Run still going when the window ends is stopped, also `failed` with `shutdown`.
 4. Connectors disconnect and the stores close.
 
-`wisp stop` finds the Runtime's process id in `$WISP_HOME/runtime.lock` and signals it. On
+`wisp stop` finds the Runtime's process id in `$WISP_HOME/runtime.lock` and signals it,
+then returns without waiting for the drain. It works only through the lock, so it refuses
+while `WISP_URL` or `WISP_TOKEN` is set. On
 purpose there is no "stop" endpoint in `/v1`: a token should not be enough to take the
 Runtime down. `wisp stop` refuses to stop Wisp Desktop's Runtime; quit the app instead.
 

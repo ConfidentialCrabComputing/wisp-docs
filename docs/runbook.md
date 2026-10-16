@@ -54,7 +54,7 @@ running Runtime, and any command that finds none (exit code `4`) points at it.
 | `ready` | Runs will run | nothing |
 | `login_required` | not signed in, or the login was lost | `wisp login` (or `wisp login --manual` on a server) |
 | `proxy_failed` | signed in, but the Wisp proxy did not answer | check that this machine can reach the internet; Runs fail with `network` or `server_error` |
-| `attestation_failed` | the model's environment could not be verified, so Wisp will not send it anything | nothing to fix locally; see [attestation](#attestation) |
+| `attestation_failed` | the Wisp proxy's trusted environment could not be verified, so Wisp will not send it anything | nothing to fix locally; see [attestation](#attestation) |
 
 `login_required` is the only state that needs a person.
 
@@ -84,8 +84,8 @@ configuration problem. It exits before serving anything and says which of these 
 - the port is already taken;
 - `host` is not a loopback address and `allowedHosts` is empty (see
   [reaching it from another machine](./remote-access.md#reaching-it-from-another-machine));
-- on a Mac, the keychain cannot store the encryption keys. `wisp doctor` names the command
-  that unlocks it;
+- the OS keyring cannot store the encryption keys (on a Mac, a locked keychain). `wisp
+  doctor` names the command that unlocks it;
 - on Linux, `WISP_MASTER_KEY_FILE` is not set: `wisp serve` there keeps its key in a
   [key file](./remote-access.md#the-encryption-key-on-a-server), never in a keyring. The installer's service
   sets it for you;
@@ -93,6 +93,10 @@ configuration problem. It exits before serving anything and says which of these 
   another user, is readable by others, or does not hold 32 bytes of base64;
 - the key does not open the data directory's stored keys (a different key from the one it
   was made with), or the directory has data but its stored keys are missing;
+- the data directory was made with a key file and `WISP_MASTER_KEY_FILE` is not set, or it
+  keeps its keys in the OS keyring and `WISP_MASTER_KEY_FILE` is set. A directory stays
+  with the way it was made: unset or set the variable, or give this Runtime its own
+  `WISP_HOME`;
 - **another Runtime already uses this data directory.** The message says which one and its
   process id. Usually it is Wisp Desktop, or a `wisp serve` you forgot. Stop it, or give
   this one its own `WISP_HOME`.
@@ -107,15 +111,14 @@ the conversation. `wisp run` prints both on stderr.
 
 | Reason | What happened | What to do |
 | --- | --- | --- |
-| `attestation_blocked` | the model's environment is not verified right now | retry later; see [attestation](#attestation) |
+| `attestation_blocked` | the Wisp proxy's environment is not verified right now | retry later; see [attestation](#attestation) |
 | `stream_stalled` | the model sent nothing for `llmStallTimeoutMs` (5 minutes) | retry |
 | `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
 | `step_ceiling` | the Run hit `graphRecursionLimit` or `toolCallLimit` | split the task, or raise the limit |
 | `output_schema_unsatisfied` | the agent did not hand over a value satisfying `outputSchema` in five attempts | simplify the schema, or say in `input` what each field holds |
-| `unsupported_document` | a `document` block is neither a PDF nor a text type, or does not read as its type says (an encrypted, scanned or corrupt PDF; binary bytes under a text type) | send the text itself, or a PDF with a text layer |
+| `unsupported_document` | a `document` block is neither a PDF nor a text type, or does not read as its type says (binary bytes under a text type). A PDF whose text cannot be extracted (a scan, a password, a damaged file) does not fail the Run: the agent is told it could not read it | send the text itself, or a PDF with a text layer |
 | `transcription_failed` | an `audio` block is not OGG/Opus, MP3 or WAV (M4A is not accepted), does not decode as its type says, holds no speech, or the speech model could not be run | send the voice message as OGG/Opus, MP3 or WAV, or type it |
 | `speech_not_installed` | an `audio` block arrived while the speech model is not installed, or still downloading | run `wisp speech install` (or `POST /v1/speech/download`), then send the voice message again |
-| `confirmation_pending` | the Session is waiting for a tool approval in Wisp Desktop | answer it in the app, then send again |
 | `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
 | `quota_exhausted` | the account's plan is used up | check your account |
 | `not_entitled` | the account's plan does not include what was asked for | check your account |
@@ -139,18 +142,20 @@ gives you.
 
 ## Attestation
 
-Before Wisp sends anything to the model, it verifies that the model runs in a genuine
-trusted execution environment, and it keeps checking.
+Before Wisp sends anything to the Wisp proxy, through which every model call goes, it
+verifies that the proxy runs in a genuine trusted execution environment, and it keeps
+checking.
 
 - **The verification service could not be reached:** Wisp keeps using the last good result
   for a grace period and retries.
 - **The verification failed:** Wisp stops sending to the model at once, and stays stopped
   until a verification succeeds again.
 
-While it is stopped, Runs fail with `attestation_blocked`. Everything else keeps working:
-Sessions, history, connectors and the audit. There is no local override, so when the
-model's environment cannot be verified, Wisp's model is unavailable. Build your retry policy
-around that.
+While it is stopped, Runs fail with `attestation_blocked`, and everything that goes through
+the proxy stops with them: the connectors it hosts (Gmail, Calendar, Drive, web search and
+fetch) and `wisp models`. Sessions, history, your own connectors and the audit keep working.
+No setting turns the check off, so when the proxy cannot be verified, Wisp's model is
+unavailable. Build your retry policy around that.
 
 ```sh
 curl -sS "$URL/v1/attestation" -H "Authorization: Bearer $TOKEN"              # the current result
@@ -182,7 +187,7 @@ Every value is from these closed sets or a tool name. The `final_output` call of
 an `outputSchema` writes no `tool.call`, as it is not listed in `toolCalls` either.
 
 ```sh
-# Runs that failed because the model's environment was not verified, or the plan ran out
+# Runs that failed because the proxy was not verified, or the plan ran out
 journalctl --user -u wisp -o cat | jq -c 'select(.msg == "run.finished" and (.reason == "attestation_blocked" or .reason == "quota_exhausted"))'
 ```
 
@@ -190,10 +195,17 @@ In `text` format the same lines read `run.finished state=failed reason=quota_exh
 
 ## FAQ
 
+**The Telegram bot or the Slack app answers "This Wisp takes no chat messages".**
+`confirmationModes` leaves out `interactive`. Add it back, or remove the key to take the
+default, and restart the Runtime. See [Configuration](./configuration.md#stop-callers-from-asking-for-approvals).
+
 **The Telegram bot or the Slack app answers "Could not reach the agent".**
-Its log says why. Usually `HTTP 403`: `interactive` is missing from `confirmationModes`, or
-its `run` token was made without `--channel`. See [the Telegram bot](./telegram-bot.md#2-allow-interactive-runs)
-and [the Slack app](./slack-app.md#3-allow-interactive-runs).
+Its log says why. Usually `HTTP 403`: its `run` token was made without `--channel`. See
+[the Telegram bot](./telegram-bot.md) and [the Slack app](./slack-app.md).
+
+**`wisp stop` says it takes no `--url`/`--token`.**
+`WISP_URL` or `WISP_TOKEN` is set in your shell. `wisp stop` works only through
+`runtime.lock`: unset them, then run it again.
 
 **`wisp serve` on Linux exits with 78.**
 It names the reason; the list is under [Exit codes](#exit-codes). Most often

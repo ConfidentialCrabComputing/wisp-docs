@@ -45,9 +45,7 @@ Each key has an environment variable, listed next to it in
 2. else the key in `runtime.json`;
 3. else the default.
 
-A `.env` file in the folder `wisp serve` starts in is read into the environment first, so it
-counts as the environment. A variable already set in the shell wins over the same line in
-`.env`.
+The installed `wisp` reads no `.env` file. Only a Runtime run from source reads one.
 
 Lists, such as `ALLOWED_HOSTS` and `CONFIRMATION_MODES`, are comma-separated in the
 environment and JSON arrays in the file.
@@ -66,18 +64,19 @@ in front of it and list the name callers use in `allowedHosts`:
 Never send the token over a network in clear. [Remote access](./remote-access.md) has the
 whole setup, a token per device, and the encryption key a Linux server needs.
 
-### Let a caller answer approvals
+### Stop callers from asking for approvals
 
-By default a `/v1` Run that needs a person's approval is refused rather than waiting. The
-[Telegram bot](./telegram-bot.md), the [Slack app](./slack-app.md) and `wisp run
---interactive` need Runs that wait for an answer. Allow them:
+By default a `/v1` Run may wait for a person's approval: the
+[Telegram bot](./telegram-bot.md), the [Slack app](./slack-app.md) and
+`wisp run --interactive` need that. To refuse every such Run instead, leave `interactive` out:
 
 ```json
-{ "agentToken": "…", "confirmationModes": ["policy", "interactive"] }
+{ "agentToken": "…", "confirmationModes": ["policy"] }
 ```
 
 `policy` is always allowed, whether listed or not. A Run that asks for a mode left out is
-refused with `403`. See [approvals](./adapter-contract.md#approvals).
+refused with `403`, and the bot and the app then take no chat messages. See
+[approvals](./adapter-contract.md#approvals).
 
 ### Change the default model
 

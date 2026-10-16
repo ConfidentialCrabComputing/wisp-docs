@@ -100,13 +100,22 @@ Project where you would approve anything the agent might do.
 `bash_run` lets the agent run shell commands. It defaults to `ask`, so under the CLI it is
 refused until a Rule allows it. Before you allow it, know that:
 
-- **It runs in a sandbox that limits the filesystem, not the network.** Allowing `bash_run`
-  also allows network access from this machine.
+- **The sandbox's network is on by default.** Allowing `bash_run` also allows network
+  access from this machine.
+- **In the sandbox a command sees its own folder and the system's.** It may write only in
+  the folder it runs in: the Project, or the subfolder the agent named. System folders such
+  as `/usr` and `/etc` are readable; your home folder is not. A command naming an absolute
+  path outside the Project is refused before it runs, `/usr/bin/python3` among them (call
+  `python3`); so is one with `../` or `~/`. Only `/tmp` and `/dev/null` are let through.
+- **It does not get your environment.** On Linux and macOS a command gets your login
+  shell's `PATH`, `LANG` and `TERM`; its `HOME` is the folder it runs in. Tokens and keys in
+  the Runtime's environment do not reach it.
 - **The sandbox needs OS support.** On Linux it needs bubblewrap (`sudo apt install
   bubblewrap`). On macOS it uses the built-in `sandbox-exec`. If the sandbox is not
   available, `bash_run` refuses to run rather than running without it.
-- **On Windows there is no sandbox yet.** Commands run directly on the host, so allowing
-  `bash_run` there allows anything the user can do.
+- **On Windows there is no sandbox yet.** Commands run directly on the host, through
+  `cmd.exe`, with your environment less Wisp's own token, so allowing `bash_run` there
+  allows anything the user can do.
 - **The sandbox can be switched off, and its network with it.** `wisp sandbox off` (or
   `PUT /v1/sandbox`) turns it off. Without the sandbox a `bash_run` command runs as the
   Runtime's own user and can read the key source. `wisp sandbox network off` keeps the
