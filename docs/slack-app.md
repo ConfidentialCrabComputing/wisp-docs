@@ -12,7 +12,8 @@ Slack over Socket Mode, so it needs no public port and no TLS of its own.
 ## 1. Create the app
 
 At [api.slack.com/apps](https://api.slack.com/apps), choose **Create New App → From a
-manifest**, pick the workspace, and paste:
+manifest**, pick the workspace, switch the editor from the **JSON** tab to **YAML**, and
+paste:
 
 ```yaml
 display_information:
@@ -37,10 +38,13 @@ settings:
 
 ## 2. Copy its two tokens
 
-1. **Install to Workspace**, then copy the **Bot User OAuth Token** (`xoxb-…`) from *OAuth &
-   Permissions*.
-2. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write`
-   scope and copy it (`xapp-…`).
+1. Open *Install App* in the app's sidebar, choose **Install to** *your workspace* and then
+   **Allow**. Back on the same page, copy the **Bot User OAuth Token** (`xoxb-…`); *OAuth &
+   Permissions* shows it too. If your workspace needs an admin to approve apps, the button
+   reads **Request to Install** instead, and the token appears once an admin approves.
+2. Open *Basic Information*, scroll to *App-Level Tokens* and choose **Generate Token and
+   Scopes**. Give it any name, add the `connections:write` scope, choose **Generate** and copy
+   the token (`xapp-…`).
 
 ## 3. Give it a token and run it
 
