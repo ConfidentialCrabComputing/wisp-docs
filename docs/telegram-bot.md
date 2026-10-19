@@ -77,7 +77,9 @@ same Connectors and memory.
 2. **Add the bot**: open the group's info → **Add members** → `@your_bot`.
 3. **Approve the group**: send `/start@your_bot` in the group (a plain mention does not reach
    the bot while privacy mode is on). The bot answers "This group is not let in yet. Its pairing
-   code is …", and you get a card "Let *the group's name* in?" with Allow and Deny.
+   code is …", in the forum topic it was sent from, and you get a card "Let *the group's name*
+   in?" with Allow and Deny. Once you approve it, the bot says so in the same topic (or the
+   group's General). The message that asked is not answered: send it again.
 4. **Each member is let in on their own**, by writing to the bot privately. Approving the group
    lets no one in.
 
@@ -183,7 +185,8 @@ wisp telegram pairing approve K7MZ4QXA   # the code the stranger passes on to yo
 wisp telegram pairing revoke 123456789   # a user id from the list
 ```
 
-Someone let in from the command line is told "The owner let you in" by the running bot. A
+Someone let in from the command line is told "The owner let you in" by the running bot; a group,
+in the topic it asked from, that it is approved and to ask again. A
 revoked user's next message starts no Run. A code expires in an hour;
 a person gets one code per ten minutes; at most a hundred wait at once, and the next is told to
 try later; five wrong codes in a row given to `pairing approve` lock approving by code, and new

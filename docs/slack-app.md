@@ -133,7 +133,9 @@ start with `!`. In a thread you can also mention the app and write the command w
   let in can carry on in that thread without mentioning the app again. Each new mention starts
   another thread and another Session.
 - **A channel the owner has not approved**: the first mention there gets a pairing code, and you
-  get a card to approve the channel. Approving a channel lets no one in; its members are let in
+  get a card to approve the channel. Once you approve it, by the card or `wisp slack pairing
+  approve`, the app says so in the thread the code was given in. The mention that asked is not
+  answered: mention the app again. Approving a channel lets no one in; its members are let in
   each on their own.
 - **A thread started by someone not let in**: when a participant asks the app about it, the
   thread's first message reaches the agent marked as a third party's, as data rather than an
