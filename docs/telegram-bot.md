@@ -101,8 +101,13 @@ refuses the bot's Runs with `403`.
   log). Each person in a group has their own Session
   (`telegram:<bot id>:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
 - **A forum topic** is one shared Session for everyone in it (`telegram:<bot id>:<chat id>:<topic id>`).
-- **A reply to someone not let in**: when a participant replies to such a message, it reaches
-  the agent marked as a third party's, as data rather than an instruction.
+- **Who wrote**: in a group or a forum topic, the agent is told the name of the person whose
+  message it answers.
+- **A reply**: when a participant replies to a message, the message they reply to reaches the agent
+  with its author's name, whoever wrote it: the owner, another participant, someone not let in or
+  another bot. It is marked as a third party's, as data rather than an instruction. If the
+  participant quoted part of it, only that part is passed. A reply to the bot's own message passes
+  that message as the bot's earlier answer. A reply to one's own message passes nothing more.
 
 ## Long texts and albums
 
