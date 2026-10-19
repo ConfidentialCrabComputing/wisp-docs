@@ -28,6 +28,7 @@ On the Runtime's host:
 wisp telegram setup
 # paste the bot's token from @BotFather, then press Enter
 # @your_bot is set up.
+# @your_bot has privacy mode on. In a private chat that changes nothing, but in a group … turn privacy mode off now, before adding the bot: …
 # Start the bot now as a service, restarted on failure? [Y/n]
 # installed the user service …; follow it with: journalctl --user -u wisp-telegram -f
 # No owner yet. Open https://t.me/your_bot?start=… and press Start, or send /pair … to the bot.
@@ -37,7 +38,9 @@ wisp telegram setup
 Telegram Channel (`wisp tokens create --name telegram --capability run --channel telegram`,
 done for you through `runtime.lock`), and stores both in the bot's
 [state file](#its-state), readable only by you. Run it again to change the bot token; a
-different bot starts with no owner and no one let in.
+different bot starts with no owner and no one let in. While the bot's privacy mode is on,
+BotFather's default, `setup` says so: if people will mention the bot in a group, turn it off
+then, before adding the bot to one (see [Add it to a group](#4-add-it-to-a-group-optional)).
 
 Then it offers to start the bot as a user service beside the Runtime's, restarted if it fails:
 a systemd unit `wisp-telegram.service` on Linux (`journalctl --user -u wisp-telegram -f`), a
@@ -79,7 +82,9 @@ same Connectors and memory.
    the bot while privacy mode is on). The bot answers "This group is not let in yet. Its pairing
    code is …", in the forum topic it was sent from, and you get a card "Let *the group's name*
    in?" with Allow and Deny. Once you approve it, the bot says so in the same topic (or the
-   group's General). The message that asked is not answered: send it again.
+   group's General). The message that asked is not answered: send it again. While privacy mode
+   is on, the bot tells the group to reply to it or send a command addressed to it rather than
+   mention it, and tells you in your private chat how to make mentions work there.
 4. **Each member is let in on their own**, by writing to the bot privately. Approving the group
    lets no one in.
 
@@ -91,8 +96,9 @@ except other bots' messages, so mentions work without `/setprivacy`.
   a mention, a reply or a command unless it runs with `--all-messages`, and drops the rest.
 - Only a group admin can make the bot an admin. The bot needs none of the admin rights
   (deleting messages, banning, pinning): grant as few as Telegram allows.
-- A bot started with `--all-messages` says on stderr that it "has privacy mode on" when
-  BotFather's setting is on, even if it is an admin. Ignore that line then.
+- The bot says on stderr when it starts that it "has privacy mode on" when BotFather's setting
+  is on, even if it is an admin, and so does the private message you get on approving a group.
+  Ignore them then.
 :::
 
 ## The bot on another machine
@@ -129,8 +135,7 @@ refuses the bot's Runs with `403`.
   With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
   every message it gets; for Telegram to send them all, turn the bot's privacy mode off in
   @BotFather (`/setprivacy` → Disable) and add the bot to the group again, or make it an admin.
-  While privacy mode is on, the bot started with `--all-messages` says so on stderr when it
-  starts (in the service's log). Each person in a group has their own Session
+  While privacy mode is on, the bot says so on stderr when it starts (in the service's log). Each person in a group has their own Session
   (`telegram:<bot id>:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
 - **A forum topic** is one shared Session for everyone in it (`telegram:<bot id>:<chat id>:<topic id>`).
 - **Who wrote**: in a group or a forum topic, the agent is told the name of the person whose
