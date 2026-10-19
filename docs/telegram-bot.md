@@ -65,6 +65,34 @@ default, and restart the Runtime.
 The bot answers only the people let in, and each of them drives the agent as you do, with the
 same Connectors and memory.
 
+## 4. Add it to a group (optional)
+
+1. **Decide first whether mentions should work.** A bot made in @BotFather has privacy mode on,
+   and Telegram then passes it only a command addressed to it (`/new@your_bot`), a reply to one
+   of its messages, and the group's service messages. A message that only mentions
+   `@your_bot` never reaches the bot. For mentions to work, turn privacy mode off **before**
+   adding the bot: in @BotFather send `/setprivacy`, choose the bot, then **Disable**. The
+   change counts only in groups the bot joins after it, so if the bot is in the group already,
+   remove it and add it again.
+2. **Add the bot**: open the group's info → **Add members** → `@your_bot`.
+3. **Approve the group**: send `/start@your_bot` in the group (a plain mention does not reach
+   the bot while privacy mode is on). The bot answers "This group is not let in yet. Its pairing
+   code is …", and you get a card "Let *the group's name* in?" with Allow and Deny.
+4. **Each member is let in on their own**, by writing to the bot privately. Approving the group
+   lets no one in.
+
+:::note[Making the bot a group admin instead]
+A bot that is an admin of the group gets every message of it, whatever its privacy mode,
+except other bots' messages, so mentions work without `/setprivacy`.
+
+- Every message of the group then reaches the host the bot runs on. The bot still answers only
+  a mention, a reply or a command unless it runs with `--all-messages`, and drops the rest.
+- Only a group admin can make the bot an admin. The bot needs none of the admin rights
+  (deleting messages, banning, pinning): grant as few as Telegram allows.
+- A bot started with `--all-messages` says on stderr that it "has privacy mode on" when
+  BotFather's setting is on, even if it is an admin. Ignore that line then.
+:::
+
 ## The bot on another machine
 
 On a host with no Runtime, `setup` asks instead for a connection string. Make one on the
@@ -91,16 +119,16 @@ refuses the bot's Runs with `403`.
 
 - **A private chat** is one Session, keyed `telegram:<bot id>:<chat id>`, so the agent remembers the
   conversation. `wisp sessions list --origin telegram` lists them.
-- **A group** must first be approved by the owner: the first message addressed to the bot
-  there sends you a card. Approving a group lets no one in; its members are let in each on
-  their own, by writing to the bot privately. The bot ignores a group message from someone
-  not let in.
-  The bot then answers only a message that mentions it, replies to it, or is a command.
+- **A group** must first be approved by the owner, and its members let in each on their own:
+  see [Add it to a group](#4-add-it-to-a-group-optional). The bot ignores a group message
+  from someone not let in.
+  The bot answers a reply to it and a command, and a mention only if Telegram passes it one:
+  with privacy mode off, or the bot an admin of the group.
   With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
-  every message; turn the bot's privacy mode off in @BotFather (`/setprivacy` → Disable) so
-  that Telegram sends them, then add the bot to the group again. While privacy mode is on,
-  the bot started with `--all-messages` says so on stderr when it starts (in the service's
-  log). Each person in a group has their own Session
+  every message it gets; for Telegram to send them all, turn the bot's privacy mode off in
+  @BotFather (`/setprivacy` → Disable) and add the bot to the group again, or make it an admin.
+  While privacy mode is on, the bot started with `--all-messages` says so on stderr when it
+  starts (in the service's log). Each person in a group has their own Session
   (`telegram:<bot id>:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
 - **A forum topic** is one shared Session for everyone in it (`telegram:<bot id>:<chat id>:<topic id>`).
 - **Who wrote**: in a group or a forum topic, the agent is told the name of the person whose
