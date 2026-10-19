@@ -58,10 +58,17 @@ token, so that losing one laptop costs you that laptop's token alone.
 
    ```sh
    ssh you@server wisp tokens create --name laptop --capability full
-   # prints the token and a connection string, once — neither is shown again
-   # Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
-   # wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   # Token:             Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   # Connection string: wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   #
+   # Shown once. Paste the connection string into Wisp Desktop (Settings → Runtime)
+   # or `wisp telegram setup`; use the token as WISP_TOKEN for `wisp slack` or a script.
    ```
+
+   When the connection string names `127.0.0.1` (no `--public-url`, and `allowedHosts` does
+   not name exactly one host), it works on the Runtime's host only, and the command says so:
+   reach it from the device through an SSH tunnel on the same port, or make the token again
+   with `--public-url`. `--json` prints the token and the connection string with no hint.
 
 2. Give the device the connection string: Wisp Desktop's field, or `WISP_URL` and
    `WISP_TOKEN` for a script.
