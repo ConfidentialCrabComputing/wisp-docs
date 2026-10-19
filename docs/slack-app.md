@@ -146,6 +146,23 @@ start with `!`. In a thread you can also mention the app and write the command w
 
 `wisp sessions list --origin slack` lists the app's Sessions.
 
+## While the agent works
+
+The app posts a "Thinking…" line that names the tool the agent is running, and deletes it once
+the answer is posted. In a thread, the same line also shows as the app's status under the
+thread, the way Telegram shows "typing…". A thread waiting for you to press **Allow** or
+**Deny** shows no status. A direct message the app answers outside a thread shows none.
+
+The status needs the app's **Agents & AI Apps** feature: turn it on in the app's settings at
+[api.slack.com/apps](https://api.slack.com/apps). This adds the `assistant:write` scope.
+Then reinstall the app. Without the feature, answers come as before, with the "Thinking…" line
+but no status. `setup` says so, and the app logs "status refused" once per start.
+
+The answer itself is posted whole once the agent is done. It does not appear as the agent
+writes it: Slack's streamed messages have no switch to turn off link previews, and the app
+posts with link previews off. Otherwise a link that a prompt injection put in an answer would
+be fetched by Slack before anyone clicks it.
+
 ## Files
 
 Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you share with the app reach the
