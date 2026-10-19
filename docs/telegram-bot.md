@@ -28,6 +28,8 @@ On the Runtime's host:
 wisp telegram setup
 # paste the bot's token from @BotFather, then press Enter
 # @your_bot is set up.
+# Start the bot now as a service, restarted on failure? [Y/n]
+# installed the user service …; follow it with: journalctl --user -u wisp-telegram -f
 # No owner yet. Open https://t.me/your_bot?start=… and press Start, or send /pair … to the bot.
 ```
 
@@ -37,19 +39,19 @@ done for you through `runtime.lock`), and stores both in the bot's
 [state file](#its-state), readable only by you. Run it again to change the bot token; a
 different bot starts with no owner and no one let in.
 
-## 3. Start it as a service
+Then it offers to start the bot as a user service beside the Runtime's, restarted if it fails:
+a systemd unit `wisp-telegram.service` on Linux (`journalctl --user -u wisp-telegram -f`), a
+launchd agent `io.usewisp.telegram` on a Mac (log in `~/.wisp/logs/telegram.log`). Once the
+service is there, a second `setup` restarts it without asking, so it picks up the new bot
+token. `wisp update` restarts it onto the new release, and `wisp telegram uninstall` or
+`wisp uninstall` removes it.
 
-```sh
-wisp telegram install
-```
+`setup` does not offer the service with `--state <file>`, or on a `wisp` that install.sh did
+not install, and not when you answer `n`. Start the bot by hand then: `wisp telegram install`
+registers the same service (add `--all-messages` for a [group](#where-the-bot-answers)), and
+`wisp telegram` runs the bot in this terminal.
 
-`install` runs the bot as a user service beside the Runtime's, restarted if it fails: a
-systemd unit `wisp-telegram.service` on Linux (`journalctl --user -u wisp-telegram -f`), a
-launchd agent `io.usewisp.telegram` on a Mac (log in `~/.wisp/logs/telegram.log`). `wisp update`
-restarts it onto the new release, and `wisp telegram uninstall` or `wisp uninstall` removes it.
-Without `install`, `wisp telegram` runs the bot in this terminal.
-
-## 4. Become its owner
+## 3. Become its owner
 
 Open the link `setup` printed on your phone and press Start: you are the bot's owner. The code
 works once.
