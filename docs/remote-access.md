@@ -1,5 +1,5 @@
 ---
-description: Reach the Runtime from another machine over TLS, give each device its own token, and keep the encryption key on a server.
+description: Reach the Runtime from Wisp Desktop over SSH or from anything else over TLS, give each device its own token, and keep the encryption key on a server.
 ---
 
 # Remote access
@@ -13,9 +13,68 @@ Linux server needs.
 The Runtime speaks plain HTTP, and one token authorises everything it does, `bash` included.
 
 :::warning
-**The token must never cross a network in clear.** Put a reverse proxy that terminates TLS
-in front of the Runtime, and give callers its `https://` address.
+**The token must never cross a network in clear.** From Wisp Desktop, reach it over SSH. For
+anything else, put a reverse proxy that terminates TLS in front of the Runtime and give
+callers its `https://` address.
 :::
+
+### From Wisp Desktop, over SSH
+
+Wisp Desktop opens the SSH tunnel to the server itself, with the system `ssh`, your keys,
+your agent and `~/.ssh/config`. This opens no port on the server and needs no domain.
+
+1. Make a token over SSH from the laptop:
+   `ssh you@server wisp tokens create --name laptop --capability full`. In an SSH session
+   it prints a `wisp+ssh://…` connection string (see [A token per device](#a-token-per-device)).
+2. Paste it into Wisp Desktop, Settings → Runtime. A **Server** field shows `user@host[:port]`
+   from the string. Correct it if the laptop reaches the server by another name: an address
+   behind NAT, or an alias from `~/.ssh/config`, which `ssh` reads.
+3. Add it. The desktop starts the tunnel on a free local port, checks the Runtime through
+   it, and saves the server with the token in the keychain.
+
+From then on the desktop opens the tunnel at launch and keeps it up. After a drop, a sleep or
+a network change, `ssh` notices within about 45 seconds and the desktop starts it again,
+after 1 second at first and backing off to 30. Under the remote, Settings → Runtime says
+**Connecting to the server…**, **Connected**, **Reconnecting** with the last error, or the
+error with a **Retry** button. Picking **This computer** or quitting closes the tunnel.
+
+The desktop needs:
+
+- **Key access without a prompt.** It never asks for a passphrase or a password. A key
+  with a passphrase must be in your agent: `ssh-add`, on macOS
+  `ssh-add --apple-use-keychain`.
+- **On Windows, the OpenSSH Client**, which Windows 10 1809 and later and Windows 11
+  ship: Settings → Apps → Optional features → OpenSSH Client.
+
+What the status line says, and what to do:
+
+| It says | Cause | Fix |
+| --- | --- | --- |
+| The server refused your key | No key the server takes, or a key with a passphrase and no agent | `ssh-add`, then **Retry** |
+| The server's host key changed | The server's key differs from the one in `~/.ssh/known_hosts` | Check with whoever runs it, remove the old key, then **Retry** |
+| Host not found | The Server does not resolve | Correct the Server |
+| The server is unreachable | Timeout, refused, no route, or the connection dropped | Check the Server and your network; it retries on its own |
+| The tunnel is open but no Runtime answers | Nothing listens behind the tunnel | `systemctl --user start wisp` (or `wisp serve`) on the server |
+| OpenSSH client not found | No `ssh` on `PATH` or in Windows' OpenSSH folder | Install the OpenSSH Client |
+| Another program holds the tunnel's port | A program took the saved local port | Nothing: the desktop picks a new port and reloads the window |
+
+Each one shows the line `ssh` printed under it, and a message the desktop does not know is
+shown as that line alone. A refused key, a changed host key and a missing `ssh` stop the
+retries until you press **Retry** or change the connection.
+
+:::warning[The first connection trusts the server's key]
+The desktop accepts the host key of a server not yet in `~/.ssh/known_hosts` and records it
+(`StrictHostKeyChecking=accept-new`); a changed key is refused. On that very first
+connection, a machine impersonating the server would get the token through the tunnel. In
+the usual flow the server is already known, since you just reached it over SSH to make the
+token. If you edit the Server to a name `ssh` has not seen, connect to it once by hand and
+check its fingerprint first.
+:::
+
+### Everything else, through a TLS proxy
+
+`wisp telegram setup`, `wisp slack`, scripts and other machines do not open a tunnel
+themselves. Give them an `https://` address, or [a tunnel you open by hand](#a-token-per-device).
 
 The proxy forwards the name the caller used (`wisp.example.com`) as the `Host` header. The
 Runtime refuses any `Host` that is not loopback or listed in `allowedHosts`, which keeps a
@@ -59,16 +118,19 @@ token, so that losing one laptop costs you that laptop's token alone.
    ```sh
    ssh you@server wisp tokens create --name laptop --capability full
    # Token:             Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
-   # Connection string: wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   # Connection string: wisp+ssh://you@203.0.113.7/127.0.0.1:3008#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
    #
-   # Shown once. Paste the connection string into Wisp Desktop (Settings → Runtime)
-   # or `wisp telegram setup`; use the token as WISP_TOKEN for `wisp slack` or a script.
+   # Shown once. Paste the connection string into Wisp Desktop (Settings → Runtime),
+   # which opens the SSH tunnel itself; use the token as WISP_TOKEN for `wisp slack` or a script.
+   # For `wisp telegram setup` or a script on another machine, open the tunnel yourself
+   # (ssh -N -L 3008:127.0.0.1:3008 you@203.0.113.7) and use wisp+http://127.0.0.1:3008#<token>.
    ```
 
-   When the connection string names `127.0.0.1` (no `--public-url`, and `allowedHosts` does
-   not name exactly one host), it works on the Runtime's host only, and the command says so:
-   reach it from the device through an SSH tunnel on the same port, or make the token again
-   with `--public-url`. `--json` prints the token and the connection string with no hint.
+   With `--public-url`, or one host in `allowedHosts`, the string is `wisp+https://…` and
+   the hint says to paste it into Wisp Desktop or `wisp telegram setup`. Run on the host
+   itself, outside SSH, the string names `127.0.0.1` and works on that host only, and the
+   command says so: run it over SSH instead, open a tunnel, or make the token again with
+   `--public-url`. `--json` prints the token and the connection string with no hint.
 
 2. Give the device the connection string: Wisp Desktop's field, or `WISP_URL` and
    `WISP_TOKEN` for a script.
@@ -96,9 +158,17 @@ fragment, so a string pasted into a browser by mistake sends it to no server. Th
 
 - `--url` when you give it (with `--token`, the one token): the address this device reached;
 - else `https://` and the host, when `allowedHosts` names exactly one;
+- else, in an SSH session, `ssh://<user>@<server>[:<ssh port>]/127.0.0.1:<port>`: your user
+  (`USER`), the server address and port this session came in on (`SSH_CONNECTION`, port 22
+  left out), and the Runtime's loopback address behind them. Only Wisp Desktop takes this
+  form. A user or server that `ssh` could read as an option falls through to the next;
 - else the address `wisp` reaches the Runtime at on its host, `http://127.0.0.1:3008` by
-  default. Reach it from the device through an SSH tunnel on the same port, so the string
-  works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`.
+  default.
+
+For anything but the desktop, reach a loopback Runtime through a tunnel you open on the same
+port, so the `http` string works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`, then
+`wisp+http://127.0.0.1:3008#<token>`. `wisp telegram setup` refuses a `wisp+ssh://` string
+before it sends anything, and prints that tunnel command and string for it.
 
 ## The encryption key on a server
 
