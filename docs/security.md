@@ -95,9 +95,10 @@ check. See [Attestation](./runbook.md#attestation).
   terminal, because a command line can be seen by other users on the machine.
 - **`runtime.json`:** a file owned by another user is refused (exit 78), and so is a file
   holding a secret that others can read: `chmod 600` it.
-- **`telegram.json`** and **`slack.json`** hold the bot's or the app's tokens and its `run`
-  token once `wisp telegram setup` or `wisp slack setup` has run, and are written readable
-  only by you.
+- **`telegram.json`** holds the bot's token and its `run` token once `wisp telegram setup`
+  has run, and is written readable only by you.
+- **`slack.json`** holds the app's bot and app-level tokens and its `run` token once
+  `wisp slack setup` has run, and is written readable only by you.
 
 ## Not available yet
 
