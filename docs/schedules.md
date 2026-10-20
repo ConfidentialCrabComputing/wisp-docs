@@ -37,6 +37,11 @@ wisp schedules create --name dentist --at 2026-11-01T09:00:00+01:00 "remind me o
 
 A spec that never fires, such as 31 February, is refused when you make the job, not at night.
 
+Over HTTP, an interval of days can also name a time of day: `{ "every": "2d", "time": "09:00" }`
+fires at nine every second day, in the job's zone as a cron job's is (see below), and stays at
+nine across a change of clock. `time` goes with days only, up to `366d`; `wisp schedules create`
+has no flag for it.
+
 More flags for `wisp schedules create`:
 
 | flag | what it does |
@@ -56,7 +61,8 @@ A `--cron` job runs in a time zone:
 3. otherwise the host's.
 
 The zone is written into the job when it is made, so the job keeps its clock wherever the
-Runtime runs later. `--tz` goes with `--cron` only: `--every` and `--at` need no zone.
+Runtime runs later. `--tz` goes with `--cron` only: `--every` and `--at` need no zone. Over
+HTTP, the zone is the `schedule`'s `timezone`.
 
 ## Managing jobs
 
@@ -78,7 +84,8 @@ wisp schedules remove <id>     # delete it
 - A fire already going when you remove its job runs on.
 
 There is no `wisp schedules` command to edit a job; change one with
-`PATCH /v1/schedules/{id}` or from a chat.
+`PATCH /v1/schedules/{id}` or from a chat. A `PATCH` replaces the fields it names, and `null`
+clears an optional one such as `deliver`.
 
 ## Posting to a chat
 

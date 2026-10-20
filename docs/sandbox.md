@@ -7,14 +7,15 @@ description: How the sandbox keeps the agent's shell commands inside their folde
 With the sandbox on, every command the agent runs with [`bash_run`](./tools.md) runs in an
 OS-level cage that keeps it inside the folder it runs in. The sandbox is off by default:
 commands it refused read as Wisp failing the task, so it is something you turn on. Its
-network is on by default. It covers `bash_run` only; the file tools have their own checks,
-and connectors run outside it. With the sandbox off, `bash_run` still asks before every
-command unless a Rule allows it.
+network is on by default. The cage covers `bash_run` only, and connectors run outside it.
+The switch also sets how far the [file tools](./tools.md#files) reach: with it on they stop
+at the Project too. With the sandbox off, `bash_run` still asks before every command unless
+a Rule allows it.
 
 ## What a command can do
 
 - **Write only in its own folder.** That is the folder the command runs in: the Project, or
-  the subfolder the agent named. Nothing else on the machine can be changed.
+  the subfolder the agent named, and `/tmp`. Nothing else on the machine can be changed.
 - **Read its folder and the system's.** System folders such as `/usr` and `/etc` are
   readable, so ordinary tools and libraries work. Your home folder is not readable, nor is
   Wisp's data directory (`~/.wisp`) or its key file.
@@ -54,8 +55,8 @@ wisp sandbox network on
 ```
 
 The same switches are `GET` and `PUT /v1/sandbox`, with `enabled` and `allowNetwork`. In
-[Wisp Desktop](./desktop/app.md) the **Sandboxed / Unrestricted** button by the message box
-turns the sandbox on or off, and Settings has **Allow network in the sandbox**.
+[Wisp Desktop](./desktop/app.md) they are the two toggles in Settings → Sandbox:
+**Sandbox terminal commands** and **Allow network in the sandbox**.
 
 - **The switches cover the whole Runtime**, every Project and Session, not one Project.
 - **A change applies to the next command**, with no restart.
@@ -64,9 +65,11 @@ turns the sandbox on or off, and Settings has **Allow network in the sandbox**.
 
 Know what each switch costs:
 
-- **Sandbox off:** a command runs as the Runtime's own user, with no OS isolation. It can
-  read your home folder and the key source. Only the path check and the stripped
-  environment above remain. `wisp sandbox off` warns you of this.
+- **Sandbox off:** a command runs as the Runtime's own user, with no OS isolation, and may
+  name any path. It can read your home folder and the key source. Only the stripped
+  environment above remains, and a check that refuses a command naming `.wisp` or Wisp's
+  data directory, which a determined command can get past. The file tools may then reach
+  outside the Project, each such call on a card. `wisp sandbox off` warns you of this.
 - **Network off:** a command cannot reach the internet, which also breaks package managers
   (`npm`, `pip`) and `git`. The switch does nothing while the sandbox is off: commands then
   have the machine's full network.

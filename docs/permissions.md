@@ -42,6 +42,11 @@ Rules override the default. The first match in this order wins:
 | `global-rule`: a Rule for every Project | `wisp permissions set <tool> <decision>` |
 | `baseline`: the tool's own default | — |
 
+Two kinds of call ask whatever a Rule or a bypass says, and a `deny` still refuses them:
+creating, changing or deleting a [scheduled job](./tools.md#schedules), and a file tool call
+on a path outside the Session's folder, which only happens with the sandbox off (see
+[Files](./tools.md#files)).
+
 ## Seeing what applies
 
 ```sh
@@ -91,8 +96,8 @@ will be refused, and the agent drafts instead.
 wisp permissions bypass on --project .
 ```
 
-Allows every tool in that Project, except tools with a global `deny`. Creating, changing
-or deleting a scheduled job [still asks](./tools.md#schedules). Use it only for a
+Allows every tool in that Project, except tools with a global `deny`. The two kinds of call
+[above](#where-a-decision-comes-from) still ask. Use it only for a
 Project where you would approve anything the agent might do.
 
 ## `bash_run`

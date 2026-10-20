@@ -18,7 +18,7 @@ const sidebars: SidebarsConfig = {
     'how-it-works/llm',
     'how-it-works/glossary',
   ],
-  desktopSidebar: ['desktop/app', 'desktop/transcript'],
+  desktopSidebar: ['desktop/app', 'desktop/connect-to-a-server', 'desktop/transcript'],
   runtimeSidebar: [
     'runtime',
     {
@@ -55,6 +55,11 @@ const sidebars: SidebarsConfig = {
       items: ['telegram-bot', 'slack-app'],
     },
     'remote-access',
+    {
+      type: 'link',
+      label: 'Connect from Wisp Desktop',
+      href: '/desktop/connect-to-a-server',
+    },
     {
       type: 'category',
       label: 'Building on Wisp',

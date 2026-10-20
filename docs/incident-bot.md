@@ -72,7 +72,8 @@ would have allowed sending too.)
 
 ## 3. Try the agent by hand
 
-Before any code, check the SOP and the Skill on one alert from the CLI:
+Before any code, check the SOP and the Skill on one alert from the CLI. Save one of
+Alertmanager's notifications as `alert.json` in the Project folder, then:
 
 ```sh
 wisp run --skill open-case "$(cat alert.json)" --json > case.json
@@ -213,8 +214,8 @@ Each Run answers the bot with its outcome:
 { "runId": "…",
   "status": "completed",
   "output": { "text": "Latency has recovered…\n\nDraft for Payments on-call: …" },
-  "toolCalls": [ { "name": "mcp__telegram__get_messages", "ok": true, "durationMs": 380 },
-                 { "name": "mcp__telegram__save_draft", "ok": true, "durationMs": 210 } ],
+  "toolCalls": [ { "name": "mcp__telegram__get_messages", "args": {}, "ok": true, "durationMs": 380 },
+                 { "name": "mcp__telegram__save_draft", "args": {}, "ok": true, "durationMs": 210 } ],
   "usage": { "inputTokens": 8122, "outputTokens": 311, "totalTokens": 8433 },
   "artifacts": [] }
 ```
@@ -226,6 +227,7 @@ refused and listed with `"ok": false`: no Rule allows it.
 ## 6. What an operator sees afterwards
 
 ```sh
+cd ~/agents/incidents
 wisp sessions list          # the Sessions this folder has, one per incident, by title
 wisp audit <session-id>     # every tool call: when, which, ok, how long, and the decision
 ```
@@ -239,7 +241,8 @@ audit like the conversation before you ship it elsewhere.
 If the Runtime stops while a Run is going, the bot's call to it fails and the bot answers
 `503`, so Alertmanager sends the notification again. Once the Runtime is back, the repeat
 carries the same key, so it starts nothing new: it gets that Run's outcome, `failed` with
-`shutdown` if the stop cut it short. The bot then calls `retry`, which runs the message
+`shutdown` if the stop cut it short. (A Run the stop ended while it still waited in its
+queue never ran, so the repeat runs it now.) The bot then calls `retry`, which runs the message
 again. If an earlier delivery already retried it, `retry` answers `409` and the bot leaves
 it. [Runs and restarts](./runs-and-restarts.md) explains why.
 

@@ -5,9 +5,13 @@ description: Talk to the agent from Slack — create the app from a manifest, pa
 
 # A Slack app
 
-`wisp slack` answers you and your team in Slack. It is the same binary, run as its own process
-beside the Runtime: it reaches the Runtime only over `/v1`, with a `run` token, and reaches
-Slack over Socket Mode, so it needs no public port and no TLS of its own.
+`wisp slack` answers you and your team in Slack. It is the same `wisp` binary, run as its own
+process beside the Runtime, and it reaches Slack over Socket Mode, so it needs no public port
+and no TLS of its own.
+
+Before you start, [install](./quickstart.md) the Runtime and sign in, and keep it running:
+`setup` finds it on this host by the lock file a running Runtime keeps. You also need the
+right to create and install apps in the Slack workspace, or an admin who approves yours.
 
 ## 1. Create the app
 
@@ -36,6 +40,11 @@ settings:
   socket_mode_enabled: true
 ```
 
+Choose **Next**, then **Create**. To have threads show the app's status while the agent works,
+also turn on **Agents & AI Apps** in the app's sidebar now, before you install it; see
+[While the agent works](#while-the-agent-works). You can do it later, but then you reinstall
+the app.
+
 ## 2. Copy its two tokens
 
 1. Open *Install App* in the app's sidebar, choose **Install to** *your workspace* and then
@@ -60,11 +69,13 @@ wisp slack setup
 # No owner yet. Send @wisp a direct message: !pair …
 ```
 
-`setup` checks both tokens with Slack, mints the app its own `run` token for the Slack
-Channel (`wisp tokens create --name slack --capability run --channel slack`, done for you
-through `runtime.lock`), and stores all of it in the app's [state file](#its-state), readable
-only by you. Run it again to change the tokens; a different app starts with no owner and no one
-let in.
+`setup` checks both tokens with Slack, makes the app its own `run` token for the Slack Channel
+(as `wisp tokens create --name slack --capability run --channel slack` would), and stores all
+of it in the app's [state file](#its-state), readable only by you. If it asks for a connection
+string instead, it found no running Runtime on this host: press Ctrl-C, start the Runtime
+(`wisp status` tells), and run `setup` again. Without Agents & AI Apps, `setup` also says that
+answers show no status. Run it again to change the tokens; a different app starts with no
+owner and no one let in.
 
 Then it offers to start the app as a user service beside the Runtime's, restarted if it fails:
 a systemd unit `wisp-slack.service` on Linux (`journalctl --user -u wisp-slack -f`), a launchd
@@ -80,9 +91,11 @@ registers the same service, and `wisp slack` runs the app in this terminal.
 
 ## 4. Become its owner
 
-Send the app the `!pair …` line `setup` printed, in a direct message: you are its owner. The
-code works once. Until then, a message to the app answers with a pairing code and a reminder
-to send that line.
+In Slack, open the app's direct message: find **Wisp** under *Apps* in the sidebar, or search
+for it, and open its **Messages** tab. Send it the `!pair …` line `setup` printed. The app
+answers "You are this app's owner now": you get the cards that let people in and approve tools.
+The code works once, and only in a direct message. Until then, a message to the app answers
+with a pairing code and a reminder to send that line.
 
 :::note[If the app says it takes no chat messages]
 Someone set [`confirmationModes`](./configuration.md) in `~/.wisp/runtime.json` to a list
@@ -93,8 +106,11 @@ default, and restart the Runtime.
 ## The app on another machine
 
 On a host with no Runtime, `setup` asks instead for a connection string. Make one on the
-Runtime's host with `wisp tokens create --name slack --capability run --channel slack` and
-paste the `wisp+…` line. You can also skip `setup` and pass everything in the environment,
+Runtime's host with `wisp tokens create --name slack --capability run --channel slack` (any
+name not taken yet) and paste the `wisp+…` line it prints. A `wisp+ssh://…` line is for Wisp
+Desktop only: `setup` refuses it and prints the SSH tunnel to open and the
+`wisp+http://127.0.0.1…` line to paste instead (see
+[A token per device](./remote-access.md#a-token-per-device)). You can also skip `setup` and pass everything in the environment,
 which wins over what `setup` stored:
 
 ```sh
@@ -126,12 +142,12 @@ start with `!`. In a thread you can also mention the app and write the command w
 
 ## Where the app answers
 
-- **A direct message** with the app is one Session, keyed `slack:<bot user id>:<DM id>`.
-- **A channel**: first invite the app (`/invite @Wisp`). Slack sends the app nothing from a
-  channel it is not in. The app answers only when mentioned (`@Wisp …`). It replies in a thread under
-  that message, and the thread is its own Session, keyed `slack:<bot user id>:<channel id>:<thread ts>`. Anyone
-  let in can carry on in that thread without mentioning the app again. Each new mention starts
-  another thread and another Session.
+- **A direct message** with the app is one Session.
+- **A channel**, public or private: first invite the app (`/invite @Wisp` in the channel).
+  Slack sends the app nothing from a channel it is not in. The app answers only when mentioned
+  (`@Wisp …`). It replies in a thread under that message, and the thread is its own Session.
+  Anyone let in can carry on in that thread without mentioning the app again. Each new mention
+  starts another thread and another Session.
 - **A channel the owner has not approved**: the first mention there gets a pairing code, and you
   get a card to approve the channel. Once you approve it, by the card or `wisp slack pairing
   approve`, the app says so in the thread the code was given in. The mention that asked is not
@@ -151,7 +167,9 @@ start with `!`. In a thread you can also mention the app and write the command w
 The app posts a "Thinking…" line that names the tool the agent is running, and deletes it once
 the answer is posted. In a thread, the same line also shows as the app's status under the
 thread, the way Telegram shows "typing…". A thread waiting for you to press **Allow** or
-**Deny** shows no status. A direct message the app answers outside a thread shows none.
+**Deny** shows no status. A direct message the app answers outside a thread shows none. A
+message sent while the agent is still busy in the same Session waits its turn, and the app
+says "Queued".
 
 The status needs the app's **Agents & AI Apps** feature: turn it on in the app's settings at
 [api.slack.com/apps](https://api.slack.com/apps). This adds the `assistant:write` scope.
@@ -165,13 +183,16 @@ be fetched by Slack before anyone clicks it.
 
 ## Files
 
-Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you share with the app reach the
-agent with your message; a PDF or a text file is read as its text. Any other file, a voice
-message or an audio file included, fails the request with `unsupported_document`: the Slack app
-does not transcribe speech. Files the agent writes are uploaded into the thread after its
-answer. The app needs the `files:read` and `files:write` scopes for this: an app installed
-without them must be reinstalled from the manifest above, and until then its log says "Slack
-sent its sign-in page; the app needs the files:read scope".
+Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you
+share with the app reach the agent with your message; a PDF, a Word or Excel file or a text
+file is read as its text. Any other file, a voice message or an audio clip included, fails the
+request with `unsupported_document`: the Slack app does not transcribe speech. Files the agent
+sends you are uploaded into the thread after its answer. See
+[Voice and files](./voice-and-files.md) for the formats and limits.
+
+The app needs the `files:read` and `files:write` scopes for this: an app installed without them
+must be reinstalled from the manifest above, and until then its log says "Slack sent its
+sign-in page; the app needs the files:read scope".
 
 ## Approving tools
 
@@ -198,7 +219,10 @@ Codes expire and are rate-limited as the Telegram bot's are: see
 [Letting people in](./telegram-bot.md#letting-people-in).
 
 To let people or channels in without pairing, list their ids in `SLACK_ALLOWED_IDS`, separated by
-commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`).
+commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`). A person's id is under **Copy member ID** in
+their profile's **⋮** menu; a channel's is at the bottom of its details. The variable is read from
+the environment `wisp slack` starts in: the service `setup` registers does not see your shell's,
+so set it when you run `wisp slack` in a terminal or under a service of your own.
 
 ## Its state
 
@@ -211,9 +235,10 @@ the app is down is answered only if Slack still retries delivering it.
 
 ## Schedules
 
-A schedule delivers to Slack with `deliver: { channel: "slack", externalKey: … }`, the key
-naming a direct message (`slack:<DM id>`), a channel (`slack:<channel id>`) or a thread in it
-(`slack:<channel id>:<thread ts>`), followed by `@<bot user id>` so that only this app posts it;
-without it, every app running on the Runtime does. Every request the app starts carries its
-direct message's or thread's key with its own bot user, so a job created there delivers back there. An outcome that settles while the
-app is down is posted once it is back.
+A schedule delivers to Slack with `--deliver slack:<DM id>@<bot user id>`, a channel
+(`slack:<channel id>@<bot user id>`) or a thread in it (`slack:<channel id>:<thread ts>@<bot user id>`).
+The `@<bot user id>` makes only this app post it; without it, every app running on the Runtime
+does. Once the owner has written to the app, it prints the owner's key when it starts, in its
+terminal or the service's log (`Outcomes reach the owner with --deliver …`). A job the agent
+creates when you ask it in a direct message or a thread posts back there. An outcome that
+settles while the app is down is posted once it is back. See [Schedules](./schedules.md).

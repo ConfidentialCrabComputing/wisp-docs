@@ -38,6 +38,15 @@ wisp skills list --project .     # the same, plus this folder's Project Skills
 
 Each line is a Skill's name and description. `GET /v1/skills` returns the same list.
 
+Two Skills are built in:
+
+- **`create-skill`** teaches the agent to write a Skill; see
+  [below](#letting-the-agent-write-skills).
+- **`wisp-self-help`** answers questions about Wisp from these docs rather than from
+  memory, and, when something fails, reads the Runtime's recent errors first. It fetches
+  pages with `mcp__wisp_proxy__fetch_url`, which asks by default; see
+  [Web search and fetch](./tools.md#web-search-and-fetch).
+
 ## Writing a SKILL.md
 
 ```markdown

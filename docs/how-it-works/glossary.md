@@ -18,7 +18,7 @@ inside a TEE. Your machine verifies the Wisp Proxy's attestation before sending 
 If the fingerprint doesn't match the published code, the connection is refused.
 
 **Confirmation gate**: the Kernel step after the schema and Rule checks. A tool call whose
-decision is `ask` (by default writing files, shell commands and every connector tool) waits until you see
+decision is `ask` (by default writing files, shell commands, every connector tool and a few more) waits until you see
 the exact action and approve it. An `allow` Rule or a Project bypass skips it, and an
 unanswered confirmation is denied. See [Permissions](../permissions.md).
 

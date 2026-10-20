@@ -53,8 +53,12 @@ that fixes each problem.
 
 :::note[Linux]
 On Linux the installer needs `minisign` or OpenSSL 3 to verify the release signature, and
-stops if neither is installed. The agent's `bash_run` tool needs bubblewrap once you turn
-its [sandbox](./sandbox.md) on. On Debian or Ubuntu: `sudo apt install minisign bubblewrap`.
+stops if neither is installed. It also warns when bubblewrap is missing: the agent's
+`bash_run` tool needs it only once you turn its [sandbox](./sandbox.md) on. On Debian or
+Ubuntu: `sudo apt install minisign bubblewrap`.
+
+On a server, also run `loginctl enable-linger "$(id -un)"` once, so the service keeps
+running after you log out.
 :::
 
 <details>
@@ -92,7 +96,7 @@ The Runtime reaches the model through your Wisp account.
 wisp login
 ```
 
-This opens a browser, waits for you to sign in, and prints `ready`.
+This opens a browser and waits up to 5 minutes for you to sign in.
 
 On a server without a browser, or over SSH, it does not wait for one. It prints a URL instead
 (`--manual` does the same anywhere): open it on any device, sign in, then copy the address
@@ -104,7 +108,7 @@ it back into the terminal.
 wisp login --manual
 ```
 
-Once signed in, it prints the same summary as `wisp status`:
+Once signed in, it prints `ready` and your account. `wisp status` now says:
 
 ```sh
 wisp status
@@ -117,7 +121,7 @@ If you skip this step, the first `wisp run` at a terminal asks whether to sign i
 ## 3. Ask something
 
 `cd` into the folder the agent should work in. That folder becomes the Session's
-**Project**, and the agent's file tools can only reach inside it.
+**Project**: the agent works there, and a file call outside it asks you first.
 
 ```sh
 cd ~/projects/thing
@@ -179,5 +183,11 @@ wisp run "list my open pull requests"
 
 - [Using the CLI](./cli.md): everything `wisp run` and friends can do.
 - [Connectors](./connectors.md): OAuth sign-in, local MCP servers, Telegram.
+- [Telegram bot](./telegram-bot.md), [Slack app](./slack-app.md): talk to the agent from a
+  messenger.
+- [Connect to a server](./desktop/connect-to-a-server.md): installed it on a server? Wisp
+  Desktop on your laptop can work with it over SSH.
+- [The adapter contract](./adapter-contract.md): call the Runtime from your own code over
+  HTTP.
 - [Deploying an agent](./deploy-an-agent.md): turn a folder into an agent you can ship to a
   server.

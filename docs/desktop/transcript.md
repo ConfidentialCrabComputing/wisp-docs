@@ -24,36 +24,50 @@ transcript is sent for processing and is decrypted only inside the same Trusted 
 Environment (Intel TDX enclave) that handles all of Wisp's model calls. See
 [Trusted Execution Environments](../how-it-works/tee.md).
 
-## How the work is split
+Transcripts work when Wisp runs on this computer. With Wisp
+[connected to a server](./connect-to-a-server.md), switch back to **This computer** to record.
 
-All local work happens inside the Tauri desktop process, split into two components with a
-strict separation of concerns:
+## Recording a call
 
-- **The Rust host** owns audio capture (microphone and system loopback) and on-device
-  speech recognition. It is the only component that touches call audio.
-- **The desktop UI** (React) talks to the Rust host over Tauri IPC, not over the network.
-  It reaches the local agent sidecar over HTTP on the loopback interface only, authenticated
-  with a per-launch token.
+1. **Open Transcripts**, on the right of the window.
+2. **Download the model** the first time: the app asks before it downloads the 574 MB
+   speech model and shows its progress. If the download fails, retry it from the same place.
+3. **Press Record** to capture the call you are on. A **Recording** pill shows while it runs;
+   **Pause** and **Resume** stop and continue it without starting a new note.
+4. **Press Stop** when the call ends. The transcript appears once it is ready, and a
+   notification says **Transcript ready**.
 
-From there, transcript text flows to the local agent sidecar, where the agent loop
-(LangGraph) and its tools run. All I/O in the sidecar passes through the
-[Kernel](../how-it-works/kernel.md), which validates paths, checks permissions and enforces
-timeouts before writes are allowed.
+**Meeting detection** does step 3 for you. When an app such as Zoom, Discord or a browser
+starts using the microphone, a small Wisp window says **Meeting detected** and offers to
+record. It only offers: nothing records until you press **Record**. When the call seems
+over and the recording still runs, it reminds you to stop. Turn detection off with **Turn
+off meeting detection** in that window, or with **Detect meetings** in Settings →
+Recording.
+
+## Working with notes
+
+Each recording becomes a note with a **Summary** and the full **Transcript**.
+
+- **Search transcripts** finds notes by their text.
+- **Rename** a note (new ones are called **New note**), or **delete** it.
+- **Copy** the summary or the transcript, or **Download** the note as Markdown.
+- **Start a chat about this note** opens a chat that mentions it. In any chat, type `#` to
+  mention a recording, and the agent reads it when it needs it.
+- If a summary fails, **Retry summary**. If a recording fails to transcribe, its **Retry**
+  tries again.
 
 ## The life of the audio
 
 Raw audio is deliberately short-lived:
 
-1. **Capture.** The Rust host records two tracks: the microphone (you) and the system
-   loopback (everyone else). The two tracks are what attribute speech to speakers; there is
-   no separate diarization step.
-2. **Buffer.** Each track is written to its own `.wav` file, both in one directory.
-3. **Transcribe.** Speech recognition runs on-device in chunks, live, as the meeting
-   proceeds.
-4. **Delete.** Once the transcript is saved and every track is transcribed, the directory
-   with both `.wav` files is deleted. If a track fails to transcribe, its audio stays on
-   your device so that **Retry** can try again, until a retry succeeds or you delete the
-   recording. Audio is never uploaded or kept after that.
-5. **Keep the text only.** What remains is the transcript: timestamped segments stored in a
-   ChaCha20-Poly1305 encrypted SQLite database, alongside chats, summaries, memory and the
-   audit log.
+1. **Capture.** The app records two tracks: the microphone (you) and the system audio
+   (everyone else). The two tracks are what tell you apart from the others in the
+   transcript.
+2. **Transcribe.** Speech recognition runs on your device, as the meeting goes on.
+3. **Delete.** Once the transcript is saved and every track is transcribed, the audio is
+   deleted. If a track fails to transcribe, its audio stays on your device so that **Retry**
+   can try again, until a retry succeeds or you delete the recording. Audio is never
+   uploaded or kept after that.
+4. **Keep the text only.** What remains is the transcript: timestamped segments in an
+   encrypted database on your device, alongside your chats, summaries, memory and the audit
+   log.

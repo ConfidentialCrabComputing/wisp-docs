@@ -18,8 +18,10 @@ There are two ways to use it, and both talk to the same Runtime:
 - **Over HTTP.** The `/v1` API on `127.0.0.1` lets your own code (a chat bot, a webhook
   handler, a scheduler) turn its events into Runs.
 
-If you also use Wisp Desktop, the CLI talks to the Runtime inside the app, and your Sessions
-and connectors are shared between the two.
+If you also use Wisp Desktop on the same machine, the CLI talks to the Runtime inside the
+app while it is open, and your Sessions and connectors are shared between the two. The app
+can also work with a Runtime you run on a server, over SSH: see
+[Connect to a server](./desktop/connect-to-a-server.md).
 
 ## Where to go next
 
@@ -37,7 +39,8 @@ and connectors are shared between the two.
 | Run a prompt on a timetable | [Schedules](./schedules.md) |
 | Send it voice, images and documents, get files back | [Voice and files](./voice-and-files.md) |
 | Talk to the agent from Telegram or Slack | [Telegram bot](./telegram-bot.md), [Slack app](./slack-app.md) |
-| Reach it from another machine, a token per device, run it on a server | [Remote access](./remote-access.md) |
+| Run it on a server and use it from Wisp Desktop | [Connect to a server](./desktop/connect-to-a-server.md) |
+| Reach it from another machine, a token per device | [Remote access](./remote-access.md) |
 | Ship an agent as a folder you can check out on a server | [Deploying an agent](./deploy-an-agent.md) |
 | Call Wisp from your own code | [The adapter contract](./adapter-contract.md) and [a worked example](./incident-bot.md) |
 | Keep it running | [Runs and restarts](./runs-and-restarts.md), [Troubleshooting](./runbook.md), [Security](./security.md) |
@@ -48,7 +51,8 @@ and connectors are shared between the two.
 - **Runtime**: the running `wisp serve` process (or the one inside Wisp Desktop).
 - **Session**: one conversation. It keeps its history between Runs and across restarts.
 - **Run**: one prompt sent to a Session, and the agent's work until it answers.
-- **Project**: the folder a Session works in. The agent's file tools are confined to it.
+- **Project**: the folder a Session works in. The agent's file tools work there; a call outside it
+  asks first (with the [sandbox](sandbox.md) on, it is refused).
 - **Connector**: an MCP server that gives the agent more tools. The built-in Telegram
   connector signs in as your own account, so the agent can read it.
 - **Channel**: a messenger you write to the agent through: `wisp telegram` or `wisp slack`.

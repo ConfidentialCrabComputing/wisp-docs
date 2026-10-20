@@ -40,7 +40,23 @@ incident-agent/
 
 ## Deploying to a server
 
-With the Runtime [installed and signed in](./quickstart.md) on the server:
+First set the server up once, in this order:
+
+```sh
+curl -fsSL https://usewisp.io/runtime/install.sh | WISP_SERVICE=1 sh   # the Runtime, as a service
+source ~/.bashrc                                                       # the PATH line the installer printed
+loginctl enable-linger "$(id -un)"                                     # keep it running after logout
+wisp login --manual                                                    # sign in from any browser
+wisp status                                                            # ready
+```
+
+If you signed in when the installer asked `Log in now?`, skip `wisp login`.
+
+The service holds the Runtime's key file, `~/.config/wisp/master.key`: back it up. See
+[Install, update, uninstall](./install.md#run-it-as-a-service). To work with this server
+from Wisp Desktop on your laptop, see [Connect to a server](./desktop/connect-to-a-server.md).
+
+Then check the agent out and give it what it needs:
 
 ```sh
 git clone git@example.com:ops/incident-agent.git /srv/agents/incidents

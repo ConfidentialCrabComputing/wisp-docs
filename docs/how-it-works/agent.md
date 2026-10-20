@@ -42,17 +42,11 @@ did, when, and whether a human approved it. Deleting a Session deletes its audit
 
 ## Under the hood
 
-**Runtime and framework**
-
-- Orchestration: LangGraph (node-based agent state machine)
-- Language: Node.js (TypeScript, ES modules)
-- Persistence: SQLite via better-sqlite3 (synchronous, file-based)
-- Encryption: ChaCha20-Poly1305
-
 **Local tools**
 
-- Files, scoped to the project root: reading, listing and searching run without
-  confirmation; writing and editing are `ask` by default
+- Files, in the project folder: reading, listing and searching run without
+  confirmation; writing and editing are `ask` by default, and so is any call outside the
+  folder while the sandbox is off
 - Shell commands: `ask` by default
 - Encrypted memory and preferences: store, recall, update and delete
 - Sub-agents: for parallel work, with every tool unless the agent narrows them to reading
@@ -78,7 +72,7 @@ Their tools are named `mcp__<connector>__<tool>` and are `ask` by default. See
 - Chat sessions: encrypted SQLite (`~/.wisp/data.db`), scoped per project
 - Agent memory: persistent across sessions and Projects, tagged (user, project, feedback,
   reference), saved by the agent or after a turn on its own, and recalled into each turn by
-  local embeddings or full-text search through FTS5. See [Tools](../tools.md#memory-and-other-agent-tools)
+  local embeddings or full-text search. See [Tools](../tools.md#memory-and-other-agent-tools)
 - Audit log: every tool call recorded with shortened, redacted arguments and result,
   timestamp and approval status
 

@@ -5,9 +5,12 @@ description: Talk to the agent from Telegram — set the bot up, pair its owner,
 
 # A Telegram bot
 
-`wisp telegram` answers you in Telegram. It is the same binary, run as its own process beside
-the Runtime: it reaches the Runtime only over `/v1`, with a `run` token, and reaches Telegram
-by long polling, so it needs no public port and no TLS of its own.
+`wisp telegram` answers you in Telegram. It is the same `wisp` binary, run as its own process
+beside the Runtime, and it reaches Telegram by long polling, so it needs no public port and no
+TLS of its own.
+
+Before you start, [install](./quickstart.md) the Runtime and sign in, and keep it running:
+`setup` finds it on this host by the lock file a running Runtime keeps.
 
 :::tip[The bot is not the Telegram connector]
 The bot is a Channel: **you write to the agent** in Telegram. The
@@ -18,7 +21,9 @@ without the other.
 
 ## 1. Make a bot
 
-Make a bot with [@BotFather](https://t.me/BotFather) and copy the token it gives you.
+In Telegram, open [@BotFather](https://t.me/BotFather) and send `/newbot`. Give it a display
+name, then a username that ends in `bot` (such as `your_bot`). BotFather answers with the
+bot's token, `123456789:AA…`: copy it. Keep it secret; anyone with it can act as the bot.
 
 ## 2. Set the bot up
 
@@ -34,10 +39,11 @@ wisp telegram setup
 # No owner yet. Open https://t.me/your_bot?start=… and press Start, or send /pair … to the bot.
 ```
 
-`setup` checks the bot token with Telegram, mints the bot its own `run` token for the
-Telegram Channel (`wisp tokens create --name telegram --capability run --channel telegram`,
-done for you through `runtime.lock`), and stores both in the bot's
-[state file](#its-state), readable only by you. Run it again to change the bot token; a
+`setup` checks the bot token with Telegram, makes the bot its own `run` token for the
+Telegram Channel (as `wisp tokens create --name telegram --capability run --channel telegram`
+would), and stores both in the bot's [state file](#its-state), readable only by you. If it asks
+for a connection string instead, it found no running Runtime on this host: press Ctrl-C, start
+the Runtime (`wisp status` tells), and run `setup` again. Run it again to change the bot token; a
 different bot starts with no owner and no one let in. While the bot's privacy mode is on,
 BotFather's default, `setup` says so: if people will mention the bot in a group, turn it off
 then, before adding the bot to one (see [Add it to a group](#4-add-it-to-a-group-optional)).
@@ -56,8 +62,10 @@ registers the same service (add `--all-messages` for a [group](#where-the-bot-an
 
 ## 3. Become its owner
 
-Open the link `setup` printed on your phone and press Start: you are the bot's owner. The code
-works once.
+Open the link `setup` printed wherever you use Telegram and press **Start** (or send the bot
+the `/pair …` line in a private chat). The bot answers "You are this bot's owner now": you get
+the cards that let people in and approve tools. The code works once, and only in a private
+chat.
 
 :::note[If the bot says it takes no chat messages]
 Someone set [`confirmationModes`](./configuration.md) in `~/.wisp/runtime.json` to a list
@@ -105,7 +113,10 @@ except other bots' messages, so mentions work without `/setprivacy`.
 
 On a host with no Runtime, `setup` asks instead for a connection string. Make one on the
 Runtime's host with `wisp tokens create --name telegram --capability run --channel telegram`
-and paste the `wisp+…` line. You can also skip `setup` and pass everything in the
+(any name not taken yet) and paste the `wisp+…` line it prints. A `wisp+ssh://…` line is for
+Wisp Desktop only: `setup` refuses it and prints the SSH tunnel to open and the
+`wisp+http://127.0.0.1…` line to paste instead (see
+[A token per device](./remote-access.md#a-token-per-device)). You can also skip `setup` and pass everything in the
 environment: `TELEGRAM_BOT_TOKEN`, and `WISP_URL` with `WISP_TOKEN`. See
 [Remote access](./remote-access.md) for reaching the Runtime from another machine.
 
@@ -125,8 +136,8 @@ refuses the bot's Runs with `403`.
 
 ## Where the bot answers
 
-- **A private chat** is one Session, keyed `telegram:<bot id>:<chat id>`, so the agent remembers the
-  conversation. `wisp sessions list --origin telegram` lists them.
+- **A private chat** is one Session, so the agent remembers the conversation.
+  `wisp sessions list --origin telegram` lists the bot's Sessions.
 - **A group** must first be approved by the owner, and its members let in each on their own:
   see [Add it to a group](#4-add-it-to-a-group-optional). The bot ignores a group message
   from someone not let in.
@@ -135,12 +146,12 @@ refuses the bot's Runs with `403`.
   With `wisp telegram install --all-messages` (or `wisp telegram --all-messages`) it answers
   every message it gets; for Telegram to send them all, turn the bot's privacy mode off in
   @BotFather (`/setprivacy` → Disable) and add the bot to the group again, or make it an admin.
-  While privacy mode is on, the bot says so on stderr when it starts (in the service's log). Each person in a group has their own Session
-  (`telegram:<bot id>:<chat id>:u<user id>`), so nobody's question waits behind someone else's.
-- **A forum topic** is one shared Session for everyone in it (`telegram:<bot id>:<chat id>:<topic id>`).
+  While privacy mode is on, the bot says so when it starts, in the service's log. Each person
+  in a group has their own Session, so nobody's question waits behind someone else's.
+- **A forum topic** is one shared Session for everyone in it.
 - **Who wrote**: in a group or a forum topic, the agent is told the name of the person whose
   message it answers.
-- **A reply**: when a participant replies to a message, the message they reply to reaches the agent
+- **A reply**: in a group, when a participant replies to a message, the message they reply to reaches the agent
   with its author's name, whoever wrote it: the owner, another participant, someone not let in or
   another bot. It is marked as a third party's, as data rather than an instruction. If the
   participant quoted part of it, only that part is passed. A reply to the bot's own message passes
@@ -159,11 +170,20 @@ as one message per photo. The bot waits a moment for the rest and puts them back
 
 ## Files and voice messages
 
-Photos, documents, voice messages and audio files up to 20 MB reach the agent with your
-message; a PDF or a text file is read as its text. Videos are refused. A voice message needs
-the [speech model](./reference.md#speech): until it is installed, the owner gets a card to
-install it (about 670 MB) and sees the progress. Files the agent writes are sent back as documents
-after its answer.
+Photos, documents, voice messages and audio files up to 20 MB each (the most Telegram lets a
+bot download) reach the agent with your message; a PDF, a Word or Excel file or a text file is
+read as its text. Videos are refused. A voice message or an audio file needs the
+[speech model](./voice-and-files.md#voice-messages): until it is installed, the owner gets a
+card to install it (about 670 MB) and sees the progress, and anyone else is told voice messages
+are not set up yet. Files the agent sends you are posted as documents after its answer. See
+[Voice and files](./voice-and-files.md) for the formats and limits.
+
+## While the agent works
+
+The bot shows "typing…" and posts a "Thinking…" line that names the tool the agent is
+running, then deletes it once the answer is posted. In a private chat the answer also shows as
+a draft while the agent writes it. A message sent while the agent is still busy in the same
+Session waits its turn, and the bot says "Queued".
 
 ## Approving tools
 
@@ -200,7 +220,9 @@ requests, for an hour, while the cards already sent still work.
 To let people in without pairing, list their user ids, or a chat's id, in
 `TELEGRAM_ALLOWED_IDS`, separated by commas (`TELEGRAM_ALLOWED_IDS=123456789,987654321`). An id
 on the list is answered at once, even before the bot has an owner; to shut it out, take it off
-the list and restart the bot.
+the list and restart the bot. The variable is read from the environment `wisp telegram` starts
+in: the service `setup` registers does not see your shell's, so set it when you run
+`wisp telegram` in a terminal or under a service of your own.
 
 ## Its state
 
@@ -236,5 +258,8 @@ it yourself after an update.
 ## Schedules
 
 A schedule delivers to Telegram with `--deliver telegram:<chat id>@<bot id>`, or
-`telegram:<chat id>:<topic id>@<bot id>` for a forum topic. The bot prints the owner's key once
-paired. Without `@<bot id>`, every bot running on the Runtime posts the outcome.
+`telegram:<chat id>:<topic id>@<bot id>` for a forum topic. Once paired, the bot prints the
+owner's key when it starts, in its terminal or the service's log (`Outcomes reach the owner with --deliver …`);
+`wisp telegram pairing list` shows the id of each user and group let in. Without `@<bot id>`,
+every bot running on the Runtime posts the outcome. A job the agent creates when you ask it in
+a chat posts back to that chat. See [Schedules](./schedules.md).

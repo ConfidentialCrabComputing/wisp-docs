@@ -32,8 +32,11 @@ else takes its default until you add it.
 `wisp doctor` names the problem and the command that fixes it. See
 [Troubleshooting](./runbook.md#wisp-doctor).
 
-`wisp serve --config <path>` reads another file instead. `wispHome` (the data directory) can
-be set only there or with `WISP_HOME`, never in a `runtime.json` found through `WISP_HOME`.
+`wisp serve --config <path>` reads another file instead. `wisp serve --home <dir>` keeps
+the data in `<dir>` and reads `<dir>/runtime.json`, as `WISP_HOME=<dir>` does; set
+`WISP_HOME` for the other `wisp` commands too, so they find that Runtime. `wispHome` (the
+data directory) can be set in a file only through `--config`, never in a `runtime.json`
+found through `WISP_HOME`.
 
 ## The environment
 
@@ -63,6 +66,10 @@ in front of it and list the name callers use in `allowedHosts`:
 
 Never send the token over a network in clear. [Remote access](./remote-access.md) has the
 whole setup, a token per device, and the encryption key a Linux server needs.
+
+To use the Runtime from Wisp Desktop on another machine, you need none of this: the app
+reaches it over SSH and the Runtime stays on loopback. See
+[Connect to a server](./desktop/connect-to-a-server.md).
 
 ### Stop callers from asking for approvals
 
@@ -111,6 +118,8 @@ A few settings belong to other processes, or are read only from the environment.
 | --- | --- | --- |
 | `TELEGRAM_ALLOWED_IDS` | `wisp telegram` | users and chats let in without pairing, comma-separated — see [Letting people in](./telegram-bot.md#letting-people-in) |
 | `SLACK_ALLOWED_IDS` | `wisp slack` | users and channels let in without pairing, comma-separated — see [Letting people in](./slack-app.md#letting-people-in) |
+| `TELEGRAM_BOT_TOKEN` | `wisp telegram` | the bot's token, instead of the one `wisp telegram setup` stored |
+| `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` | `wisp slack` | the app's two tokens, instead of the ones `wisp slack setup` stored |
 | `TELEGRAM_API_URL` | `wisp telegram` | the Bot API's address instead of `https://api.telegram.org`, for a Bot API server of your own |
 | `SLACK_API_URL` | `wisp slack` | the Web API's address instead of `https://slack.com/api` |
 | `WISP_URL`, `WISP_TOKEN` | every `wisp` command | the Runtime to reach and its token — see [Reaching a Runtime](./cli.md#reaching-a-runtime) |
@@ -120,8 +129,5 @@ A few settings belong to other processes, or are read only from the environment.
 address: the bot's tokens travel in every call. An id in an allow list that is not a valid
 id stops the bot or the app before it starts.
 
-`WISP_KEY_BACKEND=file` keeps the Runtime's keys as files under `$WISP_HOME/keys/` instead of
-in the OS keyring. The keys are then stored unencrypted, beside the data they protect: anyone
-who copies the data directory can read it. Avoid it outside tests. On a server, use
-`WISP_MASTER_KEY_FILE` instead; under `wisp serve` on Linux it is required, and
-`WISP_KEY_BACKEND` is not read.
+`WISP_KEY_BACKEND=file` is for tests: it stores the Runtime's keys unencrypted beside the
+data they protect. On a server, use `WISP_MASTER_KEY_FILE` instead.

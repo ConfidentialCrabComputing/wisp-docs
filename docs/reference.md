@@ -16,7 +16,9 @@ reached by a browser. The full API, with request and response schemas, is at
 `/v1/openapi.json`; this table is an index of it.
 
 - An error answers `{ "error": "…", "code": "…" }`, with `code` only where a program has
-  something to match, such as `confirmation_mode_<mode>_not_allowed`.
+  something to match, such as `confirmation_mode_<mode>_not_allowed`. A token the Runtime
+  does not know is `401`; a named token that may not reach the route is `403`. See
+  [errors](adapter-contract.md#errors).
 - While a newer release exists, an answer to a request with a token carries `X-Wisp-Update`
   with its version.
 - The Session routes that load a Session (`PATCH`, runs, cancel, and a Run's retry)
@@ -123,8 +125,9 @@ the Rule).
 
 - An optional `text` replaces the draft before the tool runs, on the tools whose card offers
   one to edit — see [approvals](adapter-contract.md#approvals).
+- A Prompt marked `askedEveryTime: true` cannot be lifted by a Rule: `allow_project` and
+  `allow_global` approve it and write none.
 - A `run` token answers only `approve` or `deny`, and only on a Run it started; else `403`.
-
 - It waits for the Run's next park or its end, answered as the Run request is. With
   `wait: false` it answers `202 { runId, status }` at once and the Run goes on.
 - While another Prompt of the same step is pending, it answers at once with `status: parked`
@@ -145,7 +148,7 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `tool_call.started` | `name`, `toolCallId` | a call passed the Rules and runs now, a subagent's too; no arguments. A refused call has none |
 | `tool_call` | the outcome's `toolCalls` entry, plus `toolCallId` | a call ended |
 | `run.parked` | | an `interactive` Run waits on its first pending Prompt |
-| `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks |
+| `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args`, `askedEveryTime` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks |
 | `confirmation.resolved` | `id`, `decision`, `via` | a Prompt settled: `via` is `api` when answered, `timeout` when nobody answered in time (a deny), `cancel` when the Run was cancelled (a deny) |
 | `run.resumed` | | the last pending Prompt settled and the Run goes on |
 | `run.completed`, `run.failed`, `run.cancelled` | `outcome` | the one terminal Event, carrying what `GET /v1/runs/{runId}` answers |
@@ -194,7 +197,8 @@ A job runs a message on a clock. Its `schedule` is one of:
   Without `timezone`, it runs in the zone of [`/v1/timezone`](#rules-skills-and-the-audit), or
   the host's when none is set;
 - an interval counted from when the job is made or changed: `{ "every": "2h" }`, in `m`, `h`
-  or `d`;
+  or `d`. An interval of days may name a time of day, `{ "every": "2d", "time": "09:00" }`,
+  up to `366d`, in its `timezone` or the zone a cron job would get;
 - one instant: `{ "at": "2026-11-01T09:00:00Z" }`.
 
 Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
@@ -210,19 +214,19 @@ Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
 | method | route | what it does |
 | --- | --- | --- |
 | `POST` | `/v1/schedules` | make a job; answers it with its `id` and `nextAt` |
-| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt` and `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) |
+| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt`, `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) and `lastFire`, its newest settled fire as `/v1/fires` lists one, `null` before the first |
 | `GET` | `/v1/schedules/{id}` | one job |
-| `PATCH` | `/v1/schedules/{id}` | change the fields named; `nextAt` moves only with `schedule` |
+| `PATCH` | `/v1/schedules/{id}` | change the fields named; `null` clears `skill`, `projectRoot`, `outputSchema` or `deliver`; `nextAt` moves only with `schedule` |
 | `DELETE` | `/v1/schedules/{id}` | delete a job; a fire under way runs on |
 | `POST` | `/v1/schedules/{id}/pause` | stop a job firing until it is resumed |
 | `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
 | `POST` | `/v1/schedules/{id}/run` | fire it now, off the clock; `202` with the Run's `runId`, read on `/v1/runs/{runId}`; `409` when its folder is gone |
-| `GET` | `/v1/fires` | with `channel=desktop`, the settled fires of jobs addressed to that Channel, oldest first, each with its `sequence`, job, instant, outcome and first line of the answer; `settledAfter=<sequence>` lists only those after it |
+| `GET` | `/v1/fires` | the settled fires, each with its `sequence`, job, instant, `outcome` (`completed`, `failed`, `cancelled`, `silent` or `skipped`), `reason` and first line of the answer, paged by `limit` and `nextCursor`. With `channel` (Wisp Desktop reads `desktop`), those of jobs addressed to that Channel, oldest first, past `settledAfter=<sequence>`; without, every job's newest first, before `before=<sequence>`, or one job's with `scheduleId`. `lastSequence` is the newest sequence handed out |
 | `GET` | `/v1/delivery-targets` | each place a job or a kept Run delivers, once: its `channel` and `externalKey`, the newest `label` a Run addressed there sent, and `group`, whether everyone in that chat reads it |
 
 ### Speech
 
-The speech model an `audio` block needs is 670 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. The one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
+The speech model an `audio` block needs is 670 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. Both routes take the one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
 
 | method | route | what it does |
 | --- | --- | --- |
@@ -292,7 +296,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | --- | --- |
 | `wisp serve [--home dir] [--config file]` | run the Runtime in the foreground |
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
-| `wisp doctor` | check the config, keyring, service, Runtime, login, proxy, sandbox (Linux) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
+| `wisp doctor` | check the config, the key file or keyring, service, Runtime, login, proxy, the sandbox (on Linux: bubblewrap, once the sandbox is on) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
@@ -323,7 +327,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
 | `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
 | `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
-| `wisp tokens revoke <n>` | refuse that token from now on; the one token and the other named tokens keep working |
+| `wisp tokens revoke <n>` | refuse that token from now on and pause the jobs its bot made in a chat; the one token and the other named tokens keep working |
 | `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
 | `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
 | `wisp schedules pause <id>`, `wisp schedules resume <id>` | stop a job firing, or let it fire again |
@@ -340,8 +344,8 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
-| `wisp update` | install the newest release beside the running one and restart the service onto it; without a running service, it takes effect on the next `wisp serve` |
-| `wisp uninstall` | remove what the installer put down (service, the Telegram bot's service, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
+| `wisp update` | install the newest release beside the running one and restart the service, and the Telegram bot's and the Slack app's services, onto it; without a running service, it takes effect on the next `wisp serve` |
+| `wisp uninstall` | remove what the installer put down (service, the Telegram bot's and the Slack app's services, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
 
@@ -351,7 +355,9 @@ One Run, waited on.
 
 - Without a session, it opens one for the current folder, and prints `session <id>` on stderr
   first.
-- `--detach` prints the Run's id and returns without waiting.
+- `--detach` prints the Run's id and returns without waiting; with `--json`,
+  `{ sessionId, runId, status }`.
+- `--json` prints the outcome with `sessionId`, and no `session <id>` line on stderr.
 - `--interactive` runs it in the `interactive` mode: on a park it prints each pending Prompt
   as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer.
 - `--output-schema` sends the file's JSON Schema as `outputSchema` and prints only
@@ -384,7 +390,8 @@ that bot posts it.
 - Asks for the bot's token from @BotFather.
 - Mints a `run` token for the Telegram Channel, with the one token given, or from
   `runtime.lock`. On another host, you paste a connection string instead.
-- Stores both in the state file and prints the owner link.
+- Stores both in the state file, offers to start the bot as a service, and prints the owner
+  link.
 
 See [the Telegram bot](telegram-bot.md).
 
@@ -394,7 +401,8 @@ See [the Telegram bot](telegram-bot.md).
   checks both with Slack.
 - Mints a `run` token for the Slack Channel, with the one token given, or from
   `runtime.lock`. On another host, you paste a connection string instead.
-- Stores them in the state file and prints the owner's `!pair` line.
+- Stores them in the state file, offers to start the app as a service, and prints the
+  owner's `!pair` line.
 
 See [the Slack app](slack-app.md).
 
@@ -444,7 +452,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `bashTimeout` | `BASH_TIMEOUT` | `30000` | how long one `bash_run` may take, in ms |
 | `bashMaxOutput` | `BASH_MAX_OUTPUT` | `100000` | characters of a command's output the model sees |
 | `fetchMaxLength` | `FETCH_MAX_LENGTH` | `50000` | characters of a fetched page the model sees |
-| `fsMaxFileSize` | `FS_MAX_FILE_SIZE` | `10485760` (10 MiB) | the largest file the file tools read |
+| `fsMaxFileSize` | `FS_MAX_FILE_SIZE` | `31457280` (30 MiB) | the largest file the file tools read |
 | `maxImageSizeBytes` | `MAX_IMAGE_SIZE_BYTES` | `10485760` (10 MiB) | the largest image a message may carry |
 | `skillPaths` | `SKILL_PATHS` | none | extra folders of Skills, separated like `PATH` |
 | `logFormat` | `LOG_FORMAT` | `text` | how stderr lines are written: `text`, or `json` for one object per line with `ts`, `level`, `component`, `msg`, and `runId`/`sessionId` during a Run. A config error is written in this format too, read from the environment or from the file's own `logFormat` |

@@ -21,7 +21,7 @@ from a request.
 
 ## Architecture
 
-The Wisp Proxy is built with NestJS (Node.js, TypeScript). It runs inside a Phala CVM
+The Wisp Proxy runs inside a Phala CVM
 (Confidential Virtual Machine), a TEE at the level of the whole VM rather than a single
 process. The entire process executes inside the enclave, isolated from the host OS, the
 hypervisor and the cloud operator.
