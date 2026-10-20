@@ -48,7 +48,7 @@ together. "Sealed" means the memory is encrypted by a key the CPU generates and 
 reveals.
 
 **Stateless proxy**: the routing component inside the sealed enclave. It holds the model
-API credentials and forwards requests, but stores nothing: no database, no log, no state.
+API credentials and forwards requests, but stores nothing: no database, no state.
 
 **Symlink escape**: an attack where a symbolic link inside the project folder points to a
 sensitive file outside it. The Kernel's path check resolves symlinks first, then checks

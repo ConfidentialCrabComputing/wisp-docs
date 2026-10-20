@@ -60,7 +60,8 @@ The consequence: if a web page, a connector result or a document tries to get th
 That puts all the weight on your Rules. See [Permissions](./permissions.md), including the
 warnings about [`bash_run`](./permissions.md#bash_run).
 
-Keep the `bash_run` [sandbox](./sandbox.md) on. Without it (`wisp sandbox off`, the
+Turn the `bash_run` [sandbox](./sandbox.md) on wherever commands run without you reading
+each one first; [Sandbox](./sandbox.md#when-to-turn-it-on) says when. Without it (`wisp sandbox off`, the
 default) a `bash_run` command runs as the Runtime's own user and can read the key source,
 and the file tools may reach outside the Project, each such call on a card. Sandbox or not,
 the file tools refuse Wisp's data directory, `.env` files, `/etc` and the usual secrets in

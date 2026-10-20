@@ -1,16 +1,31 @@
 ---
-description: How the sandbox keeps the agent's shell commands inside their folder, and how to turn it and its network on or off.
+description: When to turn on the sandbox for the agent's shell commands, what it protects, what stops working inside it, and how to switch it and its network.
 ---
 
 # Sandbox
 
 With the sandbox on, every command the agent runs with [`bash_run`](./tools.md) runs in an
-OS-level cage that keeps it inside the folder it runs in. The sandbox is off by default:
-commands it refused read as Wisp failing the task, so it is something you turn on. Its
-network is on by default. The cage covers `bash_run` only, and connectors run outside it.
-The switch also sets how far the [file tools](./tools.md#files) reach: with it on they stop
-at the Project too. With the sandbox off, `bash_run` still asks before every command unless
-a Rule allows it.
+OS-level cage that keeps it inside the folder it runs in. **The sandbox is off by default**:
+it is a trade, more safety for fewer things a command can do, and you choose it. Its network
+is on by default. The cage covers `bash_run` only, and connectors run outside it. The switch
+also sets how far the [file tools](./tools.md#files) reach: with it on they stop at the
+Project too. With the sandbox off, `bash_run` still asks before every command unless a Rule
+allows it.
+
+## When to turn it on
+
+Turn it on when commands can run without you reading each one first:
+
+- **You allow `bash_run` by a Rule**, or with bypass, so commands run with no card.
+- **Runs and schedules** that work unattended with such a Rule.
+- **Chat bots** ([Telegram](./telegram-bot.md), [Slack](./slack-app.md)) where other people
+  write to the agent.
+- **Input you did not write**: web pages, emails, documents, someone else's repository. A
+  hidden instruction in them can steer the agent into running a command.
+- **A shared server**, or a machine that holds other people's data.
+
+Leaving it off is fine when you sit at the machine and read every command's card before you
+approve it. Then you are the fence.
 
 ## What a command can do
 
@@ -26,11 +41,34 @@ a Rule allows it.
 - **Not see your environment.** A command gets your login shell's `PATH`, `LANG` and `TERM`;
   its `HOME` is the folder it runs in, and its `TMPDIR` is `.tmp` there. Tokens and keys in
   the Runtime's environment never reach it.
-- **Reach the network**, unless you [turn the network off](#turn-it-on-or-off).
+- **Reach the network**, unless you [turn the network off](#turn-it-on-or-off). With it on,
+  that includes services on the machine itself (`localhost`).
 
 On Linux the command also gets its own process, IPC and hostname namespaces, a fresh empty
 `/tmp` that disappears when it ends, and a filtered set of system calls. It is killed if the
 Runtime dies. On macOS `/tmp` is the machine's own.
+
+## What stops working
+
+Most work inside a Project still runs: reading and editing its files, `git status`, `diff`
+and `commit`, builds, tests, and `python3` or `node` scripts. What does not:
+
+| What | Why | What to do |
+| --- | --- | --- |
+| `sudo`, `apt`, `brew install`, `npm install -g`, `pip install` into the system Python | system folders are read-only | install tools yourself, outside Wisp, before you turn the sandbox on |
+| tools installed in your home folder: nvm, pyenv, conda, rustup, `~/.local/bin` | your home folder is not readable, so they fail even though `PATH` names them | install the tool system-wide or with Homebrew |
+| on Linux, tools under `/opt`, `/snap` or Linuxbrew | only `/usr`, `/bin`, `/sbin`, `/lib` and `/etc` are there | install the tool through the system's packages |
+| `git push` or `pull` over SSH, or with saved credentials | `~/.ssh`, the SSH agent, `~/.gitconfig` and the Keychain are out of reach | push yourself; set `git config user.name` and `user.email` in the repository, where a commit can see them |
+| a file outside the Project | the path is refused before the command runs | copy the file into the Project |
+| downloads, `npm install`, `pip install`, `git fetch` with the network off | no network at all, not even `localhost` | `wisp sandbox network on` |
+
+Project-local installs work while the network is on: `npm install` puts `node_modules` in
+the folder, and `python3 -m venv .venv` then `.venv/bin/pip install ...` gives Python
+packages of its own.
+
+If a task needs the whole machine, installing system tools or pushing with your keys, the
+sandbox is the wrong place for it: do that step yourself, or turn the sandbox off for it and
+read each card.
 
 ## What it needs
 
@@ -70,9 +108,8 @@ Know what each switch costs:
   environment above remains, and a check that refuses a command naming `.wisp` or Wisp's
   data directory, which a determined command can get past. The file tools may then reach
   outside the Project, each such call on a card. `wisp sandbox off` warns you of this.
-- **Network off:** a command cannot reach the internet, which also breaks package managers
-  (`npm`, `pip`) and `git`. The switch does nothing while the sandbox is off: commands then
-  have the machine's full network.
+- **Network off:** a command cannot reach the internet or the machine's own services,
+  which also breaks package managers (`npm`, `pip`) and `git`. The switch does nothing
+  while the sandbox is off: commands then have the machine's full network.
 
-Keep the sandbox on. If a command needs something outside its folder, give it that file in
-the Project rather than turning the sandbox off. See [Security](./security.md).
+See [Security](./security.md).

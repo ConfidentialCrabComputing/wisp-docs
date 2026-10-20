@@ -41,8 +41,8 @@ own. See [The Kernel](./kernel.md).
 
 **Wisp Proxy (Anonymizer).** The stateless gateway that forwards your prompts to the LLM
 and executes identifiable requests (web search, for example) on your behalf, so third
-parties can't track you or build a profile of you. The Wisp Proxy keeps no database or
-logs, and runs inside a Trusted Execution Environment (TEE), so nobody at Wisp can see
+parties can't track you or build a profile of you. The Wisp Proxy keeps no database,
+and runs inside a Trusted Execution Environment (TEE), so nobody at Wisp can see
 inside. See [Wisp Proxy](./proxy.md).
 
 **LLM.** The model itself runs inside a Trusted Execution Environment (Intel TDX), a secure
