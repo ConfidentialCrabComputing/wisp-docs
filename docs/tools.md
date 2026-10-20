@@ -37,7 +37,8 @@ Project, a folder of its own under `~/Wisp`.
 | `bash_run` | runs a shell command, in a [sandbox](./sandbox.md) | `ask` |
 
 Read [`bash_run`](./permissions.md#bash_run) before you allow it: the
-[sandbox](./sandbox.md) keeps a command inside its folder, but its network is on.
+[sandbox](./sandbox.md) is off by default, and once on it keeps a command inside its folder,
+but its network is on.
 
 ## Schedules
 

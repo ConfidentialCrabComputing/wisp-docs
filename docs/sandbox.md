@@ -4,10 +4,12 @@ description: How the sandbox keeps the agent's shell commands inside their folde
 
 # Sandbox
 
-Every command the agent runs with [`bash_run`](./tools.md) runs in a sandbox: an OS-level
-cage that keeps it inside the folder it runs in. The sandbox is on by default, and so is its
-network. It covers `bash_run` only; the file tools have their own checks, and connectors run
-outside it.
+With the sandbox on, every command the agent runs with [`bash_run`](./tools.md) runs in an
+OS-level cage that keeps it inside the folder it runs in. The sandbox is off by default:
+commands it refused read as Wisp failing the task, so it is something you turn on. Its
+network is on by default. It covers `bash_run` only; the file tools have their own checks,
+and connectors run outside it. With the sandbox off, `bash_run` still asks before every
+command unless a Rule allows it.
 
 ## What a command can do
 
@@ -44,7 +46,7 @@ allows anything your user can do.
 ## Turn it on or off
 
 ```sh
-wisp sandbox                 # sandbox on, network on
+wisp sandbox                 # sandbox off, network on
 wisp sandbox off             # run commands without the sandbox
 wisp sandbox on
 wisp sandbox network off     # keep the sandbox, take its network away
