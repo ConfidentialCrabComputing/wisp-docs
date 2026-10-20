@@ -42,35 +42,67 @@ settings:
 2. Under *Basic Information → App-Level Tokens*, generate a token with the `connections:write`
    scope and copy it (`xapp-…`).
 
-## 3. Give it a token and run it
+## 3. Set the app up
+
+On the Runtime's host:
 
 ```sh
-wisp tokens create --name slack --capability run --channel slack
-export SLACK_BOT_TOKEN=xoxb-… SLACK_APP_TOKEN=xapp-…
-export WISP_URL=http://127.0.0.1:3008 WISP_TOKEN=<the run token>
-wisp slack
+wisp slack setup
+# paste the app's Bot User OAuth Token (xoxb-…), then press Enter
+# paste the app-level token with connections:write (xapp-…), then press Enter
+# @wisp is set up.
+# Start the app now as a service, restarted on failure? [Y/n]
 # No owner yet. Send @wisp a direct message: !pair …
 ```
 
-Both Slack tokens are read from the environment only, never from a flag. To run the app on
-another machine than the Runtime, see [Remote access](./remote-access.md).
+`setup` reads both tokens without echoing them and checks them with Slack, mints the app its
+own `run` token for the Slack Channel (`wisp tokens create --name slack --capability run
+--channel slack`, done for you through `runtime.lock`), and stores all three in the app's
+[state file](#its-state), readable only by you. Run it again to change the tokens; a different
+app starts with no owner and no one let in.
 
-There is no `wisp slack install`: `wisp slack` runs in this terminal, so keep it running under
-your own supervisor (a systemd unit, launchd, `tmux`) to keep the app answering.
+## 4. Start it as a service
 
-:::warning
-The `run` token must be made with `--channel slack`. Without `--channel` the Runtime refuses
-the app's Runs with `403`.
-:::
+Answer yes at the end of `setup`, or later:
 
-## 4. Become its owner
+```sh
+wisp slack install
+```
 
-Send the app the `!pair …` line in a direct message: you are its owner. The code works once.
+`install` runs the app as a user service beside the Runtime's, restarted if it fails: a
+systemd unit `wisp-slack.service` on Linux (`journalctl --user -u wisp-slack -f`), a launchd
+agent `io.usewisp.slack` on a Mac (log in `~/.wisp/logs/slack.log`). A token Slack refuses
+stops the service instead of restarting it: run `wisp slack setup` again with a new one.
+`wisp update` restarts it onto the new release, and `wisp slack uninstall` or `wisp uninstall`
+removes it. Without `install`, `wisp slack` runs the app in this terminal.
+
+`install` runs only the app in `$WISP_HOME/slack.json`: its service has one fixed name and
+takes no `--state`.
+
+## 5. Become its owner
+
+Send the app the `!pair …` line `setup` printed, in a direct message: you are its owner. The
+code works once.
 
 :::note[If the app says it takes no chat messages]
 Someone set [`confirmationModes`](./configuration.md) in `~/.wisp/runtime.json` to a list
 without `interactive`, which the app's Runs need. Add it back, or remove the key to take the
 default, and restart the Runtime.
+:::
+
+## The app on another machine
+
+On a host with no Runtime, `setup` asks instead for a connection string. Make one on the
+Runtime's host with `wisp tokens create --name slack --capability run --channel slack` and
+paste the `wisp+…` line. You can also skip `setup` and pass everything in the environment:
+`SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`, and `WISP_URL` with `WISP_TOKEN`; what is set there
+wins over what `setup` stored. The Slack tokens are never taken from a flag, which a process
+listing would show. See [Remote access](./remote-access.md) for reaching the Runtime from
+another machine.
+
+:::warning
+The app's `run` token must be made with `--channel slack`. Without `--channel` the Runtime
+refuses the app's Runs with `403`.
 :::
 
 ## Commands
@@ -142,8 +174,8 @@ commas (`SLACK_ALLOWED_IDS=U012ABCDEF,C034GHIJKL`).
 
 ## Its state
 
-The app keeps its state in `$WISP_HOME/slack.json` (`--state` puts it elsewhere): the owner, the
-users let in, the codes that wait, each Session key's Sessions, the requests it is following and
+The app keeps its state in `$WISP_HOME/slack.json` (`--state` puts it elsewhere): the tokens
+`setup` stored, the owner, the users let in, the codes that wait, each Session key's Sessions, the requests it is following and
 how far it has posted delivered outcomes.
 A request it was following when it stopped is answered once it is back. A message sent while
 the app is down is answered only if Slack still retries delivering it.

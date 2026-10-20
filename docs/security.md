@@ -94,6 +94,8 @@ check. See [Attestation](./runbook.md#attestation).
   holding a secret that others can read: `chmod 600` it.
 - **`telegram.json`** holds the bot's token and its `run` token once `wisp telegram setup`
   has run, and is written readable only by you.
+- **`slack.json`** holds the app's bot and app-level tokens and its `run` token once
+  `wisp slack setup` has run, and is written readable only by you.
 
 ## Not available yet
 

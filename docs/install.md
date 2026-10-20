@@ -151,7 +151,7 @@ To use a different token, edit `agentToken` in `~/.wisp/runtime.json`. It must b
 | `mcp.json` | the connectors |
 | `telegram.json`, `slack.json` | the [Telegram bot](./telegram-bot.md)'s and the [Slack app](./slack-app.md)'s owner, users and tokens |
 | `models/` | the speech model, once installed |
-| `logs/` | the service logs on macOS and the Telegram bot's log |
+| `logs/` | the service logs on macOS, and the Telegram bot's and the Slack app's logs |
 | `bin/`, `versions/` | the installed `wisp` |
 
 To back up or move a Runtime, stop it and copy the whole directory. The databases open only
@@ -167,7 +167,8 @@ wisp update
 This downloads and verifies the newest release next to the current one, then restarts the
 service onto it and waits for it to come up on the new version. If the service does not
 come up within 30 seconds, the release is still installed; `wisp doctor` says why. A running
-[Telegram bot service](./telegram-bot.md) is restarted onto the new version too.
+[Telegram bot](./telegram-bot.md) or [Slack app](./slack-app.md) service is restarted onto the
+new version too.
 
 Each version in `~/.wisp/versions` is a few hundred megabytes, so `wisp update` then deletes
 the old ones. It keeps the new version, the one it replaced, and the one a running Runtime
@@ -188,7 +189,7 @@ wisp 0.2.0 is available — run `wisp update`
 wisp uninstall
 ```
 
-This removes the service, the Telegram bot's service, `~/.wisp/bin/wisp`, `~/.wisp/versions`
+This removes the service, the Telegram bot's and the Slack app's services, `~/.wisp/bin/wisp`, `~/.wisp/versions`
 and the `PATH` line the installer added. It removes `runtime.json` only while it holds
 nothing but the installer's `agentToken`: a file you edited is kept. At a terminal it first
 asks what to do with your data:
