@@ -53,8 +53,8 @@ that fixes each problem.
 
 :::note[Linux]
 On Linux the installer needs `minisign` or OpenSSL 3 to verify the release signature, and
-stops if neither is installed. The agent's `bash_run` tool also needs bubblewrap. On
-Debian or Ubuntu: `sudo apt install minisign bubblewrap`.
+stops if neither is installed. The agent's `bash_run` tool needs bubblewrap once you turn
+its [sandbox](./sandbox.md) on. On Debian or Ubuntu: `sudo apt install minisign bubblewrap`.
 :::
 
 <details>

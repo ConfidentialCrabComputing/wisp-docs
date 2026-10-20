@@ -33,12 +33,12 @@ wisp doctor
 # ✓ key: /home/you/.config/wisp/master.key
 # ✗ service: wisp.service is inactive — systemctl --user restart wisp.service
 # ✗ runtime: … — systemctl --user restart wisp.service
-# ✓ sandbox: bubblewrap
 # ✓ path: /home/you/.wisp/bin
 ```
 
 One line per check: the config, the encryption key, the service, the Runtime, the login, the
-proxy, the `bash_run` sandbox (Linux only) and `PATH`. The key line follows how the data
+proxy, the `bash_run` sandbox (Linux only: `off`, or whether bubblewrap works while it is on;
+absent while no Runtime answers) and `PATH`. The key line follows how the data
 directory was made: `keyring` for one whose keys are in the OS keyring, `key` for one made
 with a [key file](./remote-access.md#the-encryption-key-on-a-server). `key` checks the file `wisp serve` would
 open, named by `WISP_MASTER_KEY_FILE` in your shell or else by the systemd service, and fails

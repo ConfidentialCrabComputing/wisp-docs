@@ -76,7 +76,8 @@ once on each machine:
 - **Rules:** `wisp permissions`. They are kept in this machine's data directory, tied to
   the Project's id, so a checkout on another machine never inherits someone else's
   permissions.
-- **`bash_run`:** refused until a Rule allows it, and on Linux it also needs bubblewrap.
+- **`bash_run`:** refused until a Rule allows it, and on Linux it needs bubblewrap once its
+  [sandbox](./sandbox.md) is on.
   See [Permissions](./permissions.md#bash_run).
 
 ## One Runtime, many Projects
