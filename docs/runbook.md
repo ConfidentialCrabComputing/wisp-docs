@@ -33,18 +33,20 @@ wisp doctor
 # ✓ key: /home/you/.config/wisp/master.key
 # ✗ service: wisp.service is inactive — systemctl --user restart wisp.service
 # ✗ runtime: … — systemctl --user restart wisp.service
-# ✓ sandbox: bubblewrap
 # ✓ path: /home/you/.wisp/bin
 ```
 
 One line per check: the config, the encryption key, the service, the Runtime, the login, the
-proxy, the `bash_run` sandbox (Linux only) and `PATH`. The key line follows how the data
-directory was made: `keyring` for one whose keys are in the OS keyring, `key` for one made
-with a [key file](./remote-access.md#the-encryption-key-on-a-server). `key` checks the file `wisp serve` would
-open, named by `WISP_MASTER_KEY_FILE` in your shell or else by the systemd service, and fails
-with the reason `wisp serve` would refuse it; the key itself is never printed. Every `✗`
-names what fixes it. It exits `0` when every check passes and `1` otherwise. `wisp doctor` needs no
-running Runtime, and any command that finds none (exit code `4`) points at it.
+proxy, the `bash_run` sandbox and `PATH`. The key line reads `keyring` when the keys are in
+the OS keyring, and `key` when they are sealed with a
+[key file](./remote-access.md#the-encryption-key-on-a-server): it then checks the file the
+service (or `WISP_MASTER_KEY_FILE` in your shell) names, without printing the key. The
+sandbox line appears on Linux only, while a Runtime answers: `off`, or whether bubblewrap
+works once the sandbox is on.
+
+Every `✗` names what fixes it. It exits `0` when every check passes and `1` otherwise.
+`wisp doctor` needs no running Runtime, and any command that finds none (exit code `4`)
+points at it.
 
 ### The five states
 
@@ -195,6 +197,15 @@ In `text` format the same lines read `run.finished state=failed reason=quota_exh
 
 ## FAQ
 
+**`wisp: command not found` right after the install.**
+The terminal started before the installer added `~/.wisp/bin` to `PATH`. Open a new one, or
+run the `source …` line the installer printed. `~/.wisp/bin/wisp doctor` prints it again.
+
+**Every command says `Runtime unreachable` (exit code 4).**
+Nothing is running. Run `wisp doctor`: it names the service command that starts it, or
+`wisp serve` when there is no service. With Wisp Desktop installed and no service, open the
+app.
+
 **The Telegram bot or the Slack app answers "This Wisp takes no chat messages".**
 `confirmationModes` leaves out `interactive`. Add it back, or remove the key to take the
 default, and restart the Runtime. See [Configuration](./configuration.md#stop-callers-from-asking-for-approvals).
@@ -227,8 +238,9 @@ The Run failed with `speech_not_installed`: the speech model is installed only o
 Run `wisp speech install`, then send the message again. See [Speech](./reference.md#speech).
 
 **Another machine cannot reach the Runtime.**
-It listens on loopback only. Put a TLS reverse proxy in front of it and list its name in
-`allowedHosts`: see [Reaching it from another machine](./remote-access.md#reaching-it-from-another-machine).
+It listens on loopback only. From Wisp Desktop, connect over SSH; nothing on the server
+changes. For anything else, put a TLS reverse proxy in front of it and list its name in
+`allowedHosts`. See [Reaching it from another machine](./remote-access.md#reaching-it-from-another-machine).
 
 **A laptop with a token was lost.**
 Revoke that device's token with `wisp tokens revoke <name>`; the others keep working. See

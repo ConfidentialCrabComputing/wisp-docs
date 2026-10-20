@@ -34,7 +34,7 @@ The lowercase spellings (`agents.md`, `claude.md`, `wisp.md`, `agents.local.md`)
   instructions in `AGENTS.md`.
 - **`AGENTS.local.md` is meant for you alone.** Add it to the Project's `.gitignore`. Wisp
   does not do that for you.
-- **Empty files are skipped**, and so are files larger than `fsMaxFileSize` (10 MiB by
+- **Empty files are skipped**, and so are files larger than `fsMaxFileSize` (30 MiB by
   default). In a subfolder, a link that points outside the Project is not followed; in
   `.wisp/rules/`, one that points outside `.wisp/rules/`.
 

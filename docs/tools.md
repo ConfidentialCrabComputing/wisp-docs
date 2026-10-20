@@ -17,7 +17,7 @@ still works.
 
 ## Files
 
-The file tools work inside the Session's folder: its Project, or, for a Session without a
+The file tools work in the Session's folder: its Project, or, for a Session without a
 Project, a folder of its own under `~/Wisp`.
 
 | Tool | What it does | Default |
@@ -29,6 +29,20 @@ Project, a folder of its own under `~/Wisp`.
 | `fs_grep` | searches file contents | `allow` |
 | `fs_write` | creates or overwrites a file | `ask` |
 | `fs_edit` | replaces exact text in a file | `ask` |
+| `deliver_file` | sends you a file from the folder, attached after the answer; see [Voice and files](./voice-and-files.md) | `allow` |
+
+How far they reach follows the [sandbox](./sandbox.md) switch:
+
+- **Sandbox on:** a path outside the folder is refused.
+- **Sandbox off**, the default: a path outside the folder is allowed, but every such call
+  asks, on a card that names where it lands, whatever the Rules say. Under `wisp run` it is
+  refused.
+
+Either way some paths are always refused: Wisp's data directory (`~/.wisp`), the Project's
+own `.wisp/` (except `.wisp/mcp.json`, which can be read), `.env` files (`.env.example`,
+`.env.sample` and `.env.template` excepted), `/etc`, and the secrets in your home folder,
+such as `~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.npmrc`, `~/.gitconfig`, shell history and the
+macOS Keychain.
 
 ## Shell
 
@@ -37,7 +51,10 @@ Project, a folder of its own under `~/Wisp`.
 | `bash_run` | runs a shell command, in a [sandbox](./sandbox.md) | `ask` |
 
 Read [`bash_run`](./permissions.md#bash_run) before you allow it: the
-[sandbox](./sandbox.md) keeps a command inside its folder, but its network is on.
+[sandbox](./sandbox.md) is off by default, and once on it keeps a command inside its folder,
+but its network is on. By default a command stops after 30 seconds (`bashTimeout`) and
+its output is cut at 100,000 characters (`bashMaxOutput`); the agent can set either for one
+command.
 
 ## Schedules
 

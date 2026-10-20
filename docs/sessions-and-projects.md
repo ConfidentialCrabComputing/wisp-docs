@@ -74,7 +74,7 @@ PATCH /v1/sessions/{id}
   its enabled connectors. The transcript gets a line saying where this happened, so a later
   reader can see why a file was refused before it and read after it.
 - Files the agent already wrote on the Desk stay there.
-- The same body may carry `title`, to rename the Session; a `PATCH` must carry one of the two.
+- The same body may carry `title`, to rename the Session; a `PATCH` without either is `400`.
 
 ## Finding a Session again
 
@@ -111,9 +111,9 @@ the list to that folder's Sessions, and `?origin=` to the Sessions one client op
 
 ## Files a Run wrote
 
-A Run's `artifacts` are the files it wrote with `fs_write` or `fs_edit`, as paths relative to
-the Session's folder, with forward slashes: the Project folder, or the Desk. Files a
-`bash_run` command wrote are not listed. `GET /v1/runs/{runId}/artifacts/{index}` answers
+A Run's `artifacts` are the files the agent sent with its `deliver_file` tool, as paths
+relative to the Session's folder, with forward slashes: the Project folder, or the Desk. A
+file it only wrote stays in the folder unlisted. `GET /v1/runs/{runId}/artifacts/{index}` answers
 one file's bytes, read from the folder the Run worked in, so it needs no `projectRoot`. See
 [the adapter contract](./adapter-contract.md#a-message-is-a-run).
 

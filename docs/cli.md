@@ -20,7 +20,8 @@ Runtime. `wisp cancel` stops it.
 
 - **Without a Session id** it starts a new Session whose Project is the current folder.
 - **stderr** gets `session <id>` first, before the wait, so you can cancel or continue that
-  Session. **stdout** gets the answer only, so `wisp run "…" > answer.md` works.
+  Session. **stdout** gets the answer only, so `wisp run "…" > answer.md` works. With
+  `--json` the id is the outcome's `sessionId` instead.
 - **Exit code** is `0` when the Run completed and `1` when it failed or was cancelled. A
   failed Run prints `failed: <reason>: <message>` on stderr. The reasons are listed in
   [Troubleshooting](./runbook.md#why-a-run-failed).
@@ -164,12 +165,29 @@ allowed it. See [Permissions](./permissions.md).
 - `--json` makes a command that lists or shows something print a single JSON document on
   stdout and nothing else there. For `wisp run` it is the full [Run outcome](./adapter-contract.md#a-message-is-a-run) plus
   `sessionId`.
-- Exit codes are stable: `0` done, `1` failed, `2` bad command line, `4` no Runtime
-  reachable, `5` token refused. See [the full table](./runbook.md#exit-codes).
+- Exit codes are stable: `0` done, `1` failed, `2` bad command line, `3` parked on a
+  Prompt (`--interactive`), `4` no Runtime reachable, `5` token refused. See
+  [the full table](./runbook.md#exit-codes).
 
 ```sh
 wisp run "check the build log for new warnings" --json | jq -r .output.text
 ```
+
+A script that lets a person approve what the agent may not do alone branches on the exit
+code:
+
+```sh
+wisp run --interactive --json "draft the release notes and post them to #releases" > out.json
+case $? in
+  0) jq -r .output.text out.json ;;
+  3) jq -r '.runId as $r | .confirmations[] | "wisp confirm \($r) \(.id) approve   # \(.toolName)"' out.json ;;
+  *) jq -r '.failure.reason // empty' out.json >&2; exit 1 ;;
+esac
+```
+
+On `3` it prints the `wisp confirm` line for each Prompt; whoever runs it gets the Run's
+next park or its end, with the same exit codes. The same flow over HTTP is in
+[A first automation](./adapter-contract.md#a-first-automation).
 
 ## Reaching a Runtime
 
@@ -184,4 +202,8 @@ WISP_URL=http://127.0.0.1:3008 WISP_TOKEN="$TOKEN" wisp status
 
 The URL and the token go together. Plain `http` is accepted for loopback addresses only, so
 a token is never sent over a network unencrypted. To reach a Runtime on another machine,
-use an SSH tunnel to its loopback port.
+use the `https://` address of a TLS proxy in front of it, or an SSH tunnel to its loopback
+port (`ssh -N -L 3008:127.0.0.1:3008 you@server`, then `--url http://127.0.0.1:3008`); see
+[Remote access](./remote-access.md#reaching-it-from-another-machine). A token for a script
+is a named one, `wisp tokens create --name <n> --capability full`, made on the Runtime's
+machine.

@@ -4,7 +4,8 @@ description: Send the agent voice messages, images and documents, and get back t
 
 # Voice and files
 
-A message to the agent can carry more than words: images, PDFs and text files, and voice.
+A message to the agent can carry more than words: images, PDFs, Word, Excel and text files,
+and voice.
 The [Telegram bot](./telegram-bot.md#files-and-voice-messages) and the
 [Slack app](./slack-app.md#files) do this for you. Your own adapter sends the same as content
 blocks in a Run's `input`; see [A message is a Run](./adapter-contract.md#a-message-is-a-run).
@@ -69,18 +70,19 @@ with the Session, so later messages can refer back to it.
 ## Documents
 
 A `document` block carries a file's bytes, and the Runtime turns it into text before the agent
-reads it, so an adapter needs no parser:
+reads it, so an adapter needs no parser. It goes by the bytes and the file name, not by the
+`mediaType` the messenger gave:
 
-- **PDF** (`application/pdf`) is read as its text. A PDF with no text to extract, such as a
-  scan without a text layer, one with a password or a damaged one, does not fail the Run: the agent is told
-  no text could be extracted.
-- **Text**: any `text/*` type, `application/json`, `application/xml` and
-  `application/yaml`, read as UTF-8.
-- **Anything else**, or a text file that turns out to be binary, fails the Run as
-  `unsupported_document`.
+- **PDF** is read as its text. A PDF with no text to extract, such as a scan without a text
+  layer, one with a password or a damaged one, does not fail the Run: the agent is told no
+  text could be extracted.
+- **Word and Excel**: a `.docx` or `.xlsx` file is read as its text, and one that cannot be
+  opened is noted the same way.
+- **Text**: any other file that is not binary, read as UTF-8.
+- **Anything else**, a binary file of another kind, fails the Run as `unsupported_document`.
 
 The text of all the documents in one message is capped at `fsMaxFileSize` characters
-(10485760 by default); past that it is cut, with a note saying so.
+(31457280 by default); past that it is cut, with a note saying so.
 
 ```json
 { "type": "document", "filename": "report.pdf", "mediaType": "application/pdf", "data": "<base64>" }
@@ -91,7 +93,8 @@ fit in that.
 
 ## Files the agent writes
 
-Each Run lists the files it wrote as `artifacts`: paths relative to the Session's folder, its
+The agent sends you a file with the `deliver_file` tool, allowed by default. Each Run
+lists the files it delivered as `artifacts`: paths relative to the Session's folder, its
 Project or its Desk. The bot and the app send them back after the answer, as documents in
 Telegram and uploads into the thread in Slack.
 
@@ -104,6 +107,7 @@ type and its filename as `Content-Disposition`, to send on as a file. It serves 
 that list names, never another file in the folder. It is `404` when the Run is unknown or has
 not ended, when the index is past the list, or when the file is gone.
 
-Only what the file tools write is listed: `fs_write` and `fs_edit`. A file a `bash_run`
-command writes is not an artifact; ask the agent to write its result with the file tools when
-you want it sent back.
+A file the agent only writes stays in the folder and is not listed. Any file in the folder
+can be delivered, one a `bash_run` command made included, up to `fsMaxFileSize` bytes. In
+Wisp Desktop nothing is attached to the chat: the agent names the file it made instead, and
+you open it from the folder.

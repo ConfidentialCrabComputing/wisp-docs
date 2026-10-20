@@ -1,5 +1,5 @@
 ---
-description: Reach the Runtime from another machine over TLS, give each device its own token, and keep the encryption key on a server.
+description: Reach a Runtime on a server, most easily from Wisp Desktop over SSH, or from anything else over TLS; give each device its own token, and keep the encryption key on a server.
 ---
 
 # Remote access
@@ -13,9 +13,30 @@ Linux server needs.
 The Runtime speaks plain HTTP, and one token authorises everything it does, `bash` included.
 
 :::warning
-**The token must never cross a network in clear.** Put a reverse proxy that terminates TLS
-in front of the Runtime, and give callers its `https://` address.
+**The token must never cross a network in clear.** From Wisp Desktop, reach it over SSH. For
+anything else, put a reverse proxy that terminates TLS in front of the Runtime and give
+callers its `https://` address.
 :::
+
+### From Wisp Desktop, over SSH
+
+**The most convenient way to use a Runtime on a server is from Wisp Desktop.** The app opens
+the SSH tunnel to the server itself, with your `ssh`, your keys and your `~/.ssh/config`, and
+keeps it up. This opens no port on the server and needs no domain or certificate.
+
+1. Log in to the server (`ssh you@server`) and run
+   `wisp tokens create --name laptop --capability full`.
+2. Copy the `wisp+ssh://…` connection string it prints.
+3. In Wisp Desktop, open Settings → Runtime, paste it into **Connection string**, press
+   **Add**, then pick the server under **Wisp runs on**.
+
+[Connect to a server](./desktop/connect-to-a-server.md) walks through each step, what the app
+shows, what you can do once connected, and what each error means.
+
+### Everything else, through a TLS proxy
+
+The Telegram bot, the Slack app, scripts and other machines do not open a tunnel
+themselves. Give them an `https://` address, or [a tunnel you open by hand](#a-token-per-device).
 
 The proxy forwards the name the caller used (`wisp.example.com`) as the `Host` header. The
 Runtime refuses any `Host` that is not loopback or listed in `allowedHosts`, which keeps a
@@ -54,14 +75,26 @@ Rather than copy the one token to every machine you work from, give each its own
 token, so that losing one laptop costs you that laptop's token alone.
 
 1. Run the command on the Runtime's host, over SSH from the device the token is for, so the
-   token is printed where it will be used and never travels on its own:
+   token is printed where it will be used and never travels on its own. As one line, `ssh`
+   may not load the shell setup that puts `wisp` on `PATH`; then log in first, or call
+   `~/.wisp/bin/wisp`:
 
    ```sh
    ssh you@server wisp tokens create --name laptop --capability full
-   # prints the token and a connection string, once — neither is shown again
-   # Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
-   # wisp+https://wisp.example.com#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   # Token:             Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   # Connection string: wisp+ssh://you@203.0.113.7/127.0.0.1:3008#Q2xhdWRlIHdyb3RlIHRoaXMgZXhhbXBsZSB0b2tlbg
+   #
+   # Shown once. Paste the connection string into Wisp Desktop (Settings → Runtime),
+   # which opens the SSH tunnel itself; use the token as WISP_TOKEN for `wisp slack` or a script.
+   # For `wisp telegram setup` or a script on another machine, open the tunnel yourself
+   # (ssh -N -L 3008:127.0.0.1:3008 you@203.0.113.7) and use wisp+http://127.0.0.1:3008#<token>.
    ```
+
+   With `--public-url`, or one host in `allowedHosts`, the string is `wisp+https://…` and
+   the hint says to paste it into Wisp Desktop or `wisp telegram setup`. Run on the host
+   itself, outside SSH, the string names `127.0.0.1` and works on that host only, and the
+   command says so: run it over SSH instead, open a tunnel, or make the token again with
+   `--public-url`. `--json` prints the token and the connection string with no hint.
 
 2. Give the device the connection string: Wisp Desktop's field, or `WISP_URL` and
    `WISP_TOKEN` for a script.
@@ -87,11 +120,20 @@ The connection string, `wisp+<url>#<token>`, is the one line a device takes, Wis
 field among them; the bare token is for a script or an adapter's config. The token sits in the
 fragment, so a string pasted into a browser by mistake sends it to no server. The URL is:
 
-- `--url` when you give it (with `--token`, the one token): the address this device reached;
+- `--public-url` when you give it: the `https://` address the device will reach (plain
+  `http` only to loopback);
 - else `https://` and the host, when `allowedHosts` names exactly one;
+- else, in an SSH session, `ssh://<user>@<server>[:<ssh port>]/127.0.0.1:<port>`: your user
+  (`USER`), the server address and port this session came in on (`SSH_CONNECTION`, port 22
+  left out), and the Runtime's loopback address behind them. Only Wisp Desktop takes this
+  form. A user or server that `ssh` could read as an option falls through to the next;
 - else the address `wisp` reaches the Runtime at on its host, `http://127.0.0.1:3008` by
-  default. Reach it from the device through an SSH tunnel on the same port, so the string
-  works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`.
+  default.
+
+For anything but the desktop, reach a loopback Runtime through a tunnel you open on the same
+port, so the `http` string works unchanged: `ssh -N -L 3008:127.0.0.1:3008 you@server`, then
+`wisp+http://127.0.0.1:3008#<token>`. `wisp telegram setup` and `wisp slack setup` refuse a
+`wisp+ssh://` string before they send anything, and print that tunnel command and string for it.
 
 ## The encryption key on a server
 

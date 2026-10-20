@@ -18,14 +18,16 @@ Before anything executes, the Kernel checks:
 
 - **Path canonicalization**: resolves `../..`, symlinks and relative paths to their
   absolute form, to prevent directory traversal attacks.
-- **Symlink blocking**: rejects tool calls that try to escape the project root through
-  symbolic links.
+- **Symlink handling**: a symbolic link is judged by where it leads, so a link inside the
+  project cannot carry a call out of it unchecked.
 - **Absolute path resolution**: absolute paths aren't rejected outright. The Kernel
-  resolves them and refuses only those that lead outside the project, into sensitive
-  directories (for example `/etc/passwd` or `~/.ssh/`) or into `~/.wisp`.
-- **Bash command check**: a bash command that names `../`, `~/` or an absolute path outside
-  the project is refused before it runs. What holds a command in after that, `cd ..`
-  included, is the [sandbox](../sandbox.md): it sees the project and read-only
+  resolves them and always refuses those that lead into sensitive places (for example
+  `/etc/passwd`, `~/.ssh/` or a `.env` file) or into `~/.wisp`. A path outside the project
+  is refused while the [sandbox](../sandbox.md) is on; with it off, the call waits for your
+  approval, whatever your Rules say.
+- **Bash command check**: with the sandbox on, a bash command that names `../`, `~/` or an
+  absolute path outside the project is refused before it runs. What holds a command in
+  after that, `cd ..` included, is the sandbox itself: it sees the project and read-only
   system folders, nothing else of yours.
 
 **Schema and permissions**
