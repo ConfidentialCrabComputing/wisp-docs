@@ -334,12 +334,14 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp telegram install [--all-messages]`, `wisp telegram uninstall` | run the bot as a user service, restarted on failure, after `setup`; or stop and remove it |
 | `wisp telegram [--all-messages] [--url u --token t] [--state file]` | run the [Telegram bot](telegram-bot.md) in this terminal from what `setup` stored, or from `TELEGRAM_BOT_TOKEN`, `WISP_URL` and `WISP_TOKEN`; in a group it answers only a mention, a reply or a command, every message with `--all-messages` |
 | `wisp telegram pairing list\|approve <code>\|revoke <user id>` | who waits and who is let in; let in a stranger by their code; shut a user out |
-| `wisp slack [--url u --token t] [--state file]` | run the [Slack app](slack-app.md) over Socket Mode; `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are its tokens |
+| `wisp slack setup [--url u --token t] [--state file]` | set the app up and print the owner's `!pair` line — see [`wisp slack setup`](#wisp-slack-setup) |
+| `wisp slack install`, `wisp slack uninstall` | run the app as a user service, restarted on failure, after `setup`; or stop and remove it |
+| `wisp slack [--url u --token t] [--state file]` | run the [Slack app](slack-app.md) over Socket Mode in this terminal from what `setup` stored, or from `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `WISP_URL` and `WISP_TOKEN` |
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
 | `wisp update` | install the newest release beside the running one and restart the service onto it; without a running service, it takes effect on the next `wisp serve` |
-| `wisp uninstall` | remove what the installer put down (service, the Telegram bot's service, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
+| `wisp uninstall` | remove what the installer put down (service, the Telegram bot's and the Slack app's services, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
 
@@ -385,6 +387,17 @@ that bot posts it.
 - Stores both in the state file and prints the owner link.
 
 See [the Telegram bot](telegram-bot.md).
+
+### `wisp slack setup`
+
+- Asks for the app's Bot User OAuth Token (`xoxb-…`) and its app-level token (`xapp-…`),
+  without an echo, and checks both with Slack.
+- Mints a `run` token for the Slack Channel, with the one token given, or from
+  `runtime.lock`. On another host, you paste a connection string instead.
+- Stores them in the state file, offers to start the app as a service, and prints the owner's
+  `!pair` line.
+
+See [the Slack app](slack-app.md).
 
 ## Installer
 
