@@ -168,6 +168,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 | `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
+| `maxTurns` | optional; the most model calls the Run may make, after which it fails `step_ceiling`. Without it a Run has no such limit |
 | `deliver` | optional; `{ "channel": "telegram" \| "slack", "externalKey": "…" }`, the chat the outcome goes to — see [delivering an outcome](#delivering-an-outcome) |
 
 The answer is one JSON object:
@@ -219,7 +220,7 @@ the agent said in words:
 The agent ends the Run by handing over a value; one that does not satisfy the schema is
 returned to it with the reasons, and it tries again; stopping without one, it is reminded.
 After five such attempts the Run fails with `failure.reason` `output_schema_unsatisfied`. A Run
-that runs out of steps first still fails `step_ceiling`. The value is in the waited-on answer,
+that reaches its `maxTurns` first still fails `step_ceiling`. The value is in the waited-on answer,
 in the terminal Event and on `GET /v1/runs/{runId}`. It works with `input` or `skill`, in
 either Confirmation Mode, waited on or not.
 

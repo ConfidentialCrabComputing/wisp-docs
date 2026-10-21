@@ -63,6 +63,8 @@ reached by a browser. The full API, with request and response schemas, is at
 - With `outputSchema` (a JSON Schema, root `type: object`), the outcome carries the validated
   answer as `output.structured` — see [a structured answer](adapter-contract.md#a-structured-answer).
   A schema the Runtime cannot take is `400`.
+- With `maxTurns` (a positive whole number), the Run fails `step_ceiling` once the model has
+  been called that many times. Without it a Run has no such limit.
 - With `deliver` (`{ channel, externalKey }`), the outcome is addressed to a chat of the
   Telegram or Slack Channel, for its adapter to post — see
   [delivering an outcome](adapter-contract.md#delivering-an-outcome). A `run` token may name
@@ -298,7 +300,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, the key file or keyring, service, Runtime, login, proxy, the sandbox (on Linux: bubblewrap, once the sandbox is on) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
-| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file]` | one Run, waited on — see [`wisp run`](#wisp-run) |
+| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
@@ -362,6 +364,8 @@ One Run, waited on.
   as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer.
 - `--output-schema` sends the file's JSON Schema as `outputSchema` and prints only
   `output.structured`, as JSON. A file that cannot be read or is not JSON is a usage error.
+- `--max-turns <n>` sends `maxTurns`: the Run fails `step_ceiling` after `n` model calls. A
+  value that is not a positive whole number is a usage error.
 
 ### `wisp tokens create`
 
@@ -447,8 +451,6 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | silence from the model after which a Run fails `stream_stalled` |
 | `llmRequestTimeoutMs` | `LLM_REQUEST_TIMEOUT_MS` | `120000` | how long a model request may take to start answering |
 | `contextWindowTokens` | `CONTEXT_WINDOW_TOKENS` | `262144` | the context window assumed when the model's own is not known |
-| `graphRecursionLimit` | `GRAPH_RECURSION_LIMIT` | `500` | steps a turn may take before it fails `step_ceiling` |
-| `toolCallLimit` | `TOOL_CALL_LIMIT` | `300` | tool calls a turn may make before it fails `step_ceiling` |
 | `bashTimeout` | `BASH_TIMEOUT` | `30000` | how long one `bash_run` may take, in ms |
 | `bashMaxOutput` | `BASH_MAX_OUTPUT` | `100000` | characters of a command's output the model sees |
 | `fetchMaxLength` | `FETCH_MAX_LENGTH` | `50000` | characters of a fetched page the model sees |
