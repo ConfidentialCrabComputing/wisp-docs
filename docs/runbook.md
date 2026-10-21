@@ -116,7 +116,7 @@ the conversation. `wisp run` prints both on stderr.
 | `attestation_blocked` | the Wisp proxy's environment is not verified right now | retry later; see [attestation](#attestation) |
 | `stream_stalled` | the model sent nothing for `llmStallTimeoutMs` (5 minutes) | retry |
 | `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
-| `step_ceiling` | the Run hit `graphRecursionLimit` or `toolCallLimit` | split the task, or raise the limit |
+| `step_ceiling` | the Run reached the `maxTurns` its caller set | split the task, or raise `maxTurns` |
 | `output_schema_unsatisfied` | the agent did not hand over a value satisfying `outputSchema` in five attempts | simplify the schema, or say in `input` what each field holds |
 | `unsupported_document` | a `document` block is neither a PDF nor a text type, or does not read as its type says (binary bytes under a text type). A PDF whose text cannot be extracted (a scan, a password, a damaged file) does not fail the Run: the agent is told it could not read it | send the text itself, or a PDF with a text layer |
 | `transcription_failed` | an `audio` block is not OGG/Opus, MP3 or WAV (M4A is not accepted), does not decode as its type says, holds no speech, or the speech model could not be run | send the voice message as OGG/Opus, MP3 or WAV, or type it |
