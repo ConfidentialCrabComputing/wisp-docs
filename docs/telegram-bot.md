@@ -133,6 +133,11 @@ refuses the bot's Runs with `403`.
 | `/sessions` | Lists the earlier Sessions. |
 | `/resume <n>` | Goes back to Session number `n` from that list. |
 | `/cancel` | Stops the running request. |
+| `/model [<choice>]` | Shows the chat's model, or changes it: `advanced`, `balanced`, `default` or a model id. `/model thinking on\|off` turns thinking on or off where the model can take it. |
+
+`/model` answers with the chat's model, the modes and the catalog's models, each with what it
+cannot do, and with buttons for them; a press does what the typed command does. `/new` keeps the
+chat's model. A photo sent to a model that cannot read images is refused in one line.
 
 ## Where the bot answers
 

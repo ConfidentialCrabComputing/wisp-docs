@@ -139,6 +139,12 @@ start with `!`. In a thread you can also mention the app and write the command w
 | `!sessions` | Lists the last ten Sessions. |
 | `!resume <n>` | Goes back to Session number `n` from that list. |
 | `!cancel` | Stops the running request. |
+| `!model [<choice>]` | Shows the chat's model, or changes it: `advanced`, `balanced`, `default` or a model id. `!model thinking on\|off` turns thinking on or off where the model can take it. |
+
+`!model` answers with the chat's model, the modes and the catalog's models, each with what it
+cannot do, with buttons for the modes and a menu of the models. In a channel thread, the owner
+and the person who started the thread may change its model. `!new` keeps the chat's model. An
+image sent to a model that cannot read images is refused in one line.
 
 ## Where the app answers
 

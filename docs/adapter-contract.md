@@ -163,7 +163,7 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 | --- | --- |
 | `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF, a `.docx`, a `.xlsx` or any text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
 | `skill`, `arguments` | run a [Skill](./skills.md) the Session can see |
-| `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
+| `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>`, for this Run only. Without it the Run follows the Session's Model Selection, then the Runtime Default — see [the model](./reference.md#the-model) |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which `confirmationModes` must allow (it does by default) — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
@@ -550,7 +550,9 @@ wisp tokens create --name my-bot --capability run
 A `run` token reaches only what an adapter needs:
 
 - it opens Sessions on the Desk only (a `projectRoot` is `403`) and starts Runs in those;
-- it lists and reads Sessions and their history;
+- it lists and reads Sessions and their history, and sets a Session's Model Selection (a
+  `PATCH` that changes anything else is `403`);
+- it reads the model catalog and the Runtime Default, but does not set the Runtime Default;
 - it reads Runs, their Events and artifacts, and cancels a Session's Runs;
 - it answers only the Prompts of Runs it started, with `approve` or `deny`;
 - it reads and starts the speech model's install;
