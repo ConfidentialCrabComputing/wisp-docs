@@ -84,6 +84,19 @@ refuses the bot's Runs with `403`.
 | `/sessions` | Lists the earlier Sessions. |
 | `/resume <n>` | Goes back to Session number `n` from that list. |
 | `/cancel` | Stops the running request. |
+| `/update` | Installs the newer Wisp release. The owner's only. |
+
+### Updating Wisp from the chat
+
+When the Runtime has a newer release, the bot tells its owner once, in a direct message:
+"Wisp 0.2.0 is available. Send /update to install it." Groups and the people you let in never
+get this message.
+
+Only the owner may send `/update`; anyone else is told "Only the owner can update." With Runs
+in flight, the bot says how many and starts nothing; send `/update now` to update anyway,
+and the restart gives them the drain window. Otherwise it answers "Updating, back in a moment.", and after the
+restart says how it ended in the same chat. A failure's reason is given only in your direct
+message with the bot. See [Update](./install.md#from-telegram-or-slack).
 
 ## Where the bot answers
 

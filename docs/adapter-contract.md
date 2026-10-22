@@ -454,7 +454,9 @@ route or field is removed or renamed or changes meaning; a new route or optional
 leaves it as it is. Compare it with the one your adapter was written for.
 
 While a newer release exists, every answer to a request that carries a token also carries
-an `X-Wisp-Update` header naming its version.
+an `X-Wisp-Update` header naming its version. An adapter can offer to install it with
+`POST /v1/update` and read how it ended with `GET /v1/update` once the Runtime is back, as
+the Telegram bot and the Slack app do. See [updating the Runtime](./reference.md#updating-the-runtime).
 
 ## Errors
 
@@ -478,6 +480,10 @@ A `run` token reaches only what an adapter needs:
 - it reads Runs, their Events and artifacts, and cancels a Session's Runs;
 - it answers only the Prompts of Runs it started, with `approve` or `deny`;
 - it reads and starts the speech model's install;
+- it reads and starts the Runtime's update (`GET` and `POST /v1/update`), which installs
+  only the newest signed release. Each start restarts the Runtime and its adapter services,
+  and a retry after a failure downloads the release again: let only your adapter's owner
+  start it;
 - with `--channel telegram` or `--channel slack` it may name a `deliver` target, of that
   Channel only. Without `--channel`, a Run that names `deliver` is `403`.
 

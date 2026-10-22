@@ -62,6 +62,21 @@ test("the operator pages name every state, reason and code an operator meets", (
   assert.match(restarts, /TimeoutStopSec/);
 });
 
+test("every way to update a Runtime is documented where its user looks", () => {
+  // The four ways, and the one restart an update cannot do for you.
+  const install = page("install/index.html");
+  for (const way of [/wisp update/, /is available on the server/, /\/update/, /!update/, /autoUpdate/]) {
+    assert.match(install, way);
+  }
+  assert.match(install, /restart <code>wisp serve<\/code>/i);
+  assert.match(page("telegram-bot/index.html"), /\/update now/);
+  assert.match(page("slack-app/index.html"), /!update now/);
+  const reference = page("reference/index.html");
+  assert.match(reference, /POST<\/code>.{0,80}\/v1\/update/);
+  assert.match(reference, /GET<\/code>.{0,80}\/v1\/update/);
+  assert.match(reference, /WISP_AUTO_UPDATE/);
+});
+
 test("the site's own search index covers the docs", () => {
   const index = page("search-index.json");
   assert.match(index, /telegram-bot/);
