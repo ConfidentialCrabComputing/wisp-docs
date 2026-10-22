@@ -272,7 +272,8 @@ It is off by default, so a release never restarts your Runtime unless you said i
 it is on:
 
 - the Runtime looks once a minute, and starts the update only when no Run is executing,
-  waiting for an approval, or queued;
+  waiting for an approval, or queued. A Run that starts while the release downloads is not
+  cut off: the restart waits until none is in flight, as `wisp update --when-idle` does;
 - a failed update leaves the old release running, and the same version is tried again a day
   after the failure ended, at the first look that finds the Runtime idle, even across a
   restart. After three failures in a row of that version it stops and waits for a newer
@@ -308,6 +309,11 @@ goes to `update.log` in the data directory (`~/.wisp` by default), and how it en
 `update.json` beside it, which every surface reads after the restart. An update whose process
 died before it finished, or that was still running when the machine went down or restarted,
 is reported as failed, and counts as one of `autoUpdate`'s three tries.
+
+These updates run the `bin/wisp` in the data directory. When that is a symlink into another
+installation, they do not start, and are reported as failed: the update would record its
+outcome in the other installation, where the Runtime never reads it. Run the installer with
+`WISP_HOME` set to the data directory to give it a `bin/wisp` of its own.
 
 ## Uninstall
 

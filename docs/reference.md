@@ -49,6 +49,9 @@ reached by a browser. The full API, with request and response schemas, is at
   after all, because the release the daily check named is no longer newer, ends `idle` with
   no `version` and a new `finishedAt`, and `available` stays absent until the next daily
   check.
+- `POST` starts no update when `bin/wisp` in the data directory runs another installation, a
+  symlink into one: that `wisp update` would record its outcome there. It records `failed`
+  with the reason; run the installer with `WISP_HOME` set to the data directory.
 - `POST` is `409` on a build from source. Neither route exists on Wisp Desktop's own
   Runtime (`404`), which the app's updater replaces.
 - The state is `available` (the newer version the Runtime's check found, absent when none),
@@ -370,7 +373,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
-| `wisp update` | install the newest release beside the running one and restart the service onto it, and the Telegram and Slack services; without a running service, it takes effect on the next `wisp serve`. See [Update](install.md#update) for the other ways |
+| `wisp update [--when-idle]` | install the newest release beside the running one and restart the service onto it, and the Telegram and Slack services; without a running service, it takes effect on the next `wisp serve`. With `--when-idle`, the restart waits until no Run is executing, waiting for an approval, or queued, as `autoUpdate`'s does. See [Update](install.md#update) for the other ways |
 | `wisp uninstall` | remove what the installer put down (service, the Telegram bot's service, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
