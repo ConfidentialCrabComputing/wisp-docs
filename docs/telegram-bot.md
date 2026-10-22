@@ -95,8 +95,10 @@ get this message.
 Only the owner may send `/update`; anyone else is told "Only the owner can update." With Runs
 in flight, the bot says how many and starts nothing; send `/update now` to update anyway,
 and the restart gives them the drain window. Otherwise it answers "Updating, back in a moment.", and after the
-restart says how it ended in the same chat. A failure's reason is given only in your direct
-message with the bot. See [Update](./install.md#from-telegram-or-slack).
+restart says how it ended in the same chat. A Runtime slow to come back on the new release
+is still reported as updated. A failure's reason is given only in your direct message with
+the bot. When there is nothing newer, or the update found nothing to install after all, the
+bot says "Wisp is on the newest release." See [Update](./install.md#from-telegram-or-slack).
 
 ## Where the bot answers
 

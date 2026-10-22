@@ -75,6 +75,13 @@ test("every way to update a Runtime is documented where its user looks", () => {
   assert.match(reference, /POST<\/code>.{0,80}\/v1\/update/);
   assert.match(reference, /GET<\/code>.{0,80}\/v1\/update/);
   assert.match(reference, /WISP_AUTO_UPDATE/);
+  // autoUpdate retries a failed version, and a slow restart is no failure.
+  for (const html of [install, reference]) {
+    assert.doesNotMatch(html, /never tried/);
+    assert.match(html, /three/);
+    assert.match(html, /read as updated|reads the update as done/);
+  }
+  assert.match(install, /nothing newer to install/);
 });
 
 test("the site's own search index covers the docs", () => {

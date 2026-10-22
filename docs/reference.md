@@ -45,20 +45,25 @@ reached by a browser. The full API, with request and response schemas, is at
   update to its owner. A `run` token can do no more than install the newest signed release.
 - `POST` answers `202` with the state `installing` when it starts an update. While an update
   is running, it starts no second one and answers `202 installing` too. With nothing newer it
-  starts nothing and answers `200` with the state.
+  starts nothing and answers `200` with the state. An update that finds nothing to install
+  after all, because the release the daily check named is no longer newer, ends `idle` with
+  no `version` and a new `finishedAt`, and `available` stays absent until the next daily
+  check.
 - `POST` is `409` on a build from source. Neither route exists on Wisp Desktop's own
   Runtime (`404`), which the app's updater replaces.
 - The state is `available` (the newer version the Runtime's check found, absent when none),
   `state`, `version` (the one being or last installed), `error` (why, when `failed`) and
   `finishedAt` (when the last update ended).
 - `state` is `idle`, `installing`, `installed` (on disk, waiting for a hand-started
-  `wisp serve` to be restarted) or `failed`. An update cut short reads `failed`.
+  `wisp serve` to be restarted) or `failed`. An update cut short, its process killed or the
+  machine restarted under it, reads `failed`.
 - Runs in flight get the [drain window](runs-and-restarts.md#the-drain-window) when the
   Runtime restarts; count them first with
   `GET /v1/runs?status=queued,running,parked&origin=all&limit=200`, where a `nextCursor` means
   more than that.
-- An update that ends `failed` after the service did not come up within 30 seconds may still
-  have installed the release; `GET /v1/health` names the version that runs.
+- A service that comes up on the new version after `wisp update`'s 30-second wait gave up
+  is read as updated: the Runtime on that version answers `idle` with that `version`. Until
+  the old Runtime has stopped, it answers `installing`.
 
 ### Sessions and Runs
 
@@ -462,7 +467,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `fsMaxFileSize` | `FS_MAX_FILE_SIZE` | `10485760` (10 MiB) | the largest file the file tools read |
 | `maxImageSizeBytes` | `MAX_IMAGE_SIZE_BYTES` | `10485760` (10 MiB) | the largest image a message may carry |
 | `skillPaths` | `SKILL_PATHS` | none | extra folders of Skills, separated like `PATH` |
-| `autoUpdate` | `WISP_AUTO_UPDATE` (`true` or `false`) | `false` | install a newer release by itself once no Run is in flight or queued; a version whose update failed, however started, is never tried again. Wisp Desktop's Runtime ignores it — see [automatically](install.md#automatically) |
+| `autoUpdate` | `WISP_AUTO_UPDATE` (`true` or `false`) | `false` | install a newer release by itself once no Run is in flight or queued; a version whose update failed, however started, is tried again a day after the failure, until it has failed three times in a row, and then only a newer one is. Wisp Desktop's Runtime ignores it — see [automatically](install.md#automatically) |
 | `logFormat` | `LOG_FORMAT` | `text` | how stderr lines are written: `text`, or `json` for one object per line with `ts`, `level`, `component`, `msg`, and `runId`/`sessionId` during a Run. A config error is written in this format too, read from the environment or from the file's own `logFormat` |
 | `logLevel` | `LOG_LEVEL` | `info` | `debug` also puts a failed call's own error text on stderr, secrets removed; it may quote a request, so ship it to a third party knowingly. At `info` that text stays in the local diagnostics table |
 
