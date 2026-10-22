@@ -133,11 +133,26 @@ refuses the bot's Runs with `403`.
 | `/sessions` | Lists the earlier Sessions. |
 | `/resume <n>` | Goes back to Session number `n` from that list. |
 | `/cancel` | Stops the running request. |
+| `/update` | Installs the newer Wisp release. The owner's only. |
 | `/model [<choice>]` | Shows the chat's model, or changes it: `advanced`, `balanced`, `default` or a model id. `/model thinking on\|off` turns thinking on or off where the model can take it. |
 
 `/model` answers with the chat's model, the modes and the catalog's models, each with what it
 cannot do, and with buttons for them; a press does what the typed command does. `/new` keeps the
 chat's model. A photo sent to a model that cannot read images is refused in one line.
+
+### Updating Wisp from the chat
+
+When the Runtime has a newer release, the bot tells its owner once, in a direct message:
+"Wisp 0.2.0 is available. Send /update to install it." Groups and the people you let in never
+get this message.
+
+Only the owner may send `/update`; anyone else is told "Only the owner can update." With Runs
+in flight, the bot says how many and starts nothing; send `/update now` to update anyway,
+and the restart gives them the drain window. Otherwise it answers "Updating, back in a moment.", and after the
+restart says how it ended in the same chat. A Runtime slow to come back on the new release
+is still reported as updated. A failure's reason is given only in your direct message with
+the bot. When there is nothing newer, or the update found nothing to install after all, the
+bot says "Wisp is on the newest release." See [Update](./install.md#from-telegram-or-slack).
 
 ## Where the bot answers
 

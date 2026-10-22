@@ -179,6 +179,18 @@ with their keys: on a server, take the key file too
 
 ## Update
 
+The Runtime checks for a newer release when it starts and once a day. There are four ways
+to install one, and all of them run the same `wisp update` on the Runtime's host:
+
+- [from the shell](#from-the-shell), with `wisp update`;
+- [from Wisp Desktop](#from-wisp-desktop) connected to a Runtime on a server;
+- [from Telegram or Slack](#from-telegram-or-slack), with `/update` or `!update`;
+- [by itself](#automatically), with `autoUpdate` turned on.
+
+Only a signed release is ever installed, and only the newest one.
+
+### From the shell
+
 ```sh
 wisp update
 ```
@@ -194,13 +206,133 @@ the old ones. It keeps the new version, the one it replaced, and the one a runni
 was started from, if that is yet another. A directory it cannot delete is named on stderr,
 and the update still counts as done.
 
-A service you stopped stays stopped, and a `wisp serve` you started by hand keeps running
-the old version until you restart it. When a newer release exists, every `wisp` command
+A service you stopped stays stopped. When a newer release exists, every `wisp` command
 mentions it once on stderr:
 
 ```
 wisp 0.2.0 is available — run `wisp update`
 ```
+
+A service can take longer than the 30 seconds, for instance while Runs drain. `wisp update`
+then prints that the service did not come up within 30 seconds, but the update is not lost:
+once the service comes up on the new version, the Runtime reads the update as done, and Wisp
+Desktop, the chats and `wisp status` report it as installed. Only a service that never comes
+up on the new version leaves the update failed.
+
+`wisp status` shows the same, and how the last update ended, whichever way it was started:
+
+```
+update   wisp 0.2.0 is available — wisp update installs it
+last update  wisp 0.1.9 installed 2026-10-21T09:12:44.120Z
+```
+
+### From Wisp Desktop
+
+Connected to a Runtime on a server, Wisp Desktop shows a banner when that Runtime has a newer
+release: "Wisp 0.2.0 is available on the server", with **Update**. It reads it at launch and
+every half hour.
+
+- **Update** asks first, and says how many Runs are in flight on the server when there are
+  any. Confirm, and the server updates and restarts. The banner says "Updating…" while it
+  does. The app reconnects by itself, and the banner goes away once the server is back on
+  the new release.
+- If the update fails, the banner gives the reason. Close the message with its **×** to get
+  the offer back and try again. If the server is not back within 5 minutes, the banner says
+  so; if it was started by hand, the banner says to restart `wisp serve` on the server.
+- Dismissing the banner hides it for that release on that server. The next release brings it
+  back.
+- When the server is too old for the app, the "Different versions" dialog has an **Update the
+  server** button that does the same, on a server whose release already has the update
+  route. An older server is told to run `wisp update` on it.
+- When the server finds nothing newer to install after all, because the release its daily
+  check named is no longer newer, the banner stops waiting at once and says "The server has
+  nothing newer to install." Closing it hides the offer for that release.
+
+The app's own Runtime, on your machine, gets no banner: the app's own updater replaces it.
+
+### From Telegram or Slack
+
+The [Telegram bot](./telegram-bot.md) and the [Slack app](./slack-app.md) ask the Runtime
+about a newer release when they start and once an hour, so they hear of one at most an hour
+after the Runtime's own daily check found it. They tell their owner, once per release, in a
+direct message:
+
+```
+Wisp 0.2.0 is available. Send /update to install it.
+```
+
+The owner sends `/update` in Telegram or `!update` in Slack. Nobody else may: groups and the
+people the owner let in never get the notice, and their `/update` is answered "Only the owner
+can update."
+
+- With Runs in flight, the bot says how many and starts nothing. Send `/update now`
+  (`!update now`) to update anyway.
+- Otherwise it answers "Updating, back in a moment." and the Runtime updates. After the
+  restart, the bot says how it ended in the chat the command came from: "Updated to Wisp
+  0.2.0.", that the release is installed and `wisp serve` needs a restart, or that the update
+  failed. The reason for a failure is given only in the owner's direct message; a group is
+  told that `wisp status` on the server says why.
+- When there is nothing newer, it says "Wisp is on the newest release." It says the same after
+  the restart when the update found nothing to install after all, because the release the
+  daily check named is no longer newer; the Runtime then offers no update until its next
+  daily check.
+
+### Automatically
+
+A Runtime nobody watches, such as an [incident bot](./incident-bot.md), can install a newer
+release by itself. Turn it on in `runtime.json`, or with `WISP_AUTO_UPDATE=true`, and restart
+the Runtime:
+
+```json
+{ "agentToken": "…", "autoUpdate": true }
+```
+
+It is off by default, so a release never restarts your Runtime unless you said it may. When
+it is on:
+
+- the Runtime looks once a minute, and starts the update only when no Run is executing,
+  waiting for an approval, or queued. A Run that starts while the release downloads is not
+  cut off: the restart waits until none is in flight, as `wisp update --when-idle` does;
+- a failed update leaves the old release running, and the same version is tried again a day
+  after the failure ended, at the first look that finds the Runtime idle, even across a
+  restart. After three failures in a row of that version it stops and waits for a newer
+  release, which it tries as usual. Failures of an update started any other way,
+  `wisp update`, `/update` or the desktop, count toward the three too. Once you fixed the
+  cause, run `wisp update`;
+- a release installed and waiting for a hand-started `wisp serve` to be restarted is not
+  installed again;
+- each start and outcome goes to the Runtime's log.
+
+Wisp Desktop's own Runtime ignores `autoUpdate`.
+
+### Runs in flight
+
+An update restarts the service, so Runs in flight get the
+[drain window](./runs-and-restarts.md#the-drain-window), as on any restart. A Run still going
+when the window ends fails with `shutdown`. On a Runtime that runs long jobs, raise
+`shutdownDrainTimeoutMs` and restart it at a quiet moment, well before an update: the Runtime
+reads the window only when it starts.
+
+### A `wisp serve` started by hand
+
+`wisp update` restarts only the service the installer set up. A `wisp serve` you started by
+hand keeps running the old version: the update installs the new release, and every way of
+updating reports it as installed and waiting. Restart `wisp serve` yourself to run it.
+
+### What an update leaves behind
+
+An update started from Wisp Desktop, a chat or `autoUpdate` runs in a process of its own, so
+that restarting the service does not stop it. On Linux, when the Runtime runs as the systemd
+service, the update runs with `systemd-run --user --scope` for the same reason. Its output
+goes to `update.log` in the data directory (`~/.wisp` by default), and how it ended to
+`update.json` beside it, which every surface reads after the restart. An update whose process
+died before it finished, or that was still running when the machine went down or restarted,
+is reported as failed, and counts as one of `autoUpdate`'s three tries.
+
+These updates run the `bin/wisp` in the data directory. When that is a symlink into another
+installation, they do not start, and are reported as failed: the update would record its
+outcome in the other installation, where the Runtime never reads it. Run the installer with
+`WISP_HOME` set to the data directory to give it a `bin/wisp` of its own.
 
 ## Uninstall
 

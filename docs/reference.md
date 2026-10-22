@@ -34,6 +34,41 @@ reached by a browser. The full API, with request and response schemas, is at
 | `GET` | `/v1/ready` | whether the Runtime will take a Run |
 | `GET` | `/v1/attestation` | the proxy's last attestation; `?includeQuote=1` adds the raw quote as `quote` |
 | `POST` | `/v1/attestation/refresh` | attest the proxy again |
+| `GET` | `/v1/update` | the update state — see [updating the Runtime](#updating-the-runtime) |
+| `POST` | `/v1/update` | install the newer release and restart onto it — see [updating the Runtime](#updating-the-runtime) |
+
+#### Updating the Runtime
+
+`POST /v1/update` starts `wisp update` on the Runtime's host, in a process of its own, and
+`GET /v1/update` reads how it is going, across the restart it causes too. See
+[Update](install.md#update).
+
+- Both take the one token, a `full` token or a `run` token, so a Channel adapter can offer the
+  update to its owner. A `run` token can do no more than install the newest signed release.
+- `POST` answers `202` with the state `installing` when it starts an update. While an update
+  is running, it starts no second one and answers `202 installing` too. With nothing newer it
+  starts nothing and answers `200` with the state. An update that finds nothing to install
+  after all, because the release the daily check named is no longer newer, ends `idle` with
+  no `version` and a new `finishedAt`, and `available` stays absent until the next daily
+  check.
+- `POST` starts no update when `bin/wisp` in the data directory runs another installation, a
+  symlink into one: that `wisp update` would record its outcome there. It records `failed`
+  with the reason; run the installer with `WISP_HOME` set to the data directory.
+- `POST` is `409` on a build from source. Neither route exists on Wisp Desktop's own
+  Runtime (`404`), which the app's updater replaces.
+- The state is `available` (the newer version the Runtime's check found, absent when none),
+  `state`, `version` (the one being or last installed), `error` (why, when `failed`) and
+  `finishedAt` (when the last update ended).
+- `state` is `idle`, `installing`, `installed` (on disk, waiting for a hand-started
+  `wisp serve` to be restarted) or `failed`. An update cut short, its process killed or the
+  machine restarted under it, reads `failed`.
+- Runs in flight get the [drain window](runs-and-restarts.md#the-drain-window) when the
+  Runtime restarts; count them first with
+  `GET /v1/runs?status=queued,running,parked&origin=all&limit=200`, where a `nextCursor` means
+  more than that.
+- A service that comes up on the new version after `wisp update`'s 30-second wait gave up
+  is read as updated: the Runtime on that version answers `idle` with that `version`. Until
+  the old Runtime has stopped, it answers `installing`.
 
 ### Sessions and Runs
 
@@ -331,7 +366,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | command | what it does |
 | --- | --- |
 | `wisp serve [--home dir] [--config file]` | run the Runtime in the foreground |
-| `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
+| `wisp status` | the Runtime's health state, version and kind, a newer release and how the last update ended, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, the key file or keyring, service, Runtime, login, proxy, the sandbox (on Linux: bubblewrap, once the sandbox is on) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref [--thinking]] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
@@ -383,7 +418,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
-| `wisp update` | install the newest release beside the running one and restart the service, and the Telegram bot's and the Slack app's services, onto it; without a running service, it takes effect on the next `wisp serve` |
+| `wisp update [--when-idle]` | install the newest release beside the running one and restart the service, and the Telegram bot's and the Slack app's services, onto it; without a running service, it takes effect on the next `wisp serve`. With `--when-idle`, the restart waits until no Run is executing, waiting for an approval, or queued, as `autoUpdate`'s does. See [Update](install.md#update) for the other ways |
 | `wisp uninstall` | remove what the installer put down (service, the Telegram bot's and the Slack app's services, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
 | `wisp --help`, `wisp <command> --help`, `wisp help <command>` | the commands by group, or one command's usage |
@@ -500,6 +535,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `fsMaxFileSize` | `FS_MAX_FILE_SIZE` | `31457280` (30 MiB) | the largest file the file tools read |
 | `maxImageSizeBytes` | `MAX_IMAGE_SIZE_BYTES` | `10485760` (10 MiB) | the largest image a message may carry |
 | `skillPaths` | `SKILL_PATHS` | none | extra folders of Skills, separated like `PATH` |
+| `autoUpdate` | `WISP_AUTO_UPDATE` (`true` or `false`) | `false` | install a newer release by itself once no Run is in flight or queued; a version whose update failed, however started, is tried again a day after the failure, until it has failed three times in a row, and then only a newer one is. Wisp Desktop's Runtime ignores it — see [automatically](install.md#automatically) |
 | `logFormat` | `LOG_FORMAT` | `text` | how stderr lines are written: `text`, or `json` for one object per line with `ts`, `level`, `component`, `msg`, and `runId`/`sessionId` during a Run. A config error is written in this format too, read from the environment or from the file's own `logFormat` |
 | `logLevel` | `LOG_LEVEL` | `info` | `debug` also puts a failed call's own error text on stderr, secrets removed; it may quote a request, so ship it to a third party knowingly. At `info` that text stays in the local diagnostics table |
 
