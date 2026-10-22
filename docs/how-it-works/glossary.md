@@ -18,7 +18,7 @@ inside a TEE. Your machine verifies the Wisp Proxy's attestation before sending 
 If the fingerprint doesn't match the published code, the connection is refused.
 
 **Confirmation gate**: the Kernel step after the schema and Rule checks. A tool call whose
-decision is `ask` (by default writing files, shell commands and every connector tool) waits until you see
+decision is `ask` (by default writing files, shell commands, every connector tool and a few more) waits until you see
 the exact action and approve it. An `allow` Rule or a Project bypass skips it, and an
 unanswered confirmation is denied. See [Permissions](../permissions.md).
 
@@ -48,7 +48,7 @@ together. "Sealed" means the memory is encrypted by a key the CPU generates and 
 reveals.
 
 **Stateless proxy**: the routing component inside the sealed enclave. It holds the model
-API credentials and forwards requests, but stores nothing: no database, no log, no state.
+API credentials and forwards requests, but stores nothing: no database, no state.
 
 **Symlink escape**: an attack where a symbolic link inside the project folder points to a
 sensitive file outside it. The Kernel's path check resolves symlinks first, then checks

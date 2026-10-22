@@ -32,3 +32,4 @@ TEE: a secure hardware enclave that nobody can access.
 | Understand how Wisp keeps your data private | [How Wisp works](./how-it-works/overview.md) |
 | Use the Wisp desktop app and its features | [The desktop app](./desktop/app.md) |
 | Run the agent from a terminal, a script or your own code | [The Wisp Runtime](./runtime.md) |
+| Run the agent on a server and use it from the desktop app | [Connect to a server](./desktop/connect-to-a-server.md) |

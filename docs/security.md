@@ -60,8 +60,12 @@ The consequence: if a web page, a connector result or a document tries to get th
 That puts all the weight on your Rules. See [Permissions](./permissions.md), including the
 warnings about [`bash_run`](./permissions.md#bash_run).
 
-Keep the `bash_run` [sandbox](./sandbox.md) on. Without it (`wisp sandbox off`) a `bash_run`
-command runs as the Runtime's own user and can read the key source.
+Turn the `bash_run` [sandbox](./sandbox.md) on wherever commands run without you reading
+each one first; [Sandbox](./sandbox.md#when-to-turn-it-on) says when. Without it (`wisp sandbox off`, the
+default) a `bash_run` command runs as the Runtime's own user and can read the key source,
+and the file tools may reach outside the Project, each such call on a card. Sandbox or not,
+the file tools refuse Wisp's data directory, `.env` files, `/etc` and the usual secrets in
+your home folder; [Tools](./tools.md#files) lists them.
 
 ## What reaches the model
 
@@ -94,8 +98,12 @@ check. See [Attestation](./runbook.md#attestation).
   holding a secret that others can read: `chmod 600` it.
 - **`telegram.json`** holds the bot's token and its `run` token once `wisp telegram setup`
   has run, and is written readable only by you.
+- **`slack.json`** holds the app's bot and app-level tokens and its `run` token once
+  `wisp slack setup` has run, and is written readable only by you.
 
 ## Not available yet
 
-The Runtime does not terminate TLS itself. To reach it from another machine, put a reverse
-proxy with TLS in front of it, or tunnel to its loopback port (for example with `ssh -L`).
+The Runtime does not terminate TLS itself. To reach it from another machine, use
+[Wisp Desktop](./desktop/connect-to-a-server.md), which opens an SSH tunnel itself, put a
+reverse proxy with TLS in front of it, or tunnel to its loopback port (for example with
+`ssh -L`).

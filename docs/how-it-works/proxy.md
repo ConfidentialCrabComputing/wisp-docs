@@ -21,14 +21,13 @@ from a request.
 
 ## Architecture
 
-The Wisp Proxy is built with NestJS (Node.js, TypeScript). It runs inside a Phala CVM
+The Wisp Proxy runs inside a Phala CVM
 (Confidential Virtual Machine), a TEE at the level of the whole VM rather than a single
 process. The entire process executes inside the enclave, isolated from the host OS, the
 hypervisor and the cloud operator.
 
 The Proxy is stateless by design: no database, no disk writes, no persistent volumes. It
-lives in memory only and doesn't log request bodies, response payloads or query strings.
-Search queries and LLM prompts exist only in process memory for the duration of the
+lives in memory only. Search queries and LLM prompts exist only in process memory for the duration of the
 request, and are then gone.
 
 Because the Proxy runs inside a [TEE](./tee.md), nobody at Wisp can read or manipulate its
@@ -54,7 +53,7 @@ Google Docs and Google Sheets: one mount, one consent, three Google APIs.
 **Authorization.** You sign in to Google through OAuth with Google itself; the Proxy only
 tells the agent which scopes to ask for. The agent keeps the token and sends it with every
 call. The Proxy uses it for that one request and never stores it, true to its stateless
-design, and redacts it from its logs.
+design.
 
 | Connector | Scopes requested |
 | --- | --- |

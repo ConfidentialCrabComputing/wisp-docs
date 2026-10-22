@@ -24,22 +24,78 @@ audit, and one answer per Run.
 
 ## Connecting
 
-The Runtime listens on `127.0.0.1` unless you [open it to another
-machine](./remote-access.md#reaching-it-from-another-machine). Every request carries
-`Authorization: Bearer <token>`: the one token, a named `full` token, or a `run` token made
-for an adapter (see [Tokens for an adapter](#tokens-for-an-adapter)).
+Every request but a tokenless `GET /v1/health` carries `Authorization: Bearer <token>`:
 
-An adapter on the same machine reads the address and token from
-`$WISP_HOME/runtime.lock`, exactly as the CLI does. It is a JSON file, readable only by its
-owner, with `url`, `token`, `pid`, `version` and `kind`:
+- **the one token**, the `agentToken` of `runtime.json`, which reaches everything;
+- **a named `full` token**, everything but the tokens themselves, for a script or a device:
+  `wisp tokens create --name nightly --capability full`;
+- **a `run` token**, made for an adapter, which reaches only what an adapter needs (see
+  [Tokens for an adapter](#tokens-for-an-adapter)).
 
-```sh
-URL=$(jq -r .url ~/.wisp/runtime.lock)
-TOKEN=$(jq -r .token ~/.wisp/runtime.lock)
-```
+The base URL is where the Runtime listens:
+
+- **On the same machine**, `http://127.0.0.1:3008` by default. A script there reads the
+  address and the one token from `$WISP_HOME/runtime.lock`, exactly as the CLI does. It is a
+  JSON file, readable only by its owner, with `url`, `token`, `pid`, `version` and `kind`:
+
+  ```sh
+  URL=$(jq -r .url ~/.wisp/runtime.lock)
+  TOKEN=$(jq -r .token ~/.wisp/runtime.lock)
+  ```
+
+- **From another machine**, the `https://` address of the TLS proxy in front of it, or
+  `http://127.0.0.1:3008` through an SSH tunnel you open (`ssh -N -L 3008:127.0.0.1:3008
+  you@server`). Never send a token over plain `http` across a network. See
+  [Remote access](./remote-access.md#reaching-it-from-another-machine).
 
 The full API, with request and response schemas, is served at `GET /v1/openapi.json`. The
 CLI is tested against it, so it is a good source for generating a client.
+
+## A first automation
+
+With `URL` and `TOKEN` set as above, five requests cover the whole contract. Check that the
+Runtime is up and signed in; `status` must be `ready` (`login_required` means run
+`wisp login` first):
+
+```sh
+curl -fsS -H "Authorization: Bearer $TOKEN" "$URL/v1/health"
+```
+
+Open a Session. Without `projectRoot` it works on a [Desk](./sessions-and-projects.md#desk-sessions):
+
+```sh
+SESSION=$(curl -fsS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "origin": "cli", "externalKey": "first-automation", "title": "first automation" }' \
+  "$URL/v1/sessions" | jq -r .id)
+```
+
+Run a turn and wait for its answer:
+
+```sh
+curl -fsS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "input": "Say hello in three languages." }' \
+  "$URL/v1/sessions/$SESSION/runs" | jq -r .output.text
+```
+
+Or start it without waiting, and follow its answer as it is written. Each Event is one
+`data:` line of JSON; the stream closes after `run.completed`, `run.failed` or
+`run.cancelled`:
+
+```sh
+RUN=$(curl -fsS -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "input": "Now in three more.", "wait": false }' \
+  "$URL/v1/sessions/$SESSION/runs" | jq -r .runId)
+curl -fsSN -H "Authorization: Bearer $TOKEN" "$URL/v1/runs/$RUN/events"
+```
+
+A tool the Rules hold for a person is refused in such a Run. To answer it yourself instead,
+send `"confirmationMode": "interactive"`: the Run parks and the answer lists its
+`confirmations`, each answered with
+`POST /v1/runs/{runId}/confirmations/{id}` and `{ "decision": "approve" }` or `deny` (see
+[Approvals](#approvals)).
+
+The same from the CLI is `wisp run`, `wisp run --detach`, `wisp runs events` and
+`wisp confirm`; see [Using the CLI from scripts](./cli.md#from-scripts).
 
 ## One conversation is one Session
 
@@ -105,13 +161,14 @@ its Events (see [Not waiting](#not-waiting)). The body takes exactly one of `inp
 
 | Field | Meaning |
 | --- | --- |
-| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF or a text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
-| `skill`, `arguments` | run one of the Project's [Skills](./skills.md) |
-| `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>` |
+| `input` | a string, or an array of content blocks (`text`, `image_url`, `file`, `pdf_text`, `document`, `audio`). Every block takes an optional `author`: `owner` (the default) or `third_party` — see [Who wrote what](#who-wrote-what). A `document` block (`filename`, `mediaType`, base64 `data`) is a file's bytes: the Runtime reads a PDF, a `.docx`, a `.xlsx` or any text file as its text, so the adapter needs no parser. An `audio` block (`mediaType`, base64 `data`) is OGG/Opus, MP3 or WAV; the Runtime transcribes it on its own machine before the turn, detecting the language among 25 European ones (the list is in the block's schema) |
+| `skill`, `arguments` | run a [Skill](./skills.md) the Session can see |
+| `modelPreference` | optional; a model id from `GET /v1/models`, or `tier:<name>`, for this Run only. Without it the Run follows the Session's Model Selection, then the Runtime Default — see [the model](./reference.md#the-model) |
 | `confirmationMode` | optional; `policy` (the default) or `interactive`, which `confirmationModes` must allow (it does by default) — see [approvals](#approvals) |
 | `idempotencyKey` | optional; makes a retry safe, see [Runs and restarts](./runs-and-restarts.md#the-key) |
 | `wait` | optional; `true` (the default) holds the connection, `false` answers `202` at once |
 | `outputSchema` | optional; a JSON Schema the answer must satisfy — see [a structured answer](#a-structured-answer) |
+| `maxTurns` | optional; the most model calls the Run may make, after which it fails `step_ceiling`. Without it a Run has no such limit |
 | `deliver` | optional; `{ "channel": "telegram" \| "slack", "externalKey": "…" }`, the chat the outcome goes to — see [delivering an outcome](#delivering-an-outcome) |
 
 The answer is one JSON object:
@@ -130,10 +187,11 @@ The answer is one JSON object:
   `reason` ([the list](./runbook.md#why-a-run-failed)) and a message that never quotes the
   conversation.
 - `toolCalls[].args` is the redacted form from the audit, not the raw arguments.
-- `artifacts` are files the Run wrote with `fs_write` or `fs_edit`, relative to the
-  Session's folder (its Project, or its Desk when it has none), with forward slashes. Files a
-  `bash_run` command writes are not listed. `GET
-  /v1/runs/{runId}/artifacts/{index}` answers the `index`-th one's bytes, to send on as a file.
+- `artifacts` are the files the agent sent you with its `deliver_file` tool, relative to the
+  Session's folder (its Project, or its Desk when it has none), with forward slashes, in the
+  order delivered. A file it only wrote is not listed: ask for the file in the input ("send
+  me the CSV") and the agent delivers it. `GET /v1/runs/{runId}/artifacts/{index}` answers
+  the `index`-th one's bytes, to send on as a file.
 
 ### A structured answer
 
@@ -162,7 +220,7 @@ the agent said in words:
 The agent ends the Run by handing over a value; one that does not satisfy the schema is
 returned to it with the reasons, and it tries again; stopping without one, it is reminded.
 After five such attempts the Run fails with `failure.reason` `output_schema_unsatisfied`. A Run
-that runs out of steps first still fails `step_ceiling`. The value is in the waited-on answer,
+that reaches its `maxTurns` first still fails `step_ceiling`. The value is in the waited-on answer,
 in the terminal Event and on `GET /v1/runs/{runId}`. It works with `input` or `skill`, in
 either Confirmation Mode, waited on or not.
 
@@ -183,8 +241,8 @@ than an object.
 
 ### A refused tool is not a failed Run
 
-Nobody approves tool calls during a `/v1` Run, so a tool without a Rule that allows it is
-refused (see [Permissions](./permissions.md)). The agent is told and continues, usually by
+Nobody approves tool calls during a Run in the default mode, `policy`, so a tool without a
+Rule that allows it is refused (see [Permissions](./permissions.md)). The agent is told and continues, usually by
 drafting what it was not allowed to send. The refused call appears in `toolCalls` with
 `ok: false`, and the Run still completes.
 
@@ -203,7 +261,10 @@ the Run parks, and the waiting request answers at once:
 ```
 
 `args` is what the desktop's approval card shows, the recipient named by Wisp where a
-connector names one. Answer each Prompt with
+connector names one. `agentId` names the subagent that asks, when one does. A Prompt with
+`"askedEveryTime": true` is one no Rule can lift, such as a file tool reaching outside the
+folder: offer approve or deny only, since `allow_project` and `allow_global` approve it and
+write no Rule. Answer each Prompt with
 `POST /v1/runs/{runId}/confirmations/{id}` and `{ "decision": "approve" }` (or `deny`,
 `allow_project`, `allow_global`). That request waits for the Run's next park or its end and
 answers like the first one did; while another Prompt of the same step is still pending, it
@@ -311,10 +372,12 @@ is the one `GET /v1/openapi.json` serves; every release also carries it as `v1.j
 its archives.
 
 ```sh
+npm init -y && npm pkg set type=module && npm install openapi-fetch
 curl -fsS -H "Authorization: Bearer $TOKEN" "$URL/v1/openapi.json" -o v1.json && npx openapi-typescript v1.json -o v1.d.ts
 ```
 
-A Run started without waiting, its answer followed as it is written:
+A Run started without waiting, its answer followed as it is written. Save it as `call.ts`
+and run it with `WISP_URL=$URL WISP_TOKEN=$TOKEN npx tsx call.ts`:
 
 ```ts
 // A typed call to the Wisp Runtime through `openapi-fetch`, with the types
@@ -465,6 +528,18 @@ An error answers a JSON body `{ "error": "…" }`, a sentence for a person. Some
 `confirmation_mode_interactive_not_allowed`; match the status and the `code`, never the
 sentence.
 
+| status | what to do |
+| --- | --- |
+| `400` | the body or query is wrong, or names a folder or schema the Runtime refuses: fix the request, do not retry it |
+| `401` | the token is unknown or revoked |
+| `403` | the token may not do this, such as a `run` token naming a `projectRoot`, or the mode is outside `confirmationModes` |
+| `404` | no such Session, Run or Prompt; a Project Session may need [its folder named again](#naming-the-project-again) |
+| `409` | see [Follow-ups and cancelling](#follow-ups-and-cancelling) |
+| `5xx`, or no connection | the Runtime is down or restarting: wait for `GET /v1/health` to say `ready`, then send the same request with the same `idempotencyKey` |
+
+A Run that failed is not an HTTP error: it answers `200` with `status: "failed"` and a
+`failure.reason`.
+
 ## Tokens for an adapter
 
 Give each adapter its own `run` token instead of the one token, so a leak costs only that
@@ -477,6 +552,9 @@ wisp tokens create --name my-bot --capability run
 A `run` token reaches only what an adapter needs:
 
 - it opens Sessions on the Desk only (a `projectRoot` is `403`) and starts Runs in those;
+- it lists and reads Sessions and their history, and sets a Session's Model Selection (a
+  `PATCH` that changes anything else is `403`);
+- it reads the model catalog and the Runtime Default, but does not set the Runtime Default;
 - it reads Runs, their Events and artifacts, and cancels a Session's Runs;
 - it answers only the Prompts of Runs it started, with `approve` or `deny`;
 - it reads and starts the speech model's install;
@@ -487,7 +565,9 @@ A `run` token reaches only what an adapter needs:
 - with `--channel telegram` or `--channel slack` it may name a `deliver` target, of that
   Channel only. Without `--channel`, a Run that names `deliver` is `403`.
 
-Everything else (Rules, connectors, schedules, tokens) is `403`.
+Everything else (Rules, connectors, schedules, tokens) is `403`. Only the one token makes,
+lists and revokes tokens. A revoked token is `401` from its next request on, and the jobs
+its bot made in a chat are paused.
 
 ## Not available yet
 

@@ -26,8 +26,10 @@ step: which file to read, which command to run, which tool to call. See
 [The Wisp agent](./agent.md).
 
 **Kernel.** As an additional privacy and security measure, every agent action goes through
-the Kernel first. The Kernel refuses any path that leads outside your project folder, into
-sensitive directories such as `~/.ssh` or into Wisp's own `~/.wisp`, checks every tool
+the Kernel first. The Kernel refuses any path into sensitive directories such as `~/.ssh`
+or into Wisp's own `~/.wisp`, keeps the agent's file tools inside your project folder
+unless you approve a call outside it (or refuses it outright with the
+[sandbox](../sandbox.md) on), checks every tool
 call against your [Permissions](../permissions.md) (`allow`, `ask` or `deny`), waits for
 your approval on `ask`, and logs every tool call locally. It
 also encapsulates encryption and key management, so the Wisp agent has no access to
@@ -39,8 +41,8 @@ own. See [The Kernel](./kernel.md).
 
 **Wisp Proxy (Anonymizer).** The stateless gateway that forwards your prompts to the LLM
 and executes identifiable requests (web search, for example) on your behalf, so third
-parties can't track you or build a profile of you. The Wisp Proxy keeps no database or
-logs, and runs inside a Trusted Execution Environment (TEE), so nobody at Wisp can see
+parties can't track you or build a profile of you. The Wisp Proxy keeps no database,
+and runs inside a Trusted Execution Environment (TEE), so nobody at Wisp can see
 inside. See [Wisp Proxy](./proxy.md).
 
 **LLM.** The model itself runs inside a Trusted Execution Environment (Intel TDX), a secure

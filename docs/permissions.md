@@ -42,6 +42,11 @@ Rules override the default. The first match in this order wins:
 | `global-rule`: a Rule for every Project | `wisp permissions set <tool> <decision>` |
 | `baseline`: the tool's own default | — |
 
+Two kinds of call ask whatever a Rule or a bypass says, and a `deny` still refuses them:
+creating, changing or deleting a [scheduled job](./tools.md#schedules), and a file tool call
+on a path outside the Session's folder, which only happens with the sandbox off (see
+[Files](./tools.md#files)).
+
 ## Seeing what applies
 
 ```sh
@@ -91,22 +96,22 @@ will be refused, and the agent drafts instead.
 wisp permissions bypass on --project .
 ```
 
-Allows every tool in that Project, except tools with a global `deny`. Creating, changing
-or deleting a scheduled job [still asks](./tools.md#schedules). Use it only for a
+Allows every tool in that Project, except tools with a global `deny`. The two kinds of call
+[above](#where-a-decision-comes-from) still ask. Use it only for a
 Project where you would approve anything the agent might do.
 
 ## `bash_run`
 
 `bash_run` lets the agent run shell commands. It defaults to `ask`, so under the CLI it is
-refused until a Rule allows it. Its commands run in the [sandbox](./sandbox.md), which keeps
-them inside their folder. Before you allow it, know that:
+refused until a Rule allows it. Before you allow it, know that:
 
+- **The sandbox is off by default.** A command runs as the Runtime's own user and can read
+  your home folder and the key source. `wisp sandbox on` keeps commands inside their
+  folder. See [Sandbox](./sandbox.md#turn-it-on-or-off).
 - **The sandbox's network is on by default.** Allowing `bash_run` also allows network
   access from this machine.
 - **On Windows there is no sandbox yet.** Allowing `bash_run` there allows anything the user
   can do.
-- **The sandbox can be switched off.** Without it a command runs as the Runtime's own user
-  and can read the key source. See [Sandbox](./sandbox.md#turn-it-on-or-off).
 
 ## Where Rules live
 
