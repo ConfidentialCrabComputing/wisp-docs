@@ -94,6 +94,17 @@ wisp models                     # the ids and tiers you can name
 A single Run can still choose its own with `wisp run --model`. See
 [Choosing a model](./cli.md#choosing-a-model).
 
+### Let the Runtime update itself
+
+A Runtime nobody watches can install each newer release by itself, when no Run is in flight:
+
+```json
+{ "agentToken": "…", "autoUpdate": true }
+```
+
+It is off by default, so that a release never restarts your Runtime without your say. See
+[Update automatically](./install.md#automatically).
+
 ### Change the port
 
 ```json

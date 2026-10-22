@@ -77,7 +77,8 @@ default, and restart the Runtime.
 
 Slack takes a message that starts with `/` for one of its own commands, so the app's commands
 start with `!`. In a thread you can also mention the app and write the command with a `/`, as in
-`@Wisp /new`. In a channel, a command works only inside a thread.
+`@Wisp /new`. In a channel, a command works only inside a thread, except `!update`, which
+also works at a channel's top level when it mentions the app (`@Wisp !update`).
 
 | Command | What it does |
 | --- | --- |
@@ -85,6 +86,19 @@ start with `!`. In a thread you can also mention the app and write the command w
 | `!sessions` | Lists the last ten Sessions. |
 | `!resume <n>` | Goes back to Session number `n` from that list. |
 | `!cancel` | Stops the running request. |
+| `!update` | Installs the newer Wisp release. The owner's only. |
+
+### Updating Wisp from Slack
+
+When the Runtime has a newer release, the app tells its owner once, in a direct message:
+"Wisp 0.2.0 is available. Send !update to install it." Channels and the people you let in
+never get this message.
+
+Only the owner may send `!update`; anyone else is told "Only the owner can update." With Runs
+in flight, the app says how many and starts nothing; send `!update now` to update anyway,
+and the restart gives them the drain window. Otherwise it answers "Updating, back in a moment.", and after the
+restart says how it ended in the same thread. A failure's reason is given only in your direct
+message with the app. See [Update](./install.md#from-telegram-or-slack).
 
 ## Where the app answers
 
