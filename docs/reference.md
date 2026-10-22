@@ -39,10 +39,10 @@ reached by a browser. The full API, with request and response schemas, is at
 
 | method | route | what it does |
 | --- | --- | --- |
-| `POST` | `/v1/sessions` | open a Session |
+| `POST` | `/v1/sessions` | open a Session; with `selection`, its [Model Selection](#the-model) |
 | `GET` | `/v1/sessions` | list Sessions |
-| `GET` | `/v1/sessions/{id}` | one Session |
-| `PATCH` | `/v1/sessions/{id}` | rename a Session, or give a Desk Session a Project with `projectRoot`: once only, never moved again (`409` when it already has one) |
+| `GET` | `/v1/sessions/{id}` | one Session, with its own `selection` (`null` when it has none) and `effectiveSelection`, what its next Run resolves to |
+| `PATCH` | `/v1/sessions/{id}` | rename a Session, set or clear (`null`) its `selection`, or give a Desk Session a Project with `projectRoot`: once only, never moved again (`409` when it already has one) |
 | `DELETE` | `/v1/sessions/{id}` | delete a Session; `409` while it has a Run going |
 | `GET` | `/v1/sessions/{id}/history` | a Session's messages |
 | `POST` | `/v1/sessions/{id}/runs` | run a turn and wait for its outcome — see [running a turn](#running-a-turn) |
@@ -74,6 +74,39 @@ reached by a browser. The full API, with request and response schemas, is at
   `code: confirmation_mode_<mode>_not_allowed` when `confirmationModes` leaves the mode out.
 - A repeat of the `idempotencyKey` of a parked Run answers at once with the pending Prompts:
   `200 parked`, or `202 { runId, status: "parked" }` with `wait: false`.
+- With `modelPreference`, this Run alone asks for that model — see [the model](#the-model).
+- When the Session's selection pins a model that cannot read images and the input, or the
+  Session's history, holds an image the user sent, it is `422` with
+  `code: model_cannot_read_images`, the `model`, and `imageIn` (`message` or `history`). No Run
+  starts and no message is kept.
+
+#### The model
+
+A Model Selection is a mode, `{ "mode": "advanced" | "balanced", "thinking": … }`, or a pin to
+one model the catalog lists, `{ "mode": "model", "model": "<id>", "thinking": … }`. A Run takes
+the first of:
+
+1. the request's own `modelPreference`;
+2. the Session's `selection`;
+3. the Runtime Default, `/v1/settings/model`;
+4. the configured [`teeLlmModel`](#configuration).
+
+- Every write of a selection (a Session's, a job's, the Runtime Default) is checked against the
+  catalog: a pin the catalog does not list, or `thinking` on a model that does not reason, is
+  `400`. While the catalog cannot be reached, a pin is `503`; the modes are always accepted.
+- A pin the catalog stops listing is served by Advanced, with the pin's `thinking`. The stored
+  selection still names the pin, so it is served again once the model returns.
+- A Run never waits for the catalog: it reads the copy the Runtime fetched at boot and
+  refreshes in the background.
+- A subagent and a forked Skill run on their parent Run's model.
+- A [retry](#retrying-a-run) takes the selection current when it is sent, unless the Run named
+  its own `modelPreference`: then it asks for that model again.
+
+| method | route | what it does |
+| --- | --- | --- |
+| `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
+| `GET` | `/v1/settings/model` | the Runtime Default, `{ selection }`; `null` when the configured model applies |
+| `PUT` | `/v1/settings/model` | set it with `{ selection }`, at once; `null` clears it. The one token or a `full` token; a `run` token may only read it |
 
 #### Listing Runs
 
@@ -182,7 +215,6 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
 | `GET` | `/v1/audit` | the audit, newest first |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
-| `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
 | `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
 | `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
 | `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full` or `run`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
@@ -204,13 +236,15 @@ A job runs a message on a clock. Its `schedule` is one of:
 - one instant: `{ "at": "2026-11-01T09:00:00Z" }`.
 
 Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
-`/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema` and a
-`deliver` target.
+`/<skill> <input>`), a `projectRoot` (an absolute path to a folder), an `outputSchema`, a
+`deliver` target and a `selection`, the [Model Selection](#the-model) each fire runs on (the
+Runtime Default without one).
 
 - A spec that never fires, an instant gone by, a folder that is not one and a schema a Run
   cannot take are `400`.
 - Each fire is a fresh Session with origin `schedule`, under `policy`; its outcome becomes the
-  job's `lastOutcome`.
+  job's `lastOutcome`. The fire writes the job's `selection` onto that Session, so a later
+  change to the job leaves it alone.
 - The routes take the one token or a `full` token; a `run` token is `403` on all of them.
 
 | method | route | what it does |
@@ -218,7 +252,7 @@ Beside `name`, `input` and `schedule`, a job may name a `skill` (each fire sends
 | `POST` | `/v1/schedules` | make a job; answers it with its `id` and `nextAt` |
 | `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt`, `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) and `lastFire`, its newest settled fire as `/v1/fires` lists one, `null` before the first |
 | `GET` | `/v1/schedules/{id}` | one job |
-| `PATCH` | `/v1/schedules/{id}` | change the fields named; `null` clears `skill`, `projectRoot`, `outputSchema` or `deliver`; `nextAt` moves only with `schedule` |
+| `PATCH` | `/v1/schedules/{id}` | change the fields named; `null` clears `skill`, `projectRoot`, `outputSchema`, `deliver` or `selection`; `nextAt` moves only with `schedule` |
 | `DELETE` | `/v1/schedules/{id}` | delete a job; a fire under way runs on |
 | `POST` | `/v1/schedules/{id}/pause` | stop a job firing until it is resumed |
 | `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
@@ -300,7 +334,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp status` | the Runtime's health state, version and kind, the signed-in account, and a warning when `bash_run` is not allowed |
 | `wisp doctor` | check the config, the key file or keyring, service, Runtime, login, proxy, the sandbox (on Linux: bubblewrap, once the sandbox is on) and `PATH`; every problem comes with the command that fixes it; exits `1` if any check fails |
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
-| `wisp run [<session>] "<prompt>" [--skill name] [--model pref] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
+| `wisp run [<session>] "<prompt>" [--skill name] [--model pref [--thinking]] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
@@ -323,6 +357,9 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp connectors enable <name> --project path` | let a Project's Sessions use it |
 | `wisp skills list [--project path]` | the Skills |
 | `wisp models` | the models `--model` can prefer: each one's id, tiers, context window and capabilities |
+| `wisp model` | the Runtime Default: the model a chat or job with none of its own runs on; `none` when the configured model applies |
+| `wisp model set advanced\|balanced\|<model id> [--thinking]` | set the Runtime Default, at once; a model id must be one `wisp models` lists |
+| `wisp model reset` | clear the Runtime Default, so the configured model applies again |
 | `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (670 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
 | `wisp sandbox` | whether the `bash_run` [sandbox](./sandbox.md) and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
@@ -330,7 +367,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
 | `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on and pause the jobs its bot made in a chat; the one token and the other named tokens keep working |
-| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
+| `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] [--model m [--thinking]] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
 | `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
 | `wisp schedules pause <id>`, `wisp schedules resume <id>` | stop a job firing, or let it fire again |
 | `wisp schedules run <id>` | fire a job now and print the Run's id, for `wisp runs show` |
@@ -366,6 +403,9 @@ One Run, waited on.
   `output.structured`, as JSON. A file that cannot be read or is not JSON is a usage error.
 - `--max-turns <n>` sends `maxTurns`: the Run fails `step_ceiling` after `n` model calls. A
   value that is not a positive whole number is a usage error.
+- `--model` picks the model for this Run only: `advanced`, `balanced`, a model id, or a raw
+  preference such as `tier:balanced`. `--thinking` asks for its thinking form; it needs
+  `--model`, and a raw preference (one with a `:`) refuses it.
 
 ### `wisp tokens create`
 
@@ -388,6 +428,9 @@ Makes a job and prints its id. It takes exactly one time spec: `--cron`, `--ever
 
 each optionally followed by `@<bot id>` (Telegram's numeric bot id, Slack's bot user id), so that only
 that bot posts it.
+
+`--model` is the model each fire runs on: `advanced`, `balanced` or a model id `wisp models`
+lists, with `--thinking` for its thinking form. Without it, a fire follows the Runtime Default.
 
 ### `wisp telegram setup`
 

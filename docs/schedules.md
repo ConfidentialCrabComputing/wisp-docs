@@ -50,6 +50,7 @@ More flags for `wisp schedules create`:
 | `--skill <name>` | each fire runs this Skill, the message its arguments (`/<skill> <message>`) |
 | `--output-schema <file>` | a JSON Schema each fire's answer must match, as for [`wisp run`](./reference.md#wisp-run) |
 | `--deliver <key>` | post each outcome to this chat — see [Posting to a chat](#posting-to-a-chat) |
+| `--model <advanced\|balanced\|model id>` | the model each fire runs on, `--thinking` for its thinking form; without it, the Runtime Default (`wisp model`) |
 
 ## Time zones
 
