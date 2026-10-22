@@ -194,10 +194,11 @@ mentions it once on stderr:
 wisp 0.2.0 is available — run `wisp update`
 ```
 
-A service that does not come up within the 30 seconds is recorded as a failed update, even
-though the release is installed and the service may still come up a moment later. Wisp
-Desktop and the chats then report the update as failed; `wisp status` shows whether the
-Runtime is now on the new version.
+A service can take longer than the 30 seconds, for instance while Runs drain. `wisp update`
+then prints that the service did not come up within 30 seconds, but the update is not lost:
+once the service comes up on the new version, the Runtime reads the update as done, and Wisp
+Desktop, the chats and `wisp status` report it as installed. Only a service that never comes
+up on the new version leaves the update failed.
 
 `wisp status` shows the same, and how the last update ended, whichever way it was started:
 
@@ -224,6 +225,9 @@ every half hour.
 - When the server is too old for the app, the "Different versions" dialog has an **Update the
   server** button that does the same, on a server whose release already has the update
   route. An older server is told to run `wisp update` on it.
+- When the server finds nothing newer to install after all, because the release its daily
+  check named is no longer newer, the banner stops waiting at once and says "The server has
+  nothing newer to install." Closing it hides the offer for that release.
 
 The app's own Runtime, on your machine, gets no banner: the app's own updater replaces it.
 
@@ -249,7 +253,10 @@ can update."
   0.2.0.", that the release is installed and `wisp serve` needs a restart, or that the update
   failed. The reason for a failure is given only in the owner's direct message; a group is
   told that `wisp status` on the server says why.
-- When there is nothing newer, it says "Wisp is on the newest release."
+- When there is nothing newer, it says "Wisp is on the newest release." It says the same after
+  the restart when the update found nothing to install after all, because the release the
+  daily check named is no longer newer; the Runtime then offers no update until its next
+  daily check.
 
 ### Automatically
 
@@ -266,10 +273,14 @@ it is on:
 
 - the Runtime looks once a minute, and starts the update only when no Run is executing,
   waiting for an approval, or queued;
-- it tries each version once. A failed update leaves the old release running and is not
-  retried, even after a restart; the next release is tried as usual. A version whose update
-  failed however it was started, `/update` or the desktop included, is never tried by
-  `autoUpdate`: once you fixed the cause, run `wisp update`;
+- a failed update leaves the old release running, and the same version is tried again a day
+  after the failure ended, at the first look that finds the Runtime idle, even across a
+  restart. After three failures in a row of that version it stops and waits for a newer
+  release, which it tries as usual. Failures of an update started any other way,
+  `wisp update`, `/update` or the desktop, count toward the three too. Once you fixed the
+  cause, run `wisp update`;
+- a release installed and waiting for a hand-started `wisp serve` to be restarted is not
+  installed again;
 - each start and outcome goes to the Runtime's log.
 
 Wisp Desktop's own Runtime ignores `autoUpdate`.
@@ -295,7 +306,8 @@ that restarting the service does not stop it. On Linux, when the Runtime runs as
 service, the update runs with `systemd-run --user --scope` for the same reason. Its output
 goes to `update.log` in the data directory (`~/.wisp` by default), and how it ended to
 `update.json` beside it, which every surface reads after the restart. An update whose process
-died before it finished is reported as failed.
+died before it finished, or that was still running when the machine went down or restarted,
+is reported as failed, and counts as one of `autoUpdate`'s three tries.
 
 ## Uninstall
 
