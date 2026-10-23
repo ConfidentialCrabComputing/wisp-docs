@@ -191,8 +191,8 @@ as one message per photo. The bot waits a moment for the rest and puts them back
 ## Files and voice messages
 
 Photos, documents, voice messages and audio files up to 20 MB each (the most Telegram lets a
-bot download) reach the agent with your message; a PDF, a Word or Excel file or a text file is
-read as its text. Videos are refused. A voice message or an audio file needs the
+bot download) reach the agent with your message; a PDF, a Word, Excel or PowerPoint file or a
+text file is read as its text. Videos are refused. A voice message or an audio file needs the
 [speech model](./voice-and-files.md#voice-messages): until it is installed, the owner gets a
 card to install it (about 670 MB) and sees the progress, and anyone else is told voice messages
 are not set up yet. Files the agent sends you are posted as documents after its answer. See

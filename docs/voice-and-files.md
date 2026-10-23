@@ -4,8 +4,8 @@ description: Send the agent voice messages, images and documents, and get back t
 
 # Voice and files
 
-A message to the agent can carry more than words: images, PDFs, Word, Excel and text files,
-and voice.
+A message to the agent can carry more than words: images, PDFs, Word, Excel, PowerPoint and
+text files, and voice.
 The [Telegram bot](./telegram-bot.md#files-and-voice-messages) and the
 [Slack app](./slack-app.md#files) do this for you. Your own adapter sends the same as content
 blocks in a Run's `input`; see [A message is a Run](./adapter-contract.md#a-message-is-a-run).
@@ -76,8 +76,9 @@ reads it, so an adapter needs no parser. It goes by the bytes and the file name,
 - **PDF** is read as its text. A PDF with no text to extract, such as a scan without a text
   layer, one with a password or a damaged one, does not fail the Run: the agent is told no
   text could be extracted.
-- **Word and Excel**: a `.docx` or `.xlsx` file is read as its text, and one that cannot be
-  opened is noted the same way.
+- **Word, Excel and PowerPoint**: a `.docx`, `.xlsx` or `.pptx` file is read as its text (a
+  presentation slide by slide, with its speaker notes), and one that cannot be opened is noted
+  the same way.
 - **Text**: any other file that is not binary, read as UTF-8.
 - **Anything else**, a binary file of another kind, fails the Run as `unsupported_document`.
 
