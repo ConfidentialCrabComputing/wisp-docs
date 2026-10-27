@@ -571,7 +571,10 @@ A `run` token reaches only what an adapter needs:
   Channel only. Without `--channel`, a Run that names `deliver` is `403`;
 - with `--channel` it also reads and sets the Auto Mode switch (`GET` and
   `PUT /v1/settings/auto-mode`). It is the whole Runtime's: let only your adapter's owner
-  change it. Without `--channel`, both are `403`.
+  change it. Without `--channel`, both are `403`;
+- with `--channel` it also reads `GET /v1/billing/me`, so a Run refused `quota_exhausted`
+  while Runs are paid from the balance alone can name `wisp billing topup`. It changes
+  nothing in billing. The balance is the owner's: do not post it to a shared chat.
 
 Everything else (Rules, connectors, schedules, tokens) is `403`. Only the one token makes,
 lists and revokes tokens. A revoked token is `401` from its next request on, and the jobs

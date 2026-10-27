@@ -317,7 +317,7 @@ The speech model an `audio` block needs is 643 MB, pinned by revision and sha256
 | `GET` | `/v1/auth/status` | whether the Runtime is signed in |
 | `POST` | `/v1/auth/cancel` | abandon a login in flight |
 | `POST` | `/v1/auth/logout` | sign out |
-| `GET` | `/v1/billing/me` | the plan, how full its usage windows are, and the prepaid balance; no balance when the billing service has no pay-as-you-go |
+| `GET` | `/v1/billing/me` | the plan, how full its usage windows are, and the prepaid balance; no balance when the billing service has no pay-as-you-go. A `run` token reads it only with a `channel` |
 | `POST` | `/v1/billing/topups` | open a top-up of the balance for `amountCents`; the answer carries the `checkoutUrl` to pay it on and when it `expiresAt` |
 | `GET` | `/v1/billing/topups/{id}` | one top-up as it stands — poll it after the checkout until it is `paid`, `failed` or `expired` |
 | `PUT` | `/v1/billing/payg-settings` | change the balance settings named (`autoReload`, `spendAfterLimit`); the answer is the balance |
