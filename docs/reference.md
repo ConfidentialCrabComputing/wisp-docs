@@ -317,6 +317,13 @@ The speech model an `audio` block needs is 643 MB, pinned by revision and sha256
 | `GET` | `/v1/auth/status` | whether the Runtime is signed in |
 | `POST` | `/v1/auth/cancel` | abandon a login in flight |
 | `POST` | `/v1/auth/logout` | sign out |
+| `GET` | `/v1/billing/me` | the plan, how full its usage windows are, and the prepaid balance; no balance when the billing service has no pay-as-you-go |
+| `POST` | `/v1/billing/topups` | open a top-up of the balance for `amountCents`; the answer carries the `checkoutUrl` to pay it on and when it `expiresAt` |
+| `GET` | `/v1/billing/topups/{id}` | one top-up as it stands — poll it after the checkout until it is `paid`, `failed` or `expired` |
+| `PUT` | `/v1/billing/payg-settings` | change the balance settings named (`autoReload`, `spendAfterLimit`); the answer is the balance |
+
+A billing refusal carries a `code` beside the `error`; `503` with `billing_unavailable` means
+billing did not answer and is worth another try.
 
 ### Connectors
 
@@ -424,6 +431,10 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp slack pairing list\|approve <code>\|revoke <user id>` | as for Telegram |
 | `wisp login [--manual]` | the Account Login; without a browser on the Runtime's host, or over SSH, it asks for the redirect URL as `--manual` does. It gives up after 5 minutes |
 | `wisp logout` | sign out |
+| `wisp billing status [--json]` | the plan, how full its usage windows are, the balance and auto-reload |
+| `wisp billing topup <usd>` | print a checkout link for that many dollars and wait for the payment; Ctrl-C stops the wait, not the payment. Exits `0` once it is paid |
+| `wisp billing auto-reload --threshold <usd> --target <usd> [--monthly-limit <usd>]` | top the balance up to the target when it falls below the threshold, at most `--monthly-limit` in any 30 days (tax is charged on top and not counted). Needs a card saved during a `topup` |
+| `wisp billing auto-reload --off` | stop topping the balance up |
 | `wisp update [--when-idle]` | install the newest release beside the running one and restart the service, and the Telegram bot's and the Slack app's services, onto it; without a running service, it takes effect on the next `wisp serve`. With `--when-idle`, the restart waits until no Run is executing, waiting for an approval, or queued, as `autoUpdate`'s does. See [Update](install.md#update) for the other ways |
 | `wisp uninstall` | remove what the installer put down (service, the Telegram bot's and the Slack app's services, `bin/wisp`, `versions`, the `PATH` line, and `runtime.json` while it holds only the installer's `agentToken`); at a terminal it asks whether to delete the data too |
 | `wisp --version` | the build's version; touches nothing else |
