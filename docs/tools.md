@@ -146,6 +146,26 @@ A connector whose server offers resources or prompts also gets four tools that d
 
 `wisp permissions get --connector <name>` lists one connector's tools.
 
+### How the agent reaches them
+
+Connector tools are not in the agent's own tool list, so that dozens of them do not crowd
+its context. The agent gets a short catalog of them and two tools to use it:
+
+- **`mcp_search`** finds connector tools by what they do and returns each one's arguments.
+- **`mcp_call`** runs one connector tool by its name.
+
+So in Wisp Desktop and in the audit log you may see the agent search before it acts. The
+first call of a tool whose arguments the agent has not read yet is not run: it gets the
+tool's arguments back and calls again. That refused call is expected and changes nothing.
+
+Rules, approval cards and the audit log still use the connector tool's own name,
+`mcp__<connector>__<tool>`, never `mcp_call`. The web tools of `wisp_proxy` are the
+exception: they are in the agent's own list and called directly.
+
+A subagent or a `fork` Skill that is given a list of tools reaches connectors only when
+the list names `mcp_call` or `mcp_search`; then it can use every connector tool its Project
+enables. With no list, it gets them as the agent does.
+
 ## Web search and fetch
 
 The agent reaches the web through the Wisp proxy's own connector, `wisp_proxy`. It needs no

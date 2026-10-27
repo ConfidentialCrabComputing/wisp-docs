@@ -64,7 +64,9 @@ and bubblewrap on Linux. A Windows sandbox is in development. See [Sandbox](../s
   enclave, results returned over MCP
 
 **Connectors.** Gmail, Google Calendar, Google Drive, Telegram and any MCP server you add.
-Their tools are named `mcp__<connector>__<tool>` and are `ask` by default. See
+Their tools are named `mcp__<connector>__<tool>` and are `ask` by default. The agent finds
+them with `mcp_search` and runs them with `mcp_call` instead of keeping them all in its
+context; see [Connector tools](../tools.md#how-the-agent-reaches-them). See
 [Permissions](../permissions.md).
 
 **Sessions and memory**

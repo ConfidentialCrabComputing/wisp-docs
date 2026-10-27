@@ -47,6 +47,28 @@ Two Skills are built in:
   pages with `mcp__wisp_proxy__fetch_url`, which asks by default; see
   [Web search and fetch](./tools.md#web-search-and-fetch).
 
+Three more come with the Runtime for office files. Ask for a report, a deck or a budget and
+the agent uses them on its own:
+
+- **`documents`** creates, reads, edits and reviews Word files (.docx), tracked changes and
+  comments included.
+- **`presentations`** creates, edits and reviews PowerPoint decks (.pptx) with real text,
+  charts and tables.
+- **`spreadsheets`** reads, creates, edits and checks Excel workbooks (.xlsx, .xlsm) with
+  live formulas, charts and formats.
+
+They differ from the two above in a few ways:
+
+- **They live in the home folder.** The Runtime unpacks them into `~/.wisp/skills/` when it
+  starts and brings them up to date after each update.
+- **You can change them.** Once you edit one, updates leave it as you made it. A Skill of
+  your own with the same name is left alone too.
+- **They run Python scripts through `bash_run`.** Under `wisp run`, allow `bash_run` first
+  (see [Permissions](./permissions.md#bash_run)). The first use downloads a Python
+  toolchain, once for all Projects, which takes a while.
+- **LibreOffice is optional.** With it installed, the agent can render pages and slides to
+  check how they look; without it, everything else works.
+
 ## Writing a SKILL.md
 
 ```markdown
