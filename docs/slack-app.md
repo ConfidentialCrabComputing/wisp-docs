@@ -211,7 +211,7 @@ be fetched by Slack before anyone clicks it.
 ## Files
 
 Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you
-share with the app reach the agent with your message; a PDF, a Word, Excel or PowerPoint file or a text
+share with the app reach the agent with your message; a PDF, a Word or Excel file or a text
 file is read as its text. Any other file, a voice message or an audio clip included, fails the
 request with `unsupported_document`: the Slack app does not transcribe speech. Files the agent
 sends you are uploaded into the thread after its answer. See
