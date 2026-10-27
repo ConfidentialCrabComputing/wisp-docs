@@ -131,8 +131,8 @@ refuses the app's Runs with `403`.
 
 Slack takes a message that starts with `/` for one of its own commands, so the app's commands
 start with `!`. In a thread you can also mention the app and write the command with a `/`, as in
-`@Wisp /new`. In a channel, a command works only inside a thread, except `!update`, which
-also works at a channel's top level when it mentions the app (`@Wisp !update`).
+`@Wisp /new`. In a channel, a command works only inside a thread, except `!update` and `!auto`, which
+also work at a channel's top level when they mention the app (`@Wisp !update`).
 
 | Command | What it does |
 | --- | --- |
@@ -141,6 +141,7 @@ also works at a channel's top level when it mentions the app (`@Wisp !update`).
 | `!resume <n>` | Goes back to Session number `n` from that list. |
 | `!cancel` | Stops the running request. |
 | `!update` | Installs the newer Wisp release. The owner's only. |
+| `!auto [on\|off]` | Shows whether [Auto Mode](./permissions.md#auto-mode) is on; `on` or `off` turns it on or off for the whole Runtime. Turning it on or off is the owner's only. |
 | `!model [<choice>]` | Shows the chat's model, or changes it: `advanced`, `balanced`, `default` or a model id. `!model thinking on\|off` turns thinking on or off where the model can take it. |
 
 `!model` answers with the chat's model, the modes and the catalog's models, each with what it

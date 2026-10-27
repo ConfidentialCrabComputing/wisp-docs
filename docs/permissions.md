@@ -121,7 +121,9 @@ never refuses a call: a refusal is still yours or a Rule's.
 - A Runtime with no proxy cannot judge: `wisp auto-mode status` says so, and every `ask`
   goes to a person.
 
-`wisp auto-mode off` turns it off; the switch is the same for every Project.
+`wisp auto-mode off` turns it off; the switch is the same for every Project. The owner of
+the [Telegram bot](./telegram-bot.md#commands) or the [Slack app](./slack-app.md#commands)
+can also turn it on or off from the chat with `/auto on|off` or `!auto on|off`.
 
 ## `bash_run`
 
