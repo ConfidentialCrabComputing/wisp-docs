@@ -385,7 +385,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp sessions delete <id>` | delete a Session |
 | `wisp cancel <session>` | stop a Session's Runs |
 | `wisp permissions get [--project path] [--connector name]` | the Rules; `--connector` shows only that connector's tools |
-| `wisp permissions set <tool> ask\|allow\|deny\|default [--project path]` | write a Rule for a tool; `default` drops it |
+| `wisp permissions set <tool> ask\|allow\|deny\|always_ask\|default [--project path]` | write a Rule for a tool; `default` drops it; `always_ask` is [Always ask me](permissions.md#always-ask-me) |
 | `wisp permissions allow-connector <name> [--project path]` | allow every tool of a Connector |
 | `wisp permissions bypass on\|off --project path` | a Project's bypass |
 | `wisp auto-mode status` | whether [Auto Mode](permissions.md#auto-mode) is on, and whether this Runtime can judge |

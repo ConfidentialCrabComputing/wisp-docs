@@ -9,6 +9,9 @@ Every tool call is checked against a decision:
 - **`allow`**: the call runs.
 - **`ask`**: a person has to approve it.
 - **`deny`**: the call is refused.
+- **`always_ask`** ("Always ask me" in Wisp Desktop): a person has to approve every call,
+  whatever else would allow it. Only you set it; no tool has it as its default. See
+  [Always ask me](#always-ask-me).
 
 In Wisp Desktop, `ask` shows a card you approve or reject. A Run started from the CLI or
 over `/v1` has nobody to ask unless it runs in the `interactive` mode (see
@@ -97,8 +100,31 @@ wisp permissions bypass on --project .
 ```
 
 Allows every tool in that Project, except tools with a global `deny`. The two kinds of call
-[above](#where-a-decision-comes-from) still ask. Use it only for a
-Project where you would approve anything the agent might do.
+[above](#where-a-decision-comes-from) still ask, and so does a tool set to
+[Always ask me](#always-ask-me). Use it only for a Project where you would approve anything
+the agent might do.
+
+## Always ask me
+
+```sh
+wisp permissions set mcp__github__create_issue always_ask
+```
+
+For a tool you want to approve every time, even in a Project with bypass on or with an
+`allow` Rule. The decision is first worked out as in the
+[table above](#where-a-decision-comes-from); then, unless it is a `deny`, an `always_ask`
+Rule for the tool, in this Project or global, makes the call ask.
+
+- Its card offers no Rule: you approve or reject this one call. `wisp confirm` offers only
+  `approve` or `deny` for it.
+- [Auto Mode](#auto-mode) does not judge it: it always goes to you.
+- A Run with nobody to ask refuses it, as it refuses an `ask`.
+- `wisp permissions set <tool> default` drops it.
+
+Wisp Desktop can also set it on a whole connector ("All tools → Always ask me"), as can
+`POST /v1/permissions/connector` with `always_ask`. That writes a Rule for each tool and one
+for the connector itself, so tools the connector adds later ask too. Setting any other
+decision on the connector drops it.
 
 ## Auto Mode
 
@@ -115,7 +141,8 @@ never refuses a call: a refusal is still yours or a Rule's.
 - It applies only where there is a person to ask: Wisp Desktop, an `interactive` Run, the
   Telegram bot and the Slack app. Under the CLI's default mode an `ask` is still refused.
 - A global `deny` still refuses, and the two kinds of call
-  [above](#where-a-decision-comes-from) still ask.
+  [above](#where-a-decision-comes-from) and a tool set to [Always ask me](#always-ask-me)
+  still go to you.
 - When the Judge cannot answer (an action too long to judge, a timeout, the proxy failing),
   the call goes to you.
 - A Runtime with no proxy cannot judge: `wisp auto-mode status` says so, and every `ask`
