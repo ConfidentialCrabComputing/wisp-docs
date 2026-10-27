@@ -87,19 +87,21 @@ refused with `403`, and the bot and the app then take no chat messages. See
 
 ### Change the default model
 
-A Run that names no model uses `teeLlmModel`. Its default, `auto:auto:best`, lets the proxy
-choose. To use one model, or one tier, for every Run that does not ask otherwise:
+The Runtime Default is the model every chat, scheduled job and Run uses when it has not chosen
+its own. It takes effect at once, with no restart:
 
 ```sh
-wisp models                     # the ids and tiers you can name
+wisp models                     # the model ids you can name
+wisp model set balanced         # or advanced, or a model id; --thinking for its thinking form
+wisp model                      # what is set now
+wisp model reset                # back to teeLlmModel
 ```
 
-```json
-{ "agentToken": "…", "teeLlmModel": "tier:<name>" }
-```
+With no Runtime Default set, `teeLlmModel` applies. Its default, `auto:auto:best`, lets the
+proxy choose; changing it needs a restart.
 
-A single Run can still choose its own with `wisp run --model`. See
-[Choosing a model](./cli.md#choosing-a-model).
+A Session can still choose its own with `/model` in a chat, and a single Run with
+`wisp run --model`. See [Choosing a model](./cli.md#choosing-a-model).
 
 ### Let the Runtime update itself
 

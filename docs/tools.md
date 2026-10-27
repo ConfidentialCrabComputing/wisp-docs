@@ -128,7 +128,8 @@ A `global` one stays until it is deleted.
 
 A subagent can use every tool the agent has, writing files included, unless the agent
 narrows it to the read tools and `bash_run`. Its tool calls go through the same Rules as the
-agent's own. By default it stops after 200 steps or 5 minutes.
+agent's own. It has no step or time limit by default; `subagentTimeoutMs` in the
+[configuration](./reference.md#configuration) sets a time limit.
 
 ## Connector tools
 

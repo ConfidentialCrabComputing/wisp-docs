@@ -30,7 +30,7 @@ reached by a browser. The full API, with request and response schemas, is at
 | method | route | what it does |
 | --- | --- | --- |
 | `GET` | `/v1/openapi.json` | this contract, as OpenAPI |
-| `GET` | `/v1/health` | what the Runtime says about itself: `status` (see [the five states](runbook.md#the-five-states)), `version`, `kind`, `apiVersion` (the `/v1` revision, now `1`, raised only by a change an existing client cannot follow) and `update` when a newer release exists |
+| `GET` | `/v1/health` | what the Runtime says about itself: `status` (see [the five states](runbook.md#the-five-states)), `version`, `kind`, `apiVersion` (the `/v1` revision, now `2`), `minClientApi` (the oldest revision a client may be built for, now `1`; see [versions](adapter-contract.md#health)) and `update` when a newer release exists |
 | `GET` | `/v1/ready` | whether the Runtime will take a Run |
 | `GET` | `/v1/attestation` | the proxy's last attestation; `?includeQuote=1` adds the raw quote as `quote` |
 | `POST` | `/v1/attestation/refresh` | attest the proxy again |
@@ -301,7 +301,7 @@ Runtime Default without one).
 
 ### Speech
 
-The speech model an `audio` block needs is 670 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. Both routes take the one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
+The speech model an `audio` block needs is 643 MB, pinned by revision and sha256, and installed only when asked: until it is, an `audio` block fails the Run as `speech_not_installed` and no Run downloads it. Both routes take the one token, a `full` token or a `run` token, so a Channel adapter can offer the install to its owner.
 
 | method | route | what it does |
 | --- | --- | --- |
@@ -330,8 +330,8 @@ The speech model an `audio` block needs is 670 MB, pinned by revision and sha256
 | `GET` | `/v1/connectors/{name}/tools` | a Connector's tools |
 | `POST` | `/v1/connectors/{name}/connect` | connect a Connector |
 | `POST` | `/v1/connectors/{name}/disconnect` | disconnect a Connector |
-| `GET` | `/v1/connectors/enabled` | which Connectors a Session may use |
-| `PUT` | `/v1/connectors/enabled` | choose which Connectors a Session may use |
+| `GET` | `/v1/connectors/enabled` | which Connectors the Project of `?sessionId=` may use; a Session with no Project is `400` |
+| `PUT` | `/v1/connectors/enabled` | choose which Connectors that Project may use, for all its Sessions |
 | `GET` | `/v1/connectors/templates` | the Connectors on offer |
 | `POST` | `/v1/connectors/oauth/start` | begin a Connector's OAuth |
 | `GET` | `/v1/connectors/oauth/callback` | where the provider sends the browser back; takes no token |
@@ -401,7 +401,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp model` | the Runtime Default: the model a chat or job with none of its own runs on; `none` when the configured model applies |
 | `wisp model set advanced\|balanced\|<model id> [--thinking]` | set the Runtime Default, at once; a model id must be one `wisp models` lists |
 | `wisp model reset` | clear the Runtime Default, so the configured model applies again |
-| `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (670 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
+| `wisp speech [install]` | whether the speech model voice messages need is installed; `install` downloads it (643 MB), printing progress, and exits `0` once it is ready, at once when it already is, or `1` with the error |
 | `wisp sandbox` | whether the `bash_run` [sandbox](./sandbox.md) and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
@@ -531,6 +531,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `runRecordRetentionMs` | `RUN_RECORD_RETENTION_MS` | `604800000` (7 days) | how long an ended Run's record is kept; a daily sweep deletes it after this, never sooner than `idempotencyTtlMs` after it began |
 | `shutdownDrainTimeoutMs` | `SHUTDOWN_DRAIN_TIMEOUT_MS` | `5000` | how long a stop lets running Runs finish before it aborts them |
 | `confirmTimeoutMs` | `CONFIRM_TIMEOUT_MS` | `7200000` (2 h) | how long an unanswered confirmation waits before it is denied |
+| `subagentTimeoutMs` | `SUBAGENT_TIMEOUT_MS` | none | how long a subagent or a `fork` Skill may run, in ms; time waiting on a confirmation does not count. Unset, there is no limit |
 | `confirmationModes` | `CONFIRMATION_MODES` (comma-separated) | `["policy", "interactive"]` | the confirmation modes a `/v1` Run may name; `policy` is always one. `["policy"]` stops callers from answering Prompts, the Telegram bot and the Slack app included; a Run naming a mode left out is refused `403` |
 | `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | silence from the model after which a Run fails `stream_stalled` |
 | `llmRequestTimeoutMs` | `LLM_REQUEST_TIMEOUT_MS` | `120000` | how long a model request may take to start answering |

@@ -50,8 +50,8 @@ did, when, and whether a human approved it. Deleting a Session deletes its audit
 - Shell commands: `ask` by default
 - Encrypted memory and preferences: store, recall, update and delete
 - Sub-agents: for parallel work, with every tool unless the agent narrows them to reading
-  and `bash_run`, each capped at 200 steps and a 300 s
-  timeout (time spent waiting on a confirmation does not count)
+  and `bash_run`, with no step or time limit unless `subagentTimeoutMs` sets one (time
+  spent waiting on a confirmation does not count)
 - Skills: invoked by name, with their own files
 - Call recordings: list, read and search
 
