@@ -22,7 +22,7 @@ Project, a folder of its own under `~/Wisp`.
 
 | Tool | What it does | Default |
 | --- | --- | --- |
-| `fs_read` | reads a text file; a PDF, `.docx` or `.xlsx` is turned into text | `allow` |
+| `fs_read` | reads a text file; a PDF, `.docx`, `.xlsx` or `.pptx` is turned into text | `allow` |
 | `fs_read_media` | shows the agent an image: PNG, JPEG, GIF or WebP | `allow` |
 | `fs_list` | lists files and folders | `allow` |
 | `fs_glob` | finds files by name pattern | `allow` |
