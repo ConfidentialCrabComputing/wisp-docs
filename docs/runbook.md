@@ -122,9 +122,9 @@ the conversation. `wisp run` prints both on stderr.
 | `transcription_failed` | an `audio` block is not OGG/Opus, MP3 or WAV (M4A is not accepted), does not decode as its type says, holds no speech, or the speech model could not be run | send the voice message as OGG/Opus, MP3 or WAV, or type it |
 | `speech_not_installed` | an `audio` block arrived while the speech model is not installed, or still downloading | run `wisp speech install` (or `POST /v1/speech/download`), then send the voice message again |
 | `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
-| `quota_exhausted` | the account's plan is used up | check your account |
+| `quota_exhausted` | what pays for this Run is used up: the prepaid balance, or one of the plan's windows; the message says which | balance: `wisp billing topup <usd>`, then retry. A window: wait for its reset (`wisp billing status`). See [When a Run stops for money](./billing.md#when-a-run-stops-for-money) |
 | `not_entitled` | the subscription is not in good standing, for example a payment is past due | check your account's billing |
-| `billing_unavailable` | the plan could not be checked | retry |
+| `billing_unavailable` | billing could not be reached to check the plan or the balance | retry |
 | `rate_limit` | throttled, and the retries ran out | wait, then retry |
 | `server_error` | the model side kept failing | retry |
 | `network` | could not connect to the model | check the internet connection, then retry |
@@ -189,7 +189,7 @@ Every value is from these closed sets or a tool name. The `final_output` call of
 an `outputSchema` writes no `tool.call`, as it is not listed in `toolCalls` either.
 
 ```sh
-# Runs that failed because the proxy was not verified, or the plan ran out
+# Runs that failed because the proxy was not verified, or the plan or the balance ran out
 journalctl --user -u wisp -o cat | jq -c 'select(.msg == "run.finished" and (.reason == "attestation_blocked" or .reason == "quota_exhausted"))'
 ```
 

@@ -169,6 +169,18 @@ under names such as `token` or `password` masked. `--json` shows the arguments. 
 the second one is a tool that was refused because no Rule
 allowed it. See [Permissions](./permissions.md).
 
+## Plan and balance
+
+```sh
+wisp billing status          # the plan's windows, the balance, auto-reload
+wisp billing topup 10        # print a payment link for $10 and wait until it is paid
+wisp billing auto-reload --threshold 5 --target 20
+```
+
+`wisp run` may be paid from the prepaid balance rather than the plan. When a Run fails
+`quota_exhausted` because the balance is empty, `wisp run` prints the `topup` command to run.
+See [Plan and balance](./billing.md).
+
 ## From scripts
 
 - `--json` makes a command that lists or shows something print a single JSON document on

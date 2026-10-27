@@ -170,6 +170,13 @@ A fire's Session is kept for `runRecordRetentionMs` (7 days) after it was last t
 daily sweep deletes it, with its messages, its audit and the memories it stored. A Session
 someone has open, or whose Desk folder still exists, is kept.
 
+**Who pays for a fire.** A job that fires in Wisp Desktop's Runtime is paid from the plan, as
+a chat in the app is, whether it was made in the app or with `wisp schedules`. On a
+`wisp serve` Runtime it is paid like any terminal Run, which may mean from the balance alone,
+so an empty balance fails the fire `quota_exhausted`. Turn on
+[auto-reload](./billing.md#auto-reload) for jobs on a server. See
+[Plan and balance](./billing.md).
+
 ## When a fire is skipped
 
 - **Fires of one job never overlap.** An instant that comes while the job's previous fire is

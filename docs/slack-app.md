@@ -196,7 +196,9 @@ says "Queued".
 
 A request that fails gets "The run failed: `<reason>`." in place of an answer, for example
 `quota_exhausted`. [Troubleshooting](./runbook.md#why-a-run-failed) says what each reason means and
-what to do.
+what to do. A billing refusal is told in billing's own words instead of its code. When the
+balance is used up, the app names the command that tops it up, `wisp billing topup`, but never
+the balance itself. See [Plan and balance](./billing.md#when-a-run-stops-for-money).
 
 The status needs the app's **Agents & AI Apps** feature: turn it on in the app's settings at
 [api.slack.com/apps](https://api.slack.com/apps). This adds the `assistant:write` scope.

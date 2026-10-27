@@ -323,7 +323,8 @@ The speech model an `audio` block needs is 643 MB, pinned by revision and sha256
 | `PUT` | `/v1/billing/payg-settings` | change the balance settings named (`autoReload`, `spendAfterLimit`); the answer is the balance |
 
 A billing refusal carries a `code` beside the `error`; `503` with `billing_unavailable` means
-billing did not answer and is worth another try.
+billing did not answer and is worth another try. What the plan and the balance each pay for is
+in [Plan and balance](billing.md).
 
 ### Connectors
 

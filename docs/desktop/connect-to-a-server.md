@@ -92,6 +92,10 @@ The window on a server is for setting that Runtime up:
 - **Settings.** **Permissions** and **Sandbox** change the server's Runtime. **Keyboard** and
   **General** are this computer's. **Recording**, **Billing** and **Usage** are hidden.
 
+Everything the app does on a server is paid like a terminal Run, which may mean from your
+prepaid balance alone. The balance is your account's, so add to it from **This computer**'s
+Settings, or with `wisp billing topup` on the server. See [Plan and balance](../billing.md).
+
 Chats, Projects, Artifacts and Transcripts stay with **This computer**: a recording is this
 computer's audio, and a Project is a folder on this computer. To talk to the agent on the
 server, use the [Telegram bot](../telegram-bot.md), the [Slack app](../slack-app.md), or
