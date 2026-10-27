@@ -221,8 +221,9 @@ sign-in page; the app needs the files:read scope".
 
 When the agent wants to use a tool whose decision is `ask`, the app posts a card with
 **Allow** and **Deny**. Only the person whose message started the request, or the owner, may
-answer it. A typed "yes" (or `:+1:`, "да", "ok") approves the one card posted just before it;
-"no" (or "нет", `:-1:`), or any other message, denies the cards still waiting. A card nobody
+answer it. A typed "yes" (or `:+1:`, "да", "ok") approves the card posted before it, but only
+when exactly one card is waiting there; with more, it approves nothing and the app asks you to
+press **Allow** on the card. "No" (or "нет", `:-1:`), or any other message, denies the cards still waiting. A card nobody
 answers is denied after `confirmTimeoutMs` (two hours by default).
 
 ## Letting people in

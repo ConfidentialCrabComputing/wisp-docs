@@ -55,12 +55,17 @@ what it can do besides text, such as `images`. A `-` means the catalog says noth
 `wisp run --model` picks the model for one Run:
 
 ```sh
+wisp run --model advanced "…"       # the best model; the proxy picks which
+wisp run --model balanced "…"       # a model of the balanced tier
 wisp run --model <id> "…"           # this model
 wisp run --model tier:<name> "…"    # any model of this tier; the proxy picks which
 ```
 
-- **Without `--model`**, the Run uses `teeLlmModel` from the configuration. Its default,
-  `auto:auto:best`, lets the proxy choose. To change it for every Run, see
+`--thinking` asks for the thinking form of `advanced`, `balanced` or a model id, where the
+model can reason.
+
+- **Without `--model`**, the Run uses the Session's own model (chosen with `/model` in a
+  chat), else the Runtime Default, else `teeLlmModel` from the configuration. See
   [Configuration](./configuration.md#change-the-default-model).
 - **A retry** with `wisp retry` uses the model its Run asked for.
 - **Over `/v1`**, the same value goes in the Run's `modelPreference`

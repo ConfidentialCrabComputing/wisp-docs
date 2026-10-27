@@ -111,8 +111,8 @@ no value is left as written.
 - **`fork`**: a separate agent runs the body as its instructions and returns its conclusion.
   It does not see the conversation. `allowedTools` limits the tools it gets; it never gets
   `skill_invoke` or `spawn_agent`. Rules still apply to every call it makes, and a tool that
-  needs approval asks for it as in the main Session. It is limited to 200 steps and 5
-  minutes by default.
+  needs approval asks for it as in the main Session. It has no step or time limit by
+  default; `subagentTimeoutMs` sets a time limit, as for a subagent.
 
 `allowedTools` has no effect on an `inline` Skill.
 

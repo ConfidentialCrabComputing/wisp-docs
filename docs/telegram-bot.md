@@ -195,7 +195,7 @@ Photos, documents, voice messages and audio files up to 20 MB each (the most Tel
 bot download) reach the agent with your message; a PDF, a Word, Excel or PowerPoint file or a
 text file is read as its text. Videos are refused. A voice message or an audio file needs the
 [speech model](./voice-and-files.md#voice-messages): until it is installed, the owner gets a
-card to install it (about 670 MB) and sees the progress, and anyone else is told voice messages
+card to install it (about 643 MB) and sees the progress, and anyone else is told voice messages
 are not set up yet. Files the agent sends you are posted as documents after its answer. See
 [Voice and files](./voice-and-files.md) for the formats and limits.
 
@@ -212,7 +212,9 @@ When the agent wants to use a tool whose decision is `ask`, the bot sends a card
 and **Deny**. Only the person whose message started the request, or the owner, may answer it;
 anyone else is told "This request is not yours to answer."
 
-A typed "yes" (or "да", "ok", 👍) approves the one card sent just before it; "no" (or "нет",
+A typed "yes" (or "да", "ok", 👍) approves the card sent before it, but only when exactly one
+card is waiting there; with more, it approves nothing and the bot asks you to press
+**Allow** on the card. "No" (or "нет",
 👎) denies every card still waiting, and so does any other message, so a card scrolled away
 never holds the chat. A card nobody answers is denied after `confirmTimeoutMs` (two hours by
 default).

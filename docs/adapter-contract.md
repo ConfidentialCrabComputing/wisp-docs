@@ -508,13 +508,18 @@ compiler tells you what is new.
 
 `GET /v1/health` with the token returns the Runtime's state (`ready`, `login_required` and
 so on; see [Troubleshooting](./runbook.md#the-five-states)), its `version` and `kind`,
-`apiVersion`, and `update` when a newer release exists. Without a token it still answers
+`apiVersion` and `minClientApi`, and `update` when a newer release exists. Without a token it still answers
 `200` with an empty object, which is enough for a liveness probe. `GET /v1/ready` answers
 whether the Runtime will accept a Run right now.
 
-`apiVersion` is the revision of `/v1` the Runtime speaks, now `1`. It goes up only when a
-route or field is removed or renamed or changes meaning; a new route or optional field
-leaves it as it is. Compare it with the one your adapter was written for.
+Two numbers tell an adapter whether it and the Runtime fit:
+
+- `apiVersion` is the revision of `/v1` the Runtime speaks, now `2`. It goes up with every
+  change a client may come to rely on, a new route or field included. When it is lower than
+  the one your adapter was written for, the Runtime is too old: ask its owner to update it.
+- `minClientApi` is the oldest revision an adapter may be written for and still be served,
+  now `1`. It goes up only when a route or field is removed or renamed or changes meaning.
+  When your adapter's revision is lower, the adapter is too old: update the adapter.
 
 While a newer release exists, every answer to a request that carries a token also carries
 an `X-Wisp-Update` header naming its version. An adapter can offer to install it with

@@ -17,7 +17,7 @@ called.
 ## Voice messages
 
 Voice needs a speech model on the Runtime's host. It is not installed with Wisp: it is a
-one-time 670 MB download, made only when you ask for it.
+one-time 643 MB download, made only when you ask for it.
 
 ```sh
 wisp speech            # whether it is installed, downloading or failed

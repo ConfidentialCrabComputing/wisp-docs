@@ -123,7 +123,7 @@ the conversation. `wisp run` prints both on stderr.
 | `speech_not_installed` | an `audio` block arrived while the speech model is not installed, or still downloading | run `wisp speech install` (or `POST /v1/speech/download`), then send the voice message again |
 | `shutdown` | the Runtime stopped during the Run | retry with the same key once it is `ready` |
 | `quota_exhausted` | the account's plan is used up | check your account |
-| `not_entitled` | the account's plan does not include what was asked for | check your account |
+| `not_entitled` | the subscription is not in good standing, for example a payment is past due | check your account's billing |
 | `billing_unavailable` | the plan could not be checked | retry |
 | `rate_limit` | throttled, and the retries ran out | wait, then retry |
 | `server_error` | the model side kept failing | retry |
