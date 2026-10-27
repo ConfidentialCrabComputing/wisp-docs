@@ -258,6 +258,8 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/tokens` | the named tokens: name, capability, Channel and creation time, never a token. The one token only |
 | `GET` | `/v1/timezone` | the user's time zone (IANA, such as `Europe/Berlin`): the clock the agent is told, and the zone of a cron job made without one |
 | `PUT` | `/v1/timezone` | set it with `{ "timezone": "…" }`; Wisp Desktop writes its own on every connect |
+| `GET` | `/v1/instructions` | the user's own [instructions](instructions.md), the text of `$WISP_HOME/AGENTS.md`, as `{ instructions }`; `""` when there is no file |
+| `PUT` | `/v1/instructions` | write them with `{ "instructions": "…" }`, at most 32 KiB, from the next message on; `""` removes the file. Answers as `GET` |
 | `DELETE` | `/v1/tokens/{name}` | revoke a named token; it is refused (`401`) from its next request on. The one token only |
 
 ### Schedules

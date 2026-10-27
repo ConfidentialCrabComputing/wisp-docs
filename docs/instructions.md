@@ -23,6 +23,9 @@ The lowercase spellings (`agents.md`, `claude.md`, `wisp.md`, `agents.local.md`)
 
 - **A Session without a Project reads only the global file.** That covers the Telegram bot,
   the Slack app and run tokens. Put instructions for those in `~/.wisp/AGENTS.md`.
+- **The global file can be read and written over the API**, with
+  [`GET` and `PUT /v1/instructions`](./reference.md#rules-skills-and-the-audit). A write
+  there is capped at 32 KiB, so the Project's files keep most of the size budget.
 - **The global file is `AGENTS.md` only.** A `CLAUDE.md` or `WISP.md` in `$WISP_HOME` is not
   read.
 - **Every name is read, not the first one found.** A folder with both `AGENTS.md` and
