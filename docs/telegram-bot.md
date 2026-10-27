@@ -141,6 +141,11 @@ refuses the bot's Runs with `403`.
 cannot do, and with buttons for them; a press does what the typed command does. `/new` keeps the
 chat's model. A photo sent to a model that cannot read images is refused in one line.
 
+In a group, `/model` changes only your own Session's model, since each person there has their
+own. A forum topic is shared, so only the owner and the person who started the topic may change
+its model; anyone may look at it. A topic the bot has no starter on record for is the owner's
+alone.
+
 ### Updating Wisp from the chat
 
 When the Runtime has a newer release, the bot tells its owner once, in a direct message:
@@ -192,7 +197,7 @@ as one message per photo. The bot waits a moment for the rest and puts them back
 ## Files and voice messages
 
 Photos, documents, voice messages and audio files up to 20 MB each (the most Telegram lets a
-bot download) reach the agent with your message; a PDF, a Word or Excel file or a text file is
+bot download) reach the agent with your message; a PDF, a Word, Excel or PowerPoint file or a text file is
 read as its text. Videos are refused. A voice message or an audio file needs the
 [speech model](./voice-and-files.md#voice-messages): until it is installed, the owner gets a
 card to install it (about 670 MB) and sees the progress, and anyone else is told voice messages
@@ -205,6 +210,10 @@ The bot shows "typing…" and posts a "Thinking…" line that names the tool the
 running, then deletes it once the answer is posted. In a private chat the answer also shows as
 a draft while the agent writes it. A message sent while the agent is still busy in the same
 Session waits its turn, and the bot says "Queued".
+
+A request that fails gets "The run failed: `<reason>`." in place of an answer, for example
+`quota_exhausted`. [Troubleshooting](./runbook.md#why-a-run-failed) says what each reason means and
+what to do.
 
 ## Approving tools
 

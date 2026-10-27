@@ -194,6 +194,10 @@ thread, the way Telegram shows "typing…". A thread waiting for you to press **
 message sent while the agent is still busy in the same Session waits its turn, and the app
 says "Queued".
 
+A request that fails gets "The run failed: `<reason>`." in place of an answer, for example
+`quota_exhausted`. [Troubleshooting](./runbook.md#why-a-run-failed) says what each reason means and
+what to do.
+
 The status needs the app's **Agents & AI Apps** feature: turn it on in the app's settings at
 [api.slack.com/apps](https://api.slack.com/apps). This adds the `assistant:write` scope.
 Then reinstall the app. Without the feature, answers come as before, with the "Thinking…" line
@@ -207,7 +211,7 @@ be fetched by Slack before anyone clicks it.
 ## Files
 
 Images (PNG, JPEG, GIF, WebP) and files up to 20 MB each, 100 MB in all per message, that you
-share with the app reach the agent with your message; a PDF, a Word or Excel file or a text
+share with the app reach the agent with your message; a PDF, a Word, Excel or PowerPoint file or a text
 file is read as its text. Any other file, a voice message or an audio clip included, fails the
 request with `unsupported_document`: the Slack app does not transcribe speech. Files the agent
 sends you are uploaded into the thread after its answer. See

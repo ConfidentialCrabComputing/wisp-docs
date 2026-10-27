@@ -118,6 +118,10 @@ Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `den
 `allow-project`, `allow-global`), which waits for the next park or the end, exactly like
 `wisp run`. Add `--detach` to answer and return at once.
 
+A Run has no step limit: the agent works until the task is done, it is cancelled, or the
+model stalls. `--max-turns <n>` stops it after `n` model calls, as `failed` with
+`step_ceiling`; use it for unattended work you want bounded.
+
 ## Sessions
 
 ```sh
