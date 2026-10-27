@@ -563,7 +563,10 @@ A `run` token reaches only what an adapter needs:
   and a retry after a failure downloads the release again: let only your adapter's owner
   start it;
 - with `--channel telegram` or `--channel slack` it may name a `deliver` target, of that
-  Channel only. Without `--channel`, a Run that names `deliver` is `403`.
+  Channel only. Without `--channel`, a Run that names `deliver` is `403`;
+- with `--channel` it also reads and sets the Auto Mode switch (`GET` and
+  `PUT /v1/settings/auto-mode`). It is the whole Runtime's: let only your adapter's owner
+  change it. Without `--channel`, both are `403`.
 
 Everything else (Rules, connectors, schedules, tokens) is `403`. Only the one token makes,
 lists and revokes tokens. A revoked token is `401` from its next request on, and the jobs

@@ -247,8 +247,8 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `POST` | `/v1/permissions/rule` | write a Rule for a tool |
 | `POST` | `/v1/permissions/bypass` | turn a Project's bypass on or off |
 | `POST` | `/v1/permissions/connector` | write a Rule for every tool of a Connector |
-| `GET` | `/v1/settings/auto-mode` | whether [Auto Mode](permissions.md#auto-mode) is on: `{ enabled, available }`; `available` is `false` on a Runtime with no proxy, where every `ask` goes to a person |
-| `PUT` | `/v1/settings/auto-mode` | turn it on or off with `{ "enabled": true \| false }`, at once; answers as `GET`. The one token or a `full` token |
+| `GET` | `/v1/settings/auto-mode` | whether [Auto Mode](permissions.md#auto-mode) is on: `{ enabled, available }`; `available` is `false` on a Runtime with no proxy, where every `ask` goes to a person. A `run` token reads it only with a `channel` |
+| `PUT` | `/v1/settings/auto-mode` | turn it on or off with `{ "enabled": true \| false }`, at once; answers as `GET`. The one token, a `full` token, or a `run` token with a `channel`, whose adapter lets only its owner change it |
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
 | `GET` | `/v1/audit` | the audit, newest first |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
