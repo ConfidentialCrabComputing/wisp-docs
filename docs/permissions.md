@@ -100,6 +100,29 @@ Allows every tool in that Project, except tools with a global `deny`. The two ki
 [above](#where-a-decision-comes-from) still ask. Use it only for a
 Project where you would approve anything the agent might do.
 
+## Auto Mode
+
+```sh
+wisp auto-mode on
+```
+
+Off by default. While it is on, a call that would ask a person is first shown to the
+**Judge**, a model the Runtime reaches through the Wisp proxy. The Judge sees what you asked
+for and the one action about to run, never what tools returned, and either lets the call run
+or sends it on to you as the usual Prompt, marked "Auto Mode sent this for you to check". It
+never refuses a call: a refusal is still yours or a Rule's.
+
+- It applies only where there is a person to ask: Wisp Desktop, an `interactive` Run, the
+  Telegram bot and the Slack app. Under the CLI's default mode an `ask` is still refused.
+- A global `deny` still refuses, and the two kinds of call
+  [above](#where-a-decision-comes-from) still ask.
+- When the Judge cannot answer (an action too long to judge, a timeout, the proxy failing),
+  the call goes to you.
+- A Runtime with no proxy cannot judge: `wisp auto-mode status` says so, and every `ask`
+  goes to a person.
+
+`wisp auto-mode off` turns it off; the switch is the same for every Project.
+
 ## `bash_run`
 
 `bash_run` lets the agent run shell commands. It defaults to `ask`, so under the CLI it is

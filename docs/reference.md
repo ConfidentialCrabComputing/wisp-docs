@@ -247,6 +247,8 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `POST` | `/v1/permissions/rule` | write a Rule for a tool |
 | `POST` | `/v1/permissions/bypass` | turn a Project's bypass on or off |
 | `POST` | `/v1/permissions/connector` | write a Rule for every tool of a Connector |
+| `GET` | `/v1/settings/auto-mode` | whether [Auto Mode](permissions.md#auto-mode) is on: `{ enabled, available }`; `available` is `false` on a Runtime with no proxy, where every `ask` goes to a person |
+| `PUT` | `/v1/settings/auto-mode` | turn it on or off with `{ "enabled": true \| false }`, at once; answers as `GET`. The one token or a `full` token |
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
 | `GET` | `/v1/audit` | the audit, newest first |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
@@ -384,6 +386,8 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp permissions set <tool> ask\|allow\|deny\|default [--project path]` | write a Rule for a tool; `default` drops it |
 | `wisp permissions allow-connector <name> [--project path]` | allow every tool of a Connector |
 | `wisp permissions bypass on\|off --project path` | a Project's bypass |
+| `wisp auto-mode status` | whether [Auto Mode](permissions.md#auto-mode) is on, and whether this Runtime can judge |
+| `wisp auto-mode on`, `wisp auto-mode off` | let the Judge run harmless calls without asking, or ask a person every time |
 | `wisp connectors list` | the Connectors |
 | `wisp connectors add <name> (--http url \| --sse url \| --stdio cmd) [--header k=v]… [--header-stdin k] [--project path] [--allow]` | add one; `--header-stdin` reads a secret from the terminal, `--project` also enables it there, `--allow` also allows its tools |
 | `wisp connectors auth <name> [--project path] [--allow]` | sign a Connector in; `--project` and `--allow` as for `add` |
