@@ -216,9 +216,9 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `audio.transcribed` | `index`, `text`, `author` | an `audio` block of the input was heard: its place in `input`, its transcript and whose words they are, before the agent reads them |
 | `text.delta` | `text` | a piece of the main agent's answer as it is written; a subagent's text is not streamed |
 | `tool_call.started` | `name`, `toolCallId` | a call passed the Rules and runs now, a subagent's too; no arguments. A refused call has none |
-| `tool_call` | the outcome's `toolCalls` entry, plus `toolCallId` | a call ended |
+| `tool_call` | the outcome's `toolCalls` entry, plus `toolCallId` | a call ended; `ruledBy: "judge"` when [Auto Mode](permissions.md#auto-mode) let it run |
 | `run.parked` | | an `interactive` Run waits on its first pending Prompt |
-| `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args`, `askedEveryTime` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks |
+| `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args`, `askedEveryTime` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks; `escalatedBy: "judge"` when Auto Mode sent it on to a person |
 | `confirmation.resolved` | `id`, `decision`, `via` | a Prompt settled: `via` is `api` when answered, `timeout` when nobody answered in time (a deny), `cancel` when the Run was cancelled (a deny) |
 | `run.resumed` | | the last pending Prompt settled and the Run goes on |
 | `run.completed`, `run.failed`, `run.cancelled` | `outcome` | the one terminal Event, carrying what `GET /v1/runs/{runId}` answers |
@@ -243,15 +243,15 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 
 | method | route | what it does |
 | --- | --- | --- |
-| `GET` | `/v1/permissions` | the Rules and what they decide |
-| `POST` | `/v1/permissions/rule` | write a Rule for a tool |
-| `POST` | `/v1/permissions/bypass` | turn a Project's bypass on or off |
-| `POST` | `/v1/permissions/connector` | write a Rule for every tool of a Connector |
+| `GET` | `/v1/permissions` | the Rules and what they decide; `?projectId=` or `?projectRoot=` for a Project's |
+| `POST` | `/v1/permissions/rule` | write a Rule for a tool: `{ tool, decision, projectId? }`, where `decision` is `ask`, `allow`, `deny`, `always_ask`, or `null` to drop the Rule; without `projectId` it is global |
+| `POST` | `/v1/permissions/bypass` | turn a Project's bypass on or off: `{ projectId, enabled }` |
+| `POST` | `/v1/permissions/connector` | write a Rule for every tool of a Connector: `{ connector, decision, projectId? }`; `null` drops them |
 | `GET` | `/v1/settings/auto-mode` | whether [Auto Mode](permissions.md#auto-mode) is on: `{ enabled, available }`; `available` is `false` on a Runtime with no proxy, where every `ask` goes to a person. A `run` token reads it only with a `channel` |
 | `PUT` | `/v1/settings/auto-mode` | turn it on or off with `{ "enabled": true \| false }`, at once; answers as `GET`. The one token, a `full` token, or a `run` token with a `channel`, whose adapter lets only its owner change it |
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
-| `GET` | `/v1/audit` | the audit, newest first |
-| `GET` | `/v1/sessions/{id}/audit` | one Session's audit |
+| `GET` | `/v1/audit` | the audit, newest first; filter with `sessionId` and `tool`, page with `limit` and `cursor` (the answer's `nextCursor`) |
+| `GET` | `/v1/sessions/{id}/audit` | one Session's audit, paged with `limit` and `offset` |
 | `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
 | `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
 | `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full` or `run`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
@@ -289,14 +289,14 @@ Runtime Default without one).
 | method | route | what it does |
 | --- | --- | --- |
 | `POST` | `/v1/schedules` | make a job; answers it with its `id` and `nextAt` |
-| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt`, `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) and `lastFire`, its newest settled fire as `/v1/fires` lists one, `null` before the first |
+| `GET` | `/v1/schedules` | the jobs, each with `paused`, `nextAt`, `lastOutcome` (`runId`, `status`, `at`, and `skipped` when the scheduler passed over instants; a skip with no fire has no `runId` or `status`) and `lastFire`, its newest settled fire as `/v1/fires` lists one, `null` before the first, and `running`, its fire still going (`runId`, `sessionId`, `instant`), `null` when none is |
 | `GET` | `/v1/schedules/{id}` | one job |
 | `PATCH` | `/v1/schedules/{id}` | change the fields named; `null` clears `skill`, `projectRoot`, `outputSchema`, `deliver` or `selection`; `nextAt` moves only with `schedule` |
 | `DELETE` | `/v1/schedules/{id}` | delete a job; a fire under way runs on |
 | `POST` | `/v1/schedules/{id}/pause` | stop a job firing until it is resumed |
 | `POST` | `/v1/schedules/{id}/resume` | let it fire again; a recurring job counts `nextAt` from now, a one-off keeps its instant |
 | `POST` | `/v1/schedules/{id}/run` | fire it now, off the clock; `202` with the Run's `runId`, read on `/v1/runs/{runId}`; `409` when its folder is gone |
-| `GET` | `/v1/fires` | the settled fires, each with its `sequence`, job, instant, `outcome` (`completed`, `failed`, `cancelled`, `silent` or `skipped`), `reason` and first line of the answer, paged by `limit` and `nextCursor`. With `channel` (Wisp Desktop reads `desktop`), those of jobs addressed to that Channel, oldest first, past `settledAfter=<sequence>`; without, every job's newest first, before `before=<sequence>`, or one job's with `scheduleId`. `lastSequence` is the newest sequence handed out |
+| `GET` | `/v1/fires` | the settled fires, each with its `sequence`, job, instant, `outcome` (`completed`, `failed`, `cancelled`, `silent` or `skipped`), `reason` (a failed Run's failure reason; `folder_not_found` for a fire that could not start; `missed` or `previous_running` for a skip), `tool` (the first tool it called that no Rule allowed, whatever the outcome) and first line of the answer, paged by `limit` and `nextCursor`. The first page also lists the fires still going as `running`. With `channel` (Wisp Desktop reads `desktop`), those of jobs addressed to that Channel, oldest first, past `settledAfter=<sequence>`; without, every job's newest first, before `before=<sequence>`, or one job's with `scheduleId`. `lastSequence` is the newest sequence handed out |
 | `GET` | `/v1/delivery-targets` | each place a job or a kept Run delivers, once: its `channel` and `externalKey`, the newest `label` a Run addressed there sent, and `group`, whether everyone in that chat reads it |
 
 ### Speech

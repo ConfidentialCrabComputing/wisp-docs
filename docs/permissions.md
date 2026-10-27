@@ -134,7 +134,8 @@ wisp auto-mode on
 
 Off by default. While it is on, a call that would ask a person is first shown to the
 **Judge**, a model the Runtime reaches through the Wisp proxy. The Judge sees what you asked
-for and the one action about to run, never what tools returned, and either lets the call run
+for (your last message and up to two before it) and the one action about to run, with the
+text of any local script a command runs, never what tools returned, and either lets the call run
 or sends it on to you as the usual Prompt, marked "Auto Mode sent this for you to check". It
 never refuses a call: a refusal is still yours or a Rule's.
 
@@ -147,6 +148,12 @@ never refuses a call: a refusal is still yours or a Rule's.
   the call goes to you.
 - A Runtime with no proxy cannot judge: `wisp auto-mode status` says so, and every `ask`
   goes to a person.
+- A shell command that touches Wisp itself always goes to you, unjudged: one that names the
+  Runtime's lock file or its port, or runs `wisp permissions`, `auto-mode`, `sandbox`,
+  `confirm`, `tokens`, `run`, `schedules` or `connectors`. The agent cannot widen its own
+  rights through Auto Mode.
+- Judging takes a moment: a card the Judge sends on can appear up to about 35 seconds after
+  the call.
 
 `wisp auto-mode off` turns it off; the switch is the same for every Project. The owner of
 the [Telegram bot](./telegram-bot.md#commands) or the [Slack app](./slack-app.md#commands)
