@@ -43,9 +43,8 @@ incident-agent/
 First set the server up once, in this order:
 
 ```sh
-curl -fsSL https://usewisp.io/runtime/install.sh | WISP_SERVICE=1 sh   # the Runtime, as a service
+curl -fsSL https://usewisp.io/runtime/install.sh | WISP_SERVICE=1 sh   # the Runtime, as a service that outlives logout
 source ~/.bashrc                                                       # the PATH line the installer printed
-loginctl enable-linger "$(id -un)"                                     # keep it running after logout
 wisp login --manual                                                    # sign in from any browser
 wisp status                                                            # ready
 ```

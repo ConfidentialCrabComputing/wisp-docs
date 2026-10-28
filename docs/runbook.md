@@ -48,6 +48,20 @@ Every `✗` names what fixes it. It exits `0` when every check passes and `1` ot
 `wisp doctor` needs no running Runtime, and any command that finds none (exit code `4`)
 points at it.
 
+### It runs only while you are logged in
+
+On a Linux server the Runtime, the Telegram bot and the Slack app answer nothing while
+nobody is connected over SSH. Messages sent meanwhile wait, and once you log in they are
+answered with "Could not reach the agent", since the bot starts before the Runtime does.
+The user services stop at your last logout because lingering is off
+(`loginctl show-user "$(id -un)" -p Linger` reads `no`). Turn it on once:
+
+```sh
+sudo loginctl enable-linger "$(id -un)"
+```
+
+The installer turns it on itself where it may, and warns with this command where it may not.
+
 ### The five states
 
 | State | Meaning | What to do |
