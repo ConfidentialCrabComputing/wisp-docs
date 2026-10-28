@@ -53,7 +53,8 @@ a systemd unit `wisp-telegram.service` on Linux (`journalctl --user -u wisp-tele
 launchd agent `io.usewisp.telegram` on a Mac (log in `~/.wisp/logs/telegram.log`). Once the
 service is there, a second `setup` restarts it without asking, so it picks up the new bot
 token. `wisp update` restarts it onto the new release, and `wisp telegram uninstall` or
-`wisp uninstall` removes it.
+`wisp uninstall` removes it. If the bot answers only once you log in to the server, see [It
+runs only while you are logged in](./runbook.md#it-runs-only-while-you-are-logged-in).
 
 `setup` does not offer the service with `--state <file>`, or on a `wisp` that install.sh did
 not install, and not when you answer `n`. Start the bot by hand then: `wisp telegram install`

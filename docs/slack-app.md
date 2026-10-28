@@ -83,7 +83,8 @@ agent `io.usewisp.slack` on a Mac (log in `~/.wisp/logs/slack.log`). Once the se
 a second `setup` restarts it without asking, so it picks up the new tokens. A token Slack
 refuses stops the service rather than restarting it over and over: run `setup` again with a
 good one. `wisp update` restarts it onto the new release, and `wisp slack uninstall` or
-`wisp uninstall` removes it.
+`wisp uninstall` removes it. If the app answers only once you log in to the server, see [It
+runs only while you are logged in](./runbook.md#it-runs-only-while-you-are-logged-in).
 
 `setup` does not offer the service with `--state <file>`, or on a `wisp` that install.sh did
 not install, and not when you answer `n`. Start the app by hand then: `wisp slack install`

@@ -29,7 +29,8 @@ curl -fsSL https://usewisp.io/runtime/install.sh | sh
    or `~/.profile`, whichever matches your shell, and ends by printing the command that
    loads it into the current terminal (`source <file>`, or `. ~/.profile`).
 6. If you said yes, or set `WISP_SERVICE=1`, installs and starts the service. On Linux it
-   first writes the Runtime's encryption key to `~/.config/wisp/master.key`, once.
+   first writes the Runtime's encryption key to `~/.config/wisp/master.key`, once, and
+   then turns lingering on, so the service keeps running after you log out.
 7. If you are not signed in and the service came up, asks `Log in now? [Y/n]` and runs
    `wisp login`. Then it prints `wisp status`.
 
@@ -100,11 +101,14 @@ journalctl --user -u wisp -f        # the log
 systemctl --user restart wisp       # restart it
 ```
 
-A user service stops when you log out. To keep it running on a server, enable lingering
-once:
+A user service stops when you log out unless lingering is on. The installer turns it on.
+Where your user may not do that, often over SSH, it warns
+`the service stops at logout until: sudo loginctl enable-linger <you>`: run that once. An
+installation made before the installer did this needs the same command, or the installer run
+again:
 
 ```sh
-loginctl enable-linger "$(id -un)"
+sudo loginctl enable-linger "$(id -un)"
 ```
 
 The unit restarts the Runtime if it crashes, except after exit code 78. That code means a

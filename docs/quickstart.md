@@ -57,8 +57,8 @@ stops if neither is installed. It also warns when bubblewrap is missing: the age
 `bash_run` tool needs it only once you turn its [sandbox](./sandbox.md) on. On Debian or
 Ubuntu: `sudo apt install minisign bubblewrap`.
 
-On a server, also run `loginctl enable-linger "$(id -un)"` once, so the service keeps
-running after you log out.
+On a server the installer turns lingering on, so the service keeps running after you log
+out. If it warns that it could not, run the `sudo loginctl enable-linger` command it prints.
 :::
 
 <details>
