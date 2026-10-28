@@ -73,7 +73,7 @@ the sidebar.
 | --- | --- |
 | Permissions | which tools run without asking, for all chats or for the open Project |
 | Recording | **Detect meetings**: offer to record when a call starts |
-| Billing, Usage | your plan, payments, and how much of it you have used |
+| Billing, Usage | your plan, payments, and how much of it you have used. **Usage credits** is the prepaid balance: add credits, set auto-reload, and **Use credits after a plan limit** to keep chatting once a plan window runs out. See [Plan and balance](../billing.md) |
 | Sandbox | **Sandbox terminal commands** and **Allow network in the sandbox**. See [Sandbox](../sandbox.md) |
 | Runtime | whether Wisp runs on this computer or on your server. See [Connect to a server](./connect-to-a-server.md) |
 | Keyboard | change the menu shortcuts |

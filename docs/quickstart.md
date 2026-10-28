@@ -118,7 +118,31 @@ wisp status
 
 If you skip this step, the first `wisp run` at a terminal asks whether to sign in first.
 
-## 3. Ask something
+## 3. Add money to the balance
+
+`wisp run` may be paid from your account's prepaid balance alone, not from the plan that pays
+for chats in Wisp Desktop. See what you have:
+
+```sh
+wisp billing status
+# balance      $0.00
+# auto-reload  off
+```
+
+If it shows only these two lines, terminal Runs are paid from the balance, so add some
+before your first Run. The command prints a payment link, which you can open on any device,
+and waits until you have paid:
+
+```sh
+wisp billing topup 10
+# https://checkout.…
+# paid: $10.00 added to the balance
+```
+
+[Plan and balance](./billing.md) explains what each one pays for, and how to top up
+automatically.
+
+## 4. Ask something
 
 `cd` into the folder the agent should work in. That folder becomes the Session's
 **Project**: the agent works there, and a file call outside it asks you first.
@@ -143,7 +167,7 @@ wisp cancel 6b4f2a7e-…  # stop a Run that is taking too long
 wisp models             # models you can pick with: wisp run --model <id>
 ```
 
-## 4. Connect a service
+## 5. Connect a service
 
 The agent has file, shell and web tools built in. Anything else comes from a
 **connector**, an MCP server you add once and then enable for each Project. For example,
@@ -182,6 +206,7 @@ wisp run "list my open pull requests"
 ## Next
 
 - [Using the CLI](./cli.md): everything `wisp run` and friends can do.
+- [Plan and balance](./billing.md): what pays for a Run, top-ups and auto-reload.
 - [Connectors](./connectors.md): OAuth sign-in, local MCP servers, Telegram.
 - [Telegram bot](./telegram-bot.md), [Slack app](./slack-app.md): talk to the agent from a
   messenger.

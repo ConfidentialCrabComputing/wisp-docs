@@ -32,6 +32,7 @@ can also work with a Runtime you run on a server, over SSH: see
 | Use it day to day from the terminal | [Using the CLI](./cli.md) |
 | Know where a conversation's files live, and tie it to a folder | [Sessions and Projects](./sessions-and-projects.md) |
 | Change a setting, open it to the network, pick the default model | [Configuration](./configuration.md) |
+| Know what pays for a Run, top up the balance | [Plan and balance](./billing.md) |
 | Give the agent access to GitHub, Drive, your Telegram account, your own MCP servers | [Connectors](./connectors.md) |
 | See which tools the agent has | [Tools](./tools.md) |
 | Decide which tools may run unattended | [Permissions](./permissions.md) |

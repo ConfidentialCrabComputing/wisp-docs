@@ -150,8 +150,8 @@ never refuses a call: a refusal is still yours or a Rule's.
   goes to a person.
 - A shell command that touches Wisp itself always goes to you, unjudged: one that names the
   Runtime's lock file or its port, or runs `wisp permissions`, `auto-mode`, `sandbox`,
-  `confirm`, `tokens`, `run`, `schedules` or `connectors`. The agent cannot widen its own
-  rights through Auto Mode.
+  `confirm`, `tokens`, `run`, `schedules`, `connectors` or `billing`. The agent cannot widen
+  its own rights, or spend your balance, through Auto Mode.
 - Judging takes a moment: a card the Judge sends on can appear up to about 35 seconds after
   the call.
 

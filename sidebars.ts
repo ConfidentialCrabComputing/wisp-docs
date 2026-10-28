@@ -31,7 +31,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Using Wisp',
       collapsed: false,
-      items: ['cli', 'sessions-and-projects', 'configuration'],
+      items: ['cli', 'sessions-and-projects', 'configuration', 'billing'],
     },
     {
       type: 'category',
