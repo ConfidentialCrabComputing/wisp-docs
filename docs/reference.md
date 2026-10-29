@@ -87,6 +87,7 @@ reached by a browser. The full API, with request and response schemas, is at
 | `GET` | `/v1/runs/{runId}/artifacts/{index}` | the bytes of the `index`-th path of the Run's `artifacts`, with its media type and filename (`Content-Disposition`); only what that list names, never another file in the folder. `404` when the Run is unknown or has not ended, the index is past the list, or the file is gone since or is now a link out of the folder. A `run` token reads any Run's artifacts |
 | `POST` | `/v1/runs/{runId}/retry` | run a failed or cancelled Run's message again — see [retrying a Run](#retrying-a-run) |
 | `POST` | `/v1/runs/{runId}/confirmations/{promptId}` | answer a parked Run's Prompt — see [answering a Prompt](#answering-a-prompt) |
+| `POST` | `/v1/runs/{runId}/questions/{questionId}` | answer a parked Run's question card — see [answering a question](#answering-a-question) |
 | `POST` | `/v1/sessions/{id}/cancel` | stop the Session's Runs |
 
 #### Running a turn
@@ -172,7 +173,8 @@ ended, past `settledAfter`, from every entrance. See
   goes, when anywhere), `schedule` (the job's name, on a Run a schedule fired),
   `settleCursor` (once it ended, its place in the delivery listing; opaque), `createdAt`,
   `startedAt`, `settledAt`, and, once it ended, the outcome a waited-on Run answers with;
-- while a `/v1` Run is parked, its pending Prompts as `confirmations`;
+- while a `/v1` Run is parked, its pending Prompts as `confirmations`, and its pending
+  question cards as `questions` (absent when there are none);
 - `404` for an unknown id.
 
 #### Retrying a Run
@@ -205,6 +207,27 @@ the Rule).
 - It is `404`, the same for each, when the Prompt is unknown, already settled, of another Run,
   of a desktop Run, or of a Run that has ended.
 
+#### Answering a question
+
+In the `interactive` mode the agent can ask the person questions (the `ask_user` tool), and
+the Run parks on the card until they are answered, as on a Prompt. A card is
+`{ id, toolCallId, agentId, questions }`: up to four questions, each `{ question, options }`
+with up to four options `{ label, description }`, or none for a free-text question. In the
+`policy` mode the agent has no such tool.
+
+`POST /v1/runs/{runId}/questions/{questionId}` answers the card with
+`{ outcome: "answered", answers }`, one non-empty answer per question in their order (an
+option's `label` or the person's own words), or skips it with `{ outcome: "dismissed" }`.
+
+- A different number of answers than questions is `400`.
+- A `run` token answers only on a Run it started; else `403`.
+- It waits as [answering a Prompt](#answering-a-prompt) does, `wait: false` too, and answers
+  at once with `status: parked` while another card or Prompt is pending.
+- It is `404`, the same for each, when the card is unknown, already settled, of another Run,
+  of a desktop Run, or of a Run that has ended.
+- An unanswered card expires with the Prompts' timeout, and the agent is told nobody
+  answered.
+
 ### The Event stream
 
 Every Event carries `seq` and `kind`. In the order a Run makes them:
@@ -220,14 +243,17 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `run.parked` | | an `interactive` Run waits on its first pending Prompt |
 | `confirmation.required` | `id`, `toolName`, `toolCallId`, `agentId`, `args`, `askedEveryTime` | a Prompt, as `confirmations` lists it; `agentId` names the subagent that asks; `escalatedBy: "judge"` when Auto Mode sent it on to a person |
 | `confirmation.resolved` | `id`, `decision`, `via` | a Prompt settled: `via` is `api` when answered, `timeout` when nobody answered in time (a deny), `cancel` when the Run was cancelled (a deny) |
-| `run.resumed` | | the last pending Prompt settled and the Run goes on |
+| `question.required` | `id`, `toolCallId`, `agentId`, `questions` | a question card, as `questions` lists it |
+| `question.resolved` | `id`, `resolution` | a card settled: `answered`, `dismissed` (skipped), `timeout` or `cancel` |
+| `run.resumed` | | the last pending Prompt or card settled and the Run goes on |
 | `run.completed`, `run.failed`, `run.cancelled` | `outcome` | the one terminal Event, carrying what `GET /v1/runs/{runId}` answers |
 | `gap` | `status`, `text` | see resuming below |
 
 - **Resuming.** Send the last `seq` you saw as `Last-Event-ID` and the stream replays every
   Event after it. Each Run keeps its last 1000 Events in memory; when the one you need is gone,
   you get a `gap` first — the Run's `status` now and the `text` of the `text.delta`s it
-  stands for — then a `confirmation.required` for each pending Prompt, then the Events the
+  stands for — then a `confirmation.required` for each pending Prompt and a
+  `question.required` for each pending card, then the Events the
   Runtime still holds. The answer so far is the `gap`'s `text` plus the `text.delta`s after
   it. Key Prompts by `id`: one may reach you twice.
 - **Late and old Runs.** A Run that has ended, or one from before a restart, sends its
@@ -383,6 +409,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref [--thinking]] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
+| `wisp answer <run> <question> "<answer>"... \| --skip [--detach]` | answer a parked Run's question card, one answer per question in order, or skip it with `--skip`, and wait as `wisp confirm` does; `--detach` returns at once and exits `0`. When the card is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
 | `wisp runs show <id> [--json]` | one Run: its status and, once it ended, its answer; `--json` for the whole Run |
@@ -451,7 +478,8 @@ One Run, waited on.
   `{ sessionId, runId, status }`.
 - `--json` prints the outcome with `sessionId`, and no `session <id>` line on stderr.
 - `--interactive` runs it in the `interactive` mode: on a park it prints each pending Prompt
-  as `<prompt> <tool> <arguments>` and exits `3`; `--json` prints the parked answer.
+  as `<prompt> <tool> <arguments>` and each question card as `<question> ask_user <questions>`,
+  and exits `3`; `--json` prints the parked answer.
 - `--output-schema` sends the file's JSON Schema as `outputSchema` and prints only
   `output.structured`, as JSON. A file that cannot be read or is not JSON is a usage error.
 - `--max-turns <n>` sends `maxTurns`: the Run fails `step_ceiling` after `n` model calls. A

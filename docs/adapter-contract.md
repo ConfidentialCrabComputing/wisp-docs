@@ -427,6 +427,7 @@ const KINDS: Record<RunEvent["kind"], boolean> = {
   "run.queued": false, "run.started": false, "run.parked": false, "run.resumed": false,
   "text.delta": false, "audio.transcribed": false, "tool_call.started": false, "tool_call": false, "gap": false,
   "confirmation.required": false, "confirmation.resolved": false,
+  "question.required": false, "question.resolved": false,
   "run.completed": true, "run.failed": true, "run.cancelled": true,
 };
 
