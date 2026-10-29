@@ -123,6 +123,11 @@ Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `den
 `allow-project`, `allow-global`), which waits for the next park or the end, exactly like
 `wisp run`. Add `--detach` to answer and return at once.
 
+The agent can also ask you questions on an `--interactive` Run: `wisp run` prints each card
+as `<question> ask_user <questions>` and exits `3`. Answer with
+`wisp answer <run> <question> "<answer>"...`, one answer per question in order, or skip it
+with `wisp answer <run> <question> --skip`.
+
 A Run has no step limit: the agent works until the task is done, it is cancelled, or the
 model stalls. `--max-turns <n>` stops it after `n` model calls, as `failed` with
 `step_ceiling`; use it for unattended work you want bounded.
