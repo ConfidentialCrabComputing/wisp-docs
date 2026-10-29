@@ -545,7 +545,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `confirmTimeoutMs` | `CONFIRM_TIMEOUT_MS` | `7200000` (2 h) | how long an unanswered confirmation waits before it is denied |
 | `subagentTimeoutMs` | `SUBAGENT_TIMEOUT_MS` | none | how long a subagent or a `fork` Skill may run, in ms; time waiting on a confirmation does not count. Unset, there is no limit |
 | `confirmationModes` | `CONFIRMATION_MODES` (comma-separated) | `["policy", "interactive"]` | the confirmation modes a `/v1` Run may name; `policy` is always one. `["policy"]` stops callers from answering Prompts, the Telegram bot and the Slack app included; a Run naming a mode left out is refused `403` |
-| `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | silence from the model after which a Run fails `stream_stalled` |
+| `llmStallTimeoutMs` | `LLM_STALL_TIMEOUT_MS` | `300000` | the longest a model call may go without a token: past it the attempt is cut and retried as `network` (10 retries by default), so a dead upstream means retries, not an immediate failure. Bytes that carry no token, such as SSE keep-alive comments, do not count; tool runs and confirmation parks are not model calls and do not count either. Also bounds each compaction summary call, retries included |
 | `llmRequestTimeoutMs` | `LLM_REQUEST_TIMEOUT_MS` | `120000` | how long a model request may take to start answering |
 | `contextWindowTokens` | `CONTEXT_WINDOW_TOKENS` | `262144` | the context window assumed when the model's own is not known |
 | `bashTimeout` | `BASH_TIMEOUT` | `30000` | how long one `bash_run` may take, in ms |
