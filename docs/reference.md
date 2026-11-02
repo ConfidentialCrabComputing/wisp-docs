@@ -280,6 +280,10 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit, paged with `limit` and `offset` |
 | `GET` | `/v1/sandbox` | the `bash_run` sandbox switches: `enabled` and `allowNetwork` |
 | `PUT` | `/v1/sandbox` | change one or both switches; an omitted one keeps its value |
+| `GET` | `/v1/knowledge-folders` | the [Knowledge Folders](knowledge-folders.md) as `{ folders }`, each `{ path, writable }` |
+| `POST` | `/v1/knowledge-folders` | add one with `{ path, writable? }`: an absolute path to an existing folder, read-only unless `writable` is `true`. `400` for the disk's root, a folder that overlaps Wisp's data directory or the Desk root, or one already listed. Answers as `GET` |
+| `PATCH` | `/v1/knowledge-folders` | make one writable or read-only with `{ path, writable }`; `404` when it is not listed. Answers as `GET` |
+| `DELETE` | `/v1/knowledge-folders` | take one off the list with `?path=`; its files stay. `404` when it is not listed. Answers as `GET` |
 | `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full` or `run`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
 | `GET` | `/v1/tokens` | the named tokens: name, capability, Channel and creation time, never a token. The one token only |
 | `GET` | `/v1/timezone` | the user's time zone (IANA, such as `Europe/Berlin`): the clock the agent is told, and the zone of a cron job made without one |
@@ -440,6 +444,10 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp sandbox` | whether the `bash_run` [sandbox](./sandbox.md) and its network are on |
 | `wisp sandbox on`, `wisp sandbox off` | turn the sandbox on or off. `off` warns that a command then runs as the Runtime's own user and can read the key source |
 | `wisp sandbox network on\|off` | let sandboxed commands reach the network, or not |
+| `wisp knowledge list [--json]` | the [Knowledge Folders](knowledge-folders.md), each with its path and whether it is read-only or writable |
+| `wisp knowledge add <path> [--writable]` | add a folder, read-only unless `--writable`; a relative path is taken from the current folder |
+| `wisp knowledge set <path> --writable\|--read-only` | let the agent write in a folder, or only read it |
+| `wisp knowledge remove <path>` | take a folder off the list; its files stay where they are |
 | `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
 | `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on and pause the jobs its bot made in a chat; the one token and the other named tokens keep working |

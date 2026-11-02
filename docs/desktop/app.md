@@ -74,6 +74,7 @@ the sidebar.
 | Permissions | which tools run without asking, for all chats or for the open Project |
 | Recording | **Detect meetings**: offer to record when a call starts |
 | Billing, Usage | your plan, payments, and how much of it you have used. **Usage credits** is the prepaid balance: add credits, set auto-reload, and **Use credits after a plan limit** to keep chatting once a plan window runs out. See [Plan and balance](../billing.md) |
+| Knowledge Folders | your own folders, such as an Obsidian vault, that Wisp can read in every chat, each with a **Writable** switch. See [Knowledge Folders](../knowledge-folders.md) |
 | Sandbox | **Sandbox terminal commands** and **Allow network in the sandbox**. See [Sandbox](../sandbox.md) |
 | Runtime | whether Wisp runs on this computer or on your server. See [Connect to a server](./connect-to-a-server.md) |
 | Keyboard | change the menu shortcuts |

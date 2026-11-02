@@ -9,7 +9,8 @@ OS-level cage that keeps it inside the folder it runs in. **The sandbox is off b
 it is a trade, more safety for fewer things a command can do, and you choose it. Its network
 is on by default. The cage covers `bash_run` only, and connectors run outside it. The switch
 also sets how far the [file tools](./tools.md#files) reach: with it on they stop at the
-Project too. With the sandbox off, `bash_run` still asks before every command unless a Rule
+Project too, except for your [Knowledge Folders](./knowledge-folders.md), which they reach
+either way. With the sandbox off, `bash_run` still asks before every command unless a Rule
 allows it.
 
 ## When to turn it on
