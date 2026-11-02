@@ -56,6 +56,9 @@
     "docusaurus-plugin-llms": {
       "yaml": "^2.8.3",
       "minimatch": "^11.0.4"
+    },
+    "serve-handler": {
+      "minimatch": "3.1.5"
     }
   }
 }
