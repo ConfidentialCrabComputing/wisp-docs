@@ -51,6 +51,11 @@
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "tinypool": "^2.1.2",
+    "docusaurus-plugin-llms": {
+      "yaml": "^2.8.3",
+      "minimatch": "^9.0.7"
+    }
   }
 }
