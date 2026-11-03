@@ -62,14 +62,18 @@ A folder must exist when you add it. It cannot be:
 - Wisp's data directory (`~/.wisp`), a folder inside it, or a folder that holds it, such as
   your whole home folder;
 - the folder Wisp Desktop keeps its chats' files in, a folder inside it, or one that holds it;
-- a folder already on the list.
+- a folder inside another Knowledge Folder, or one that holds one;
+- a folder already on the list;
+- on a drive that gives no file identity, as some network, cloud-sync and virtual drives do:
+  Wisp could not tell its files apart.
 
 A Project folder can be a Knowledge Folder too. When it is read-only, the agent cannot write
 in it from any chat, its own Project's included: read-only wins.
 
 When a folder disappears, because a disk is unplugged or a vault was moved, the agent goes on
-without it and the Runtime notes it once in its log. The folder stays on the list and is used
-again as soon as it is back.
+without it and the Runtime notes it once in its log. The same goes for a folder whose path now
+leads to another folder than the one you added. The folder stays on the list, marked
+`not reachable` by `wisp knowledge list`, and is used again as soon as it is back.
 
 ## How the agent uses them
 
