@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'sandbox',
         'skills',
         'instructions',
+        'knowledge-folders',
         'schedules',
         'voice-and-files',
       ],
