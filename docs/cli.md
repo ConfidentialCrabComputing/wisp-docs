@@ -129,7 +129,7 @@ as `<question> ask_user <questions>` and exits `3`. Answer with
 with `wisp answer <run> <question> --skip`.
 
 A Run has no step limit: the agent works until the task is done, it is cancelled, or the
-model stalls. `--max-turns <n>` stops it after `n` model calls, as `failed` with
+model stops answering and the retries run out. `--max-turns <n>` stops it after `n` model calls, as `failed` with
 `step_ceiling`; use it for unattended work you want bounded.
 
 ## Sessions

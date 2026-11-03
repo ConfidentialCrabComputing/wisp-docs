@@ -49,7 +49,7 @@ test("the operator pages name every state, reason and code an operator meets", (
     assert.match(runbook, new RegExp(state));
   }
   for (const reason of [
-    "attestation_blocked", "stream_stalled", "context_overflow", "step_ceiling", "shutdown",
+    "attestation_blocked", "context_overflow", "step_ceiling", "shutdown",
     "quota_exhausted", "not_entitled", "billing_unavailable", "rate_limit", "server_error",
     "network", "internal",
   ]) {

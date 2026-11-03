@@ -128,7 +128,6 @@ the conversation. `wisp run` prints both on stderr.
 | Reason | What happened | What to do |
 | --- | --- | --- |
 | `attestation_blocked` | the Wisp proxy's environment is not verified right now | retry later; see [attestation](#attestation) |
-| `stream_stalled` | the model sent nothing for `llmStallTimeoutMs` (5 minutes) | retry |
 | `context_overflow` | the conversation did not fit the model's context, even after compacting | start a new Session, or send less |
 | `step_ceiling` | the Run reached the `maxTurns` its caller set | split the task, or raise `maxTurns` |
 | `output_schema_unsatisfied` | the agent did not hand over a value satisfying `outputSchema` in five attempts | simplify the schema, or say in `input` what each field holds |
@@ -141,7 +140,7 @@ the conversation. `wisp run` prints both on stderr.
 | `billing_unavailable` | billing could not be reached to check the plan or the balance | retry |
 | `rate_limit` | throttled, and the retries ran out | wait, then retry |
 | `server_error` | the model side kept failing | retry |
-| `network` | could not connect to the model | check the internet connection, then retry |
+| `network` | could not connect to the model, or it went `llmStallTimeoutMs` (5 minutes) without a token, and the retries ran out | check the internet connection, then retry |
 | `internal` | anything else | the message is deliberately generic; report it |
 
 A tool refused by [Permissions](./permissions.md) is not a failure: the Run completes with
