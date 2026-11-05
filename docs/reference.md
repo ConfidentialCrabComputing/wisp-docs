@@ -572,7 +572,7 @@ internals, or are set by Wisp Desktop or the build, and are not for operators. T
 | `host` | `HOST` | `127.0.0.1` | the address it listens on; anything but loopback needs `allowedHosts`. Wisp Desktop ignores it |
 | `allowedHosts` | `ALLOWED_HOSTS` (comma-separated) | `[]` | host names, without a port, a request's `Host` may carry besides loopback; the name your [reverse proxy](remote-access.md#reaching-it-from-another-machine) is reached by |
 | `wispHome` | `WISP_HOME` | `~/.wisp` | the data directory; only from `--config` or the environment, never from a `runtime.json` found through it |
-| `teeLlmModel` | `TEE_LLM_MODEL` | `auto:auto:best` | the model a Run uses when it does not name one |
+| `teeLlmModel` | `TEE_LLM_MODEL` | `tier:thinking:balanced` (Balanced, thinking on) | the model a Run uses when it does not name one |
 | `maxConcurrentRuns` | `MAX_CONCURRENT_RUNS` | `3` | Runs executing at once across all Sessions |
 | `maxQueuedRunsPerSession` | `MAX_QUEUED_RUNS_PER_SESSION` | `10` | Runs that may wait behind a Session's live one before the next is refused with `409` |
 | `idempotencyTtlMs` | `IDEMPOTENCY_TTL_MS` | `86400000` (24 h) | how long a key names the Run it started — see [the key](runs-and-restarts.md#the-key) |
