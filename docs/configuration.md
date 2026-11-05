@@ -97,8 +97,9 @@ wisp model                      # what is set now
 wisp model reset                # back to teeLlmModel
 ```
 
-With no Runtime Default set, `teeLlmModel` applies. Its default, `auto:auto:best`, lets the
-proxy choose; changing it needs a restart.
+With no Runtime Default set, `teeLlmModel` applies. Its default, `tier:thinking:balanced`, is
+Balanced with thinking on; changing it needs a restart. Session titles and Recording summaries
+always use `teeLlmModel`.
 
 A Session can still choose its own with `/model` in a chat, and a single Run with
 `wisp run --model`. See [Choosing a model](./cli.md#choosing-a-model).
