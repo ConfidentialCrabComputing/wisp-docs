@@ -447,10 +447,11 @@ function decode(data: string): RunEvent | undefined {
 // ends having brought an Event, is resumed after the last seq with Last-Event-ID;
 // one refused, as while the Runtime restarts, or answered 5xx or 429, is tried again each second.
 // `signal` stops it: following a Run never holds a caller that is shutting down.
+// `after` resumes a Run already followed past that seq.
 export async function* runEvents(
-  baseUrl: string, token: string, runId: string, signal?: AbortSignal,
+  baseUrl: string, token: string, runId: string, signal?: AbortSignal, after?: number,
 ): AsyncGenerator<RunEvent> {
-  let lastSeq: number | undefined;
+  let lastSeq = after;
   for (let progressed = true; progressed; ) {
     progressed = false;
     let res: Response;

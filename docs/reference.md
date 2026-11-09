@@ -143,6 +143,8 @@ the first of:
 | `GET` | `/v1/models` | the models a Run can prefer, as the proxy's catalog lists them |
 | `GET` | `/v1/settings/model` | the Runtime Default, `{ selection }`; `null` when the configured model applies |
 | `PUT` | `/v1/settings/model` | set it with `{ selection }`, at once; `null` clears it. The one token or a `full` token; a `run` token may only read it |
+| `GET` | `/v1/settings/host-agent-model` | the model of the Host Agent calling it (such as Hermes), `{ selection }`: its Runs take it in place of the Runtime Default; `null` when they follow the Runtime Default. Only a Host Agent's token reaches it; any other is `403` |
+| `PUT` | `/v1/settings/host-agent-model` | set it with `{ selection }`, from its next Run on, checked as the Runtime Default is; `null` clears it |
 
 #### Listing Runs
 
@@ -284,7 +286,10 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `POST` | `/v1/knowledge-folders` | add one with `{ path, writable? }`: an absolute path to an existing folder, read-only unless `writable` is `true`; its real path is stored. `400` for a relative path, one that is missing or not a folder, the disk's root (`/`, `C:\`), a drive that gives no file identity, a folder that is, is inside or holds Wisp's data directory, the Desk root or another Knowledge Folder, or one already listed; the message names which. `409` when the folder changed while it was being added. Answers as `GET` |
 | `PATCH` | `/v1/knowledge-folders` | make one writable or read-only with `{ path, writable }`; `404` when it is not listed. Answers as `GET` |
 | `DELETE` | `/v1/knowledge-folders` | take one off the list with `?path=`; its files stay. `404` when it is not listed. Answers as `GET` |
-| `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full` or `run`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
+| `GET` | `/v1/private-folders` | the Private Folders, which no Host Agent (such as Hermes) may open while Wisp still reaches them, as `{ folders }`, each `{ path }`. Wisp's data directory and the Desk root come first with `always: true`: private without being listed, and never removable. `moved: true` on one whose path is missing or leads to another folder than the one added: its old path stays denied, and you add the new one. `unreadable: true` on one Wisp cannot look at, under a locked parent: its path stays denied, and you unlock the parent. A Host Agent's token may read it, never change it |
+| `POST` | `/v1/private-folders` | add one with `{ path }`: an absolute path to an existing folder; its real path and file identity are stored, and a moved entry of the same folder is replaced. `400` for a relative path, one that is missing or not a folder, holds a control character, the disk's root, a drive that gives no file identity, or a folder already private (listed, or inside a listed or always-private folder); the message names which. Answers as `GET` |
+| `DELETE` | `/v1/private-folders` | take one off the list with `?path=`; a folder gone from disk is matched by its path. `400` for an always-private folder, `404` when it is not listed. Answers as `GET` |
+| `POST` | `/v1/tokens` | make a named token with a `name`, a `capability` (`full`, `run` or `host_agent`) and, for a `run` token, an optional `channel` (`telegram` or `slack`), the only Channel its Runs may `deliver` to; the answer, with the token and the Runtime's public `url` when it has one, is the only time the token is shown; `409` when the name is taken. The one token only |
 | `GET` | `/v1/tokens` | the named tokens: name, capability, Channel and creation time, never a token. The one token only |
 | `GET` | `/v1/timezone` | the user's time zone (IANA, such as `Europe/Berlin`): the clock the agent is told, and the zone of a cron job made without one |
 | `PUT` | `/v1/timezone` | set it with `{ "timezone": "…" }`; Wisp Desktop writes its own on every connect |
@@ -448,7 +453,13 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp knowledge add <path> [--writable]` | add a folder, read-only unless `--writable`; a relative path is taken from the current folder |
 | `wisp knowledge set <path> --writable\|--read-only` | let the agent write in a folder, or only read it |
 | `wisp knowledge remove <path>` | take a folder off the list; its files stay where they are |
-| `wisp tokens create --name <n> --capability full\|run [--channel telegram\|slack] [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
+| `wisp private list` | the Private Folders, Wisp's data directory and the Desk root first, and after a folder a Hermes profile picks up only at its restart, `restart Hermes to apply` and the profile |
+| `wisp private add <path>` | keep Host Agents out of a folder; Wisp still reaches it as before. A relative path is taken from the current folder |
+| `wisp private remove <path>` | take a folder off the list |
+| `wisp integrate hermes [--profile <name>] [--skip-connectors]` | wire Wisp into the Hermes Agent on this machine: in every Hermes profile, or only `--profile`'s, install Wisp's plugin and connect it to this Runtime's `/mcp` with one Host Agent Credential, `hermes`. It then asks which of Hermes's MCP servers to move into Wisp; `--skip-connectors` asks nothing |
+| `wisp integrate hermes --connectors` | only move Hermes's MCP servers into Wisp, as setup asks to; takes `--url` and `--token` for a Runtime elsewhere |
+| `wisp integrate hermes --remove [--profile <name>]` | undo it: disconnect, switch the moved MCP servers back on in Hermes, remove the plugin, and revoke the credential; with `--profile`, only that profile, keeping the credential the others use |
+| `wisp tokens create --name <n> (--capability full\|run [--channel telegram\|slack] \| --host-agent) [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
 | `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
 | `wisp tokens revoke <n>` | refuse that token from now on and pause the jobs its bot made in a chat; the one token and the other named tokens keep working |
 | `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] [--model m [--thinking]] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
@@ -505,6 +516,9 @@ run it.
   [Telegram bot](telegram-bot.md) and the [Slack app](slack-app.md) need.
 - `--public-url` is the address the device will reach the Runtime at, put into the
   connection string. See [a token per device](remote-access.md#a-token-per-device).
+- `wisp tokens create --host-agent` makes a Host Agent Credential, named for its Host Agent
+  (`hermes`): it opens the Runtime's `/mcp` and nothing else. `wisp integrate hermes` makes
+  one for you.
 
 ### `wisp schedules create`
 
