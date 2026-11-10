@@ -295,6 +295,7 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `PUT` | `/v1/timezone` | set it with `{ "timezone": "…" }`; Wisp Desktop writes its own on every connect |
 | `GET` | `/v1/instructions` | the user's own [instructions](instructions.md), the text of `$WISP_HOME/AGENTS.md`, as `{ instructions }`; `""` when there is no file |
 | `PUT` | `/v1/instructions` | write them with `{ "instructions": "…" }`, at most 32 KiB, from the next message on; `""` removes the file. Answers as `GET` |
+| `PUT` | `/v1/tokens/{name}/local` | mark a Host Agent Credential as the one this machine's Hermes holds, so only it may have the Runtime replace its own token after Hermes's sandbox starts; `wisp integrate hermes` sends it. `404` when no Host Agent Credential has that name. The one token only |
 | `DELETE` | `/v1/tokens/{name}` | revoke a named token; it is refused (`401`) from its next request on. The one token only |
 
 ### Schedules
