@@ -126,7 +126,10 @@ Prompt and exits `3`; answer with `wisp confirm <run> <prompt> approve` (or `den
 The agent can also ask you questions on an `--interactive` Run: `wisp run` prints each card
 as `<question> ask_user <questions>` and exits `3`. Answer with
 `wisp answer <run> <question> "<answer>"...`, one answer per question in order, or skip it
-with `wisp answer <run> <question> --skip`.
+with `wisp answer <run> <question> --skip`. A question that takes several picks
+(`"picks": "many"`) is answered with a list: pass every answer as JSON with
+`wisp answer <run> <question> --answers '[["Postgres","SQLite"],"accounts"]'`, a list where a
+question takes several picks and a string elsewhere.
 
 A Run has no step limit: the agent works until the task is done, it is cancelled, or the
 model stops answering and the retries run out. `--max-turns <n>` stops it after `n` model calls, as `failed` with
