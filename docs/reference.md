@@ -211,15 +211,19 @@ the Rule).
 
 In the `interactive` mode the agent can ask the person questions (the `ask_user` tool), and
 the Run parks on the card until they are answered, as on a Prompt. A card is
-`{ id, toolCallId, agentId, questions }`: up to four questions, each `{ question, options }`
-with up to four options `{ label, description }`, or none for a free-text question. In the
-`policy` mode the agent has no such tool.
+`{ id, toolCallId, agentId, questions }`: up to four questions, each `{ question, options, picks }`
+with up to six options `{ label, description }`, or none for a free-text question. `picks` is
+`"many"` on a question whose options the person may pick several of, and absent (or `"one"`)
+on a single choice. In the `policy` mode the agent has no such tool.
 
 `POST /v1/runs/{runId}/questions/{questionId}` answers the card with
 `{ outcome: "answered", answers }`, one non-empty answer per question in their order (an
-option's `label` or the person's own words), or skips it with `{ outcome: "dismissed" }`.
+option's `label` or the person's own words), or skips it with `{ outcome: "dismissed" }`. On a
+`"picks": "many"` question the answer is a non-empty list of the labels picked and any words of
+the person's own; a lone string there is read as a list of one.
 
-- A different number of answers than questions is `400`.
+- A different number of answers than questions is `400`, and so is a list answering a
+  question that does not take several picks.
 - A `run` token answers only on a Run it started; else `403`.
 - It waits as [answering a Prompt](#answering-a-prompt) does, `wait: false` too, and answers
   at once with `status: parked` while another card or Prompt is pending.
@@ -413,7 +417,7 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp stop` | stop the Runtime this data directory holds, draining its Runs; it returns once the signal is sent. Refused while `--url`, `--token`, `WISP_URL` or `WISP_TOKEN` is set: unset them first |
 | `wisp run [<session>] "<prompt>" [--skill name] [--model pref [--thinking]] [--key k] [--detach] [--interactive] [--output-schema file] [--max-turns n]` | one Run, waited on — see [`wisp run`](#wisp-run) |
 | `wisp confirm <run> <prompt> approve\|deny\|allow-project\|allow-global [--detach]` | answer a parked Run's Prompt and wait as `wisp run` waits, with its exit codes; `--detach` returns at once and exits `0`. When the Prompt is already settled or unknown it says so and prints the Run's state |
-| `wisp answer <run> <question> "<answer>"... \| --skip [--detach]` | answer a parked Run's question card, one answer per question in order, or skip it with `--skip`, and wait as `wisp confirm` does; `--detach` returns at once and exits `0`. When the card is already settled or unknown it says so and prints the Run's state |
+| `wisp answer <run> <question> "<answer>"... \| --answers '<json>' \| --skip [--detach]` | answer a parked Run's question card, one answer per question in order, `--answers` with them as a JSON array where a question takes several picks (`'[["a","b"],"c"]'`), or skip it with `--skip`, and wait as `wisp confirm` does; `--detach` returns at once and exits `0`. When the card is already settled or unknown it says so and prints the Run's state |
 | `wisp retry <run> [--detach]` | run a failed or cancelled Run's message again and wait, with `wisp run`'s exit codes; `--detach` prints the new Run's id and returns |
 | `wisp runs list [<session>] [--status s,s] [--json]` | the `/v1` Runs, newest first, one line each: when, id, status, Session; with a session only its Runs, with `--status` only those statuses (`running,parked`); `--json` for the Runs whole |
 | `wisp runs show <id> [--json]` | one Run: its status and, once it ended, its answer; `--json` for the whole Run |
