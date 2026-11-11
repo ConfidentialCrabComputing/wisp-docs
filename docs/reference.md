@@ -212,7 +212,7 @@ the Rule).
 In the `interactive` mode the agent can ask the person questions (the `ask_user` tool), and
 the Run parks on the card until they are answered, as on a Prompt. A card is
 `{ id, toolCallId, agentId, questions }`: up to four questions, each `{ question, options, picks }`
-with up to four options `{ label, description }`, or none for a free-text question. `picks` is
+with up to six options `{ label, description }`, or none for a free-text question. `picks` is
 `"many"` on a question whose options the person may pick several of, and absent (or `"one"`)
 on a single choice. In the `policy` mode the agent has no such tool.
 
