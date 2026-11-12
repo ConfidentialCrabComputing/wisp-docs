@@ -30,6 +30,7 @@ Project, a folder of its own under `~/Wisp`.
 | `fs_write` | creates or overwrites a file | `ask` |
 | `fs_edit` | replaces exact text in a file | `ask` |
 | `deliver_file` | sends you a file from the folder, attached after the answer; see [Voice and files](./voice-and-files.md) | `allow` |
+| `generate_image` | makes a picture from a description and saves it in the folder as a JPEG; see [Pictures the agent makes](./voice-and-files.md#pictures-the-agent-makes) | `allow` |
 
 How far they reach follows the [sandbox](./sandbox.md) switch:
 
@@ -37,6 +38,9 @@ How far they reach follows the [sandbox](./sandbox.md) switch:
 - **Sandbox off**, the default: a path outside the folder is allowed, but every such call
   asks, on a card that names where it lands, whatever the Rules say. Under `wisp run` it is
   refused.
+
+`generate_image` is the exception: its path must stay inside the folder whatever the switch,
+and a path outside it is refused, never asked.
 
 Either way some paths are always refused: Wisp's data directory (`~/.wisp`), the Project's
 own `.wisp/` (except `.wisp/mcp.json`, which can be read), `.env` files (`.env.example`,
