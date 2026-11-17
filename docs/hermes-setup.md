@@ -65,19 +65,7 @@ wisp status
 
 [Install, update, uninstall](./install.md) covers the installer's options and the service.
 
-### 2. Linux only: bubblewrap
-
-On Linux, Wisp's sandbox around Hermes is [bubblewrap](https://github.com/containers/bubblewrap).
-Install it now if it is missing:
-
-```sh
-sudo apt install bubblewrap
-```
-
-On Ubuntu 23.10 and later, AppArmor also blocks bubblewrap for regular users. You do not have to
-work this out: the next step checks both, and prints the exact command that fixes it.
-
-### 3. Wire Wisp into Hermes
+### 2. Wire Wisp into Hermes
 
 ```sh
 wisp integrate hermes
@@ -102,9 +90,12 @@ happens to each server is on [Moving Hermes's MCP servers into Wisp](./hermes.md
 
 It ends with what to do next, and the known limits for your OS.
 
-### 4. Linux only: the fix before the restart
+### 3. Linux only: the fix before the restart
 
-If bubblewrap is missing or blocked, `integrate` prints one more step:
+On Linux, Wisp's sandbox around Hermes is [bubblewrap](https://github.com/containers/bubblewrap),
+required here, not only for `bash_run`'s sandbox. On Ubuntu 23.10 and later, AppArmor also
+blocks it for regular users. You do not have to work this out: `integrate` checks both, and if
+bubblewrap is missing or blocked, it prints one more step:
 
 ```text
 Before the restart: Hermes runs unsandboxed on this machine until this is fixed: …
@@ -114,7 +105,7 @@ Run the command it names, exactly as printed. It either installs bubblewrap or a
 AppArmor profile for it. If your user has no `sudo` (common on a VPS you reach with an SSH key),
 run it as root, without its leading `sudo`.
 
-### 5. Restart Hermes
+### 4. Restart Hermes
 
 The plugin, and its sandbox, take effect when Hermes starts:
 
@@ -125,7 +116,7 @@ hermes gateway restart --all
 Also quit any `hermes` CLI you have open. **Until every Hermes process has stopped once, it runs
 without the sandbox.**
 
-### 6. Check it
+### 5. Check it
 
 ```sh
 wisp doctor
@@ -139,7 +130,7 @@ Then, in Hermes (the CLI, or Telegram):
 - Ask Hermes to list `~/.wisp`. Its tool call is refused with `This goes through Wisp — use
   ask_wisp.`, and the folder reads as empty even to a script Hermes writes.
 
-### 7. Tell Wisp what is private
+### 6. Tell Wisp what is private
 
 Wisp now protects its own data and your [Desks](./sessions-and-projects.md) (`~/Wisp`). Add the
 rest:
@@ -286,7 +277,7 @@ it immediate. In Telegram, `/wisp` and `/wisp_model` reach the bot's command men
 
 ### Then
 
-- Check it as in [One machine](#6-check-it), with `/wisp Which connectors do you have?`.
+- Check it as in [One machine](#5-check-it), with `/wisp Which connectors do you have?`.
   `wisp doctor` has nothing to check on Hermes's machine.
 - Name what is private on the **Runtime's** machine: `wisp connectors add …`,
   `wisp private add …`. Hermes never had those files; a Private Folder there tells Wisp's answers
