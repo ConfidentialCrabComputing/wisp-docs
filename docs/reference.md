@@ -458,14 +458,14 @@ commands, and `wisp <command> --help` or `wisp help <command>` shows one. Exit c
 | `wisp knowledge add <path> [--writable]` | add a folder, read-only unless `--writable`; a relative path is taken from the current folder |
 | `wisp knowledge set <path> --writable\|--read-only` | let the agent write in a folder, or only read it |
 | `wisp knowledge remove <path>` | take a folder off the list; its files stay where they are |
-| `wisp private list` | the Private Folders, Wisp's data directory and the Desk root first, and after a folder a Hermes profile picks up only at its restart, `restart Hermes to apply` and the profile |
+| `wisp private list` | the [Private Folders](hermes.md#private-folders), Wisp's data directory and the Desk root first, and after a folder a Hermes profile picks up only at its restart, `restart Hermes to apply` and the profile |
 | `wisp private add <path>` | keep Host Agents out of a folder; Wisp still reaches it as before. A relative path is taken from the current folder |
 | `wisp private remove <path>` | take a folder off the list |
-| `wisp integrate hermes [--profile <name>] [--skip-connectors]` | wire Wisp into the Hermes Agent on this machine: in every Hermes profile, or only `--profile`'s, install Wisp's plugin and connect it to this Runtime's `/mcp` with one Host Agent Credential, `hermes`. It then asks which of Hermes's MCP servers to move into Wisp; `--skip-connectors` asks nothing |
+| `wisp integrate hermes [--profile <name>] [--skip-connectors]` | wire Wisp into the Hermes Agent on this machine: in every Hermes profile, or only `--profile`'s, install Wisp's plugin and connect it to this Runtime's `/mcp` with one Host Agent Credential, `hermes`. It then asks which of Hermes's MCP servers to move into Wisp; `--skip-connectors` asks nothing. See [Set up Wisp inside Hermes](hermes-setup.md) |
 | `wisp integrate hermes --connectors` | only move Hermes's MCP servers into Wisp, as setup asks to; takes `--url` and `--token` for a Runtime elsewhere |
 | `wisp integrate hermes --remove [--profile <name>]` | undo it: disconnect, switch the moved MCP servers back on in Hermes, remove the plugin, and revoke the credential; with `--profile`, only that profile, keeping the credential the others use |
 | `wisp tokens create --name <n> (--capability full\|run [--channel telegram\|slack] \| --host-agent) [--public-url <u>]` | make a named token and print it with its connection string, once — see [`wisp tokens create`](#wisp-tokens-create) |
-| `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token |
+| `wisp tokens list` | the named tokens: name, capability, Channel and creation time, never a token; `local` after the Host Agent Credential this machine's Hermes holds |
 | `wisp tokens revoke <n>` | refuse that token from now on and pause the jobs its bot made in a chat; the one token and the other named tokens keep working |
 | `wisp schedules create --name <n> (--cron "<expr>" [--tz zone] \| --every 30m\|2h\|1d \| --at <instant>) [--project path] [--skill name] [--output-schema file] [--deliver key] [--model m [--thinking]] "<input>"` | make a job and print its id — see [`wisp schedules create`](#wisp-schedules-create) |
 | `wisp schedules list [--json]` | the jobs, one line each: id, name, `next <instant>` (or `paused`, or `done` for a one-off that fired), and the last outcome with its Run's id (or `never fired`) |
@@ -520,10 +520,13 @@ run it.
 - `--channel` names the one Channel a `run` token's Runs may deliver to, which the
   [Telegram bot](telegram-bot.md) and the [Slack app](slack-app.md) need.
 - `--public-url` is the address the device will reach the Runtime at, put into the
-  connection string. See [a token per device](remote-access.md#a-token-per-device).
+  connection string. Its host is added to `allowedHosts` in the Runtime's config file, which
+  the running Runtime answers to once restarted. See
+  [a token per device](remote-access.md#a-token-per-device).
 - `wisp tokens create --host-agent` makes a Host Agent Credential, named for its Host Agent
-  (`hermes`): it opens the Runtime's `/mcp` and nothing else. `wisp integrate hermes` makes
-  one for you.
+  (`hermes`): it opens the Runtime's `/mcp` and nothing else, and is printed with the
+  `hermes wisp connect <public-url>/mcp` to paste it into. `wisp integrate hermes` makes one
+  for you on one machine; on two, see [Two machines](hermes-setup.md#two-machines).
 
 ### `wisp schedules create`
 

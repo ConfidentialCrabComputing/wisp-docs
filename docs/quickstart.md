@@ -54,7 +54,8 @@ that fixes each problem.
 :::note[Linux]
 On Linux the installer needs `minisign` or OpenSSL 3 to verify the release signature, and
 stops if neither is installed. It also warns when bubblewrap is missing: the agent's
-`bash_run` tool needs it only once you turn its [sandbox](./sandbox.md) on. On Debian or
+`bash_run` tool needs it once you turn its [sandbox](./sandbox.md) on, and
+[Wisp inside Hermes](./hermes-setup.md) needs it for its sandbox around Hermes. On Debian or
 Ubuntu: `sudo apt install minisign bubblewrap`.
 
 On a server the installer turns lingering on, so the service keeps running after you log

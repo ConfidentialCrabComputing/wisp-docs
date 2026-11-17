@@ -32,13 +32,14 @@ which could already read the Runtime's environment, and nothing to other users.
 On Windows there are no Unix file modes; both files sit under your user profile, which only
 you can read.
 
-There are three kinds of token:
+There are four kinds of token:
 
 | Token | What it can do |
 | --- | --- |
 | the one token (`agentToken`) | everything Wisp Desktop's chat can do — run prompts, change Rules, manage connectors, read the audit — and create, list and revoke the named tokens |
 | a named `full` token | the same, except the named tokens themselves |
 | a named `run` token | only what a Channel adapter needs: open Sessions on the Desk, start Runs in them, read every Session and Run, cancel any Session's Run, answer the Prompts of Runs it started (approve or deny only), deliver to its own Channel, and install the speech model |
+| a Host Agent Credential | only the Runtime's `/mcp` endpoint, which [Hermes](./hermes.md) hands its tasks to; every other route is `403` |
 
 No token can stop the Runtime: there is no stop endpoint.
 

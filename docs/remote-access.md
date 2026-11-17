@@ -49,6 +49,9 @@ web page from reaching it through DNS rebinding. With the proxy on the same mach
    { "agentToken": "…", "allowedHosts": ["wisp.example.com"] }
    ```
 
+   `wisp tokens create … --public-url https://wisp.example.com` adds the name for you; the
+   restart is still yours.
+
 2. Put a [Caddy](https://caddyserver.com) site in front of it. Caddy gets and renews the
    certificate itself and streams the Event stream without buffering:
 
@@ -91,7 +94,9 @@ token, so that losing one laptop costs you that laptop's token alone.
    ```
 
    With `--public-url`, or one host in `allowedHosts`, the string is `wisp+https://…` and
-   the hint says to paste it into Wisp Desktop or `wisp telegram setup`. Run on the host
+   the hint says to paste it into Wisp Desktop or `wisp telegram setup`. `--public-url` also
+   adds its host to `allowedHosts` in `runtime.json`; the running Runtime answers to it once
+   restarted. Run on the host
    itself, outside SSH, the string names `127.0.0.1` and works on that host only, and the
    command says so: run it over SSH instead, open a tunnel, or make the token again with
    `--public-url`. `--json` prints the token and the connection string with no hint.

@@ -26,7 +26,9 @@ audit, and one answer per Run.
 
 Every request but a tokenless `GET /v1/health` carries `Authorization: Bearer <token>`:
 
-- **the one token**, the `agentToken` of `runtime.json`, which reaches everything;
+- **the one token**, the `agentToken` of `runtime.json`, which reaches everything. On a machine
+  where [Wisp inside Hermes](./hermes.md#the-credential) is set up it changes at every Hermes
+  start, so a script or a device that keeps a copy takes a named token instead;
 - **a named `full` token**, everything but the tokens themselves, for a script or a device:
   `wisp tokens create --name nightly --capability full`;
 - **a `run` token**, made for an adapter, which reaches only what an adapter needs (see

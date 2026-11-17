@@ -55,6 +55,12 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: ['telegram-bot', 'slack-app'],
     },
+    {
+      type: 'category',
+      label: 'Wisp inside Hermes',
+      collapsed: false,
+      items: ['hermes', 'hermes-setup'],
+    },
     'remote-access',
     {
       type: 'link',
