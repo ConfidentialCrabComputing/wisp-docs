@@ -96,8 +96,10 @@ fit in that.
 
 The agent sends you a file with the `deliver_file` tool, allowed by default. Each Run
 lists the files it delivered as `artifacts`: paths relative to the Session's folder, its
-Project or its Desk. The bot and the app send them back after the answer, as documents in
-Telegram and uploads into the thread in Slack.
+Project or its Desk. The bot and the app send them back after the answer, as uploads into
+the thread in Slack and as documents in Telegram. A `.jpg` or `.jpeg` goes to Telegram as a
+photo instead, and as a document if Telegram refuses the photo. Every other image, a PNG
+included, stays a document, so it arrives exactly as it was made.
 
 ```json
 { "runId": "…", "status": "completed", "output": { "text": "…" }, "artifacts": ["notes/4711.md"] }
@@ -111,4 +113,27 @@ not ended, when the index is past the list, or when the file is gone.
 A file the agent only writes stays in the folder and is not listed. Any file in the folder
 can be delivered, one a `bash_run` command made included, up to `fsMaxFileSize` bytes. In
 Wisp Desktop nothing is attached to the chat: the agent names the file it made instead, and
-you open it from the folder.
+you open it from the folder. A picture the agent made is the exception, below.
+
+## Pictures the agent makes
+
+Ask for a picture in plain words: an illustration, a cover, a banner. The agent writes a
+description and calls `generate_image`, which saves a JPEG in the Session's folder. The
+picture is a delivered file of the Run, as if the agent had called `deliver_file` on it: it
+is listed in `artifacts`, Telegram gets it as a photo and Slack as an upload into the
+thread. Wisp Desktop shows it in the chat; click it to open it full size.
+
+- **Shape.** Square by default, 1024×1024. The agent can ask for `16:9` (1344×768), `9:16`
+  (768×1344), `4:3` (1152×864) or `3:4` (864×1152); say "wide" or "for a phone" and it
+  picks one.
+- **Another one.** The same description always gives the same picture. For a different one,
+  say what to change; the agent rewords the description.
+- **Files.** The path must end in `.jpg` and stay inside the folder. An existing file is
+  never overwritten: the agent is told to pick another name.
+- **Privacy.** The description goes only to the Wisp proxy, as chat does, and the model runs
+  in a TEE. The agent does not see the picture unless it opens it with `fs_read_media`.
+- **Cost.** Each picture is charged like a model call; see
+  [Plan and balance](./billing.md#what-pays-for-what). When the balance or the plan does not
+  cover it, the agent says so.
+- **Limits.** The model makes a picture from text only: it cannot edit an image or start from
+  one you send. `generate_image` is there only when the Runtime talks to the Wisp proxy.

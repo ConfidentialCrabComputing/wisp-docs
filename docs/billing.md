@@ -34,8 +34,9 @@ Then the plan does not pay for anything there, and `wisp billing status` shows n
 Otherwise it is paid exactly like the desktop side.
 
 Everything a Run causes is paid the same way as the Run: its subagents, the Skills it runs,
-the memories it saves afterwards, and the [Auto Mode](./permissions.md#auto-mode) reviewer
-that checks its tool calls.
+the memories it saves afterwards, the [Auto Mode](./permissions.md#auto-mode) reviewer
+that checks its tool calls, and the [pictures it makes](./voice-and-files.md#pictures-the-agent-makes).
+A picture is charged at its own price per picture, not by tokens.
 
 A few cases that surprise people:
 
