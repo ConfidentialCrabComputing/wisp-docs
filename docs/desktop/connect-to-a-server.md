@@ -91,6 +91,9 @@ The window on a server is for setting that Runtime up:
   [Connectors](../connectors.md).
 - **Settings.** **Permissions** and **Sandbox** change the server's Runtime. **Keyboard** and
   **General** are this computer's. **Recording**, **Billing** and **Usage** are hidden.
+  **Knowledge** also shows the server's **Private Folders**, the folders a Hermes wired to it may
+  not open: type a path on the server and click **Add**. See
+  [Private Folders](../hermes.md#private-folders).
 
 Everything the app does on a server is paid like a terminal Run, which may mean from your
 prepaid balance alone. The balance is your account's, so add to it from **This computer**'s
