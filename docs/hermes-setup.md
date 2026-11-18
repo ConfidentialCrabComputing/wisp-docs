@@ -17,12 +17,39 @@ on [Wisp inside Hermes](./hermes.md).
 | Hermes runs on a VPS, and your private files and accounts should stay on another machine (a Mac mini at home, a second server) | [Two machines](#two-machines) | a way to reach that machine over https or SSH |
 | You talk to Hermes only from Telegram or Slack, and have no terminal on its machine | [From a chat](#from-a-chat) | the chat |
 
-**Which one is safer?** On one machine, Wisp keeps Hermes out of its files with an OS sandbox
-around every Hermes process. That stops Hermes reading them itself, but not a model that sets out
-to escape the sandbox: it can have an app or a script that runs outside it do the reading (see
-[Known limits](./hermes.md#known-limits)). On two machines, the files and the keys are simply not on
-Hermes's machine. That is the boundary that holds, and the one to choose when the data matters
-most.
+### One machine or two
+
+|  | One machine | Two machines |
+| --- | --- | --- |
+| Where your private files and Wisp's keys are | on Hermes's machine, behind a sandbox | on another machine; Hermes's disk has none of them |
+| What keeps Hermes out | an OS sandbox around every Hermes process (Seatbelt on macOS, bubblewrap on Linux) | the network: Hermes reaches only Wisp's `/mcp` endpoint |
+| Against a model set on escaping | does not hold: an app or script started outside the sandbox can read the files, and on macOS computer use drives apps the sandbox does not cover | holds: there is nothing to escape to |
+| Hermes's model switching the plugin off | possible, and seen only by `wisp doctor` | changes nothing: the files were never there |
+| Hermes's own MCP servers | `integrate` moves them into Wisp for you | you add them in Wisp and remove them from Hermes by hand |
+| Upkeep | one command; restart Hermes after each new Private Folder | a second machine kept on and reachable; an https address or a tunnel |
+| Hermes on Windows | no | yes, as the Hermes side |
+
+Both share the limits of the credential: whoever holds it can ask Wisp anything, and a
+prompt-injected Hermes can approve Wisp's Confirmations itself
+([Known limits](./hermes.md#known-limits)).
+
+**Which to choose.** Two machines is the safer one: the files and the keys are simply not where
+Hermes runs, and no sandbox has to hold. Choose it when the data matters most (health, money, legal
+papers), and always when Hermes runs on a VPS. One machine is fine when you mainly want Hermes's
+model and its `.env` kept away from your accounts, and you trust the machine itself.
+
+Whichever you pick:
+
+- **Prefer Tailscale Serve** for two machines: no open port and no domain. With an SSH tunnel,
+  [restrict its key](#an-ssh-tunnel), or Hermes gets a shell on Wisp's machine.
+- **Keep confirmations on for what moves data out**: sending mail or messages, writing files. Allow
+  a tool beforehand (`wisp permissions set <tool> allow`) only for what a cron job needs.
+- **Delete the moved keys from Hermes's `.env`**, as `integrate` lists them: until then Hermes still
+  holds them.
+- **Limit who talks to your Hermes.** Anyone Hermes lets in, in a group chat too, uses Wisp as you.
+- **Prefer `/wisp <task>`** when even the conclusion should not reach Hermes's model.
+- On one machine: **run Hermes as a regular user**, not root; check `wisp doctor` now and then; and
+  restart Hermes after `wisp private add`.
 
 ## Before you start
 
@@ -101,8 +128,9 @@ bubblewrap is missing or blocked, it prints one more step:
 Before the restart: Hermes runs unsandboxed on this machine until this is fixed: …
 ```
 
-Run the command it names, exactly as printed. It either installs bubblewrap or adds a small
-AppArmor profile for it. If your user has no `sudo` (common on a VPS you reach with an SSH key),
+Run the command it names, exactly as printed. It installs bubblewrap, adds a small AppArmor
+profile for it, or removes bubblewrap's setuid bit. A line that names no command gives
+bubblewrap's own error instead. If your user has no `sudo` (common on a VPS you reach with an SSH key),
 run it as root, without its leading `sudo`.
 
 ### 4. Restart Hermes
@@ -128,7 +156,8 @@ Then, in Hermes (the CLI, or Telegram):
 
 - `/wisp Which connectors do you have?` — Wisp answers directly, with no Hermes model involved.
 - Ask Hermes to list `~/.wisp`. Its tool call is refused with `This goes through Wisp — use
-  ask_wisp.`, and the folder reads as empty even to a script Hermes writes.
+  ask_wisp.`, and a script Hermes writes cannot read it either: on Linux the folder reads as empty,
+  on macOS the read is refused (`Operation not permitted`).
 
 ### 6. Tell Wisp what is private
 
@@ -187,8 +216,8 @@ On the Runtime's machine:
 tailscale serve --bg 3008
 ```
 
-It prints the machine's https name, such as `https://mac-mini.tail1234.ts.net`. That is
-`<name>` below.
+It prints the machine's https address, such as `https://mac-mini.tail1234.ts.net`. Its name,
+`mac-mini.tail1234.ts.net`, is `<name>` below.
 
 #### Caddy with a domain
 
@@ -201,7 +230,7 @@ wisp.example.com {
 }
 ```
 
-`https://wisp.example.com` is `<name>` below. You do not need to edit `allowedHosts` by hand: the
+`wisp.example.com` is `<name>` below. You do not need to edit `allowedHosts` by hand: the
 next step adds the name.
 
 #### An SSH tunnel
@@ -224,7 +253,8 @@ restrict,port-forwarding,permitopen="127.0.0.1:3008" ssh-ed25519 AAAA… hermes-
 :::
 
 With a tunnel, leave `--public-url` out in the next step, and use `http://127.0.0.1:3008` where the
-steps say `https://<name>`.
+steps say `https://<name>`. `wisp tokens create` then suggests an https name and `--public-url`:
+ignore that hint.
 
 ### 3. Make Hermes's credential
 
@@ -280,8 +310,10 @@ it immediate. In Telegram, `/wisp` and `/wisp_model` reach the bot's command men
 - Check it as in [One machine](#5-check-it), with `/wisp Which connectors do you have?`.
   `wisp doctor` has nothing to check on Hermes's machine.
 - Name what is private on the **Runtime's** machine: `wisp connectors add …`,
-  `wisp private add …`. Hermes never had those files; a Private Folder there tells Wisp's answers
-  to Hermes not to hand its files over verbatim, and needs no restart of Hermes.
+  `wisp private add …`, or in Wisp Desktop connected to that machine,
+  [Settings → Knowledge → Private Folders](./hermes.md#private-folders). Hermes never had those
+  files; a Private Folder there tells Wisp's answers to Hermes not to hand its files over verbatim.
+  Hermes's routing rule names it from Hermes's next start.
 - The Runtime's machine must be on and reachable whenever Hermes needs Wisp. While it is not, Hermes
   says Wisp is not answering, and does not do Wisp's tasks another way.
 - Moving Hermes's MCP servers into Wisp is part of the one-machine setup. Here, add those accounts
@@ -304,10 +336,11 @@ follows the steps in the plugin's README, which are written for it.
    page does not load, which is fine). Do it within 5 minutes, or ask Hermes to start the sign-in
    again.
 
-3. **The turn ends while Hermes reloads.** Hermes enables the plugin and restarts into the sandbox
-   in the middle of that turn, so the turn is lost. Your next message gets
+3. **The turn ends while Hermes reloads.** On Linux, Hermes enables the plugin and restarts into
+   the sandbox in the middle of that turn, so the turn is lost. Your next message gets
    `⏸️ This conversation is paused …`: send `/discard`, then ask something that needs Wisp, such as
-   `/wisp Which connectors do you have?`.
+   `/wisp Which connectors do you have?`. If the chat stays locked (one opened just before), or on
+   macOS, send `/restart` instead.
 
 4. **On Linux, if Hermes gives you a command to run as root** (bubblewrap, or its AppArmor
    profile), run it on the server as root, then send `/restart`. Until then Hermes runs without
@@ -362,13 +395,15 @@ and on the Runtime's machine, `wisp tokens revoke hermes`.
 | The service stops right after installing, on a Linux server shared with other users | Another user's Runtime holds port 3008. Give yours another `port` in `runtime.json` (see [Change the port](./configuration.md#change-the-port)), restart it, and run `integrate` again. |
 | Hermes starts with `Wisp's zone is unprotected: …` | The sandbox did not start, and the line says why. On Linux it is almost always bubblewrap or AppArmor: run the fix `wisp doctor` names, then restart Hermes. |
 | `wisp doctor` says `the Wisp plugin is disabled`, or another `hermes <profile>` problem | Run the fix it prints: `wisp integrate hermes --profile <profile>`, then restart Hermes. |
-| Hermes says Wisp is not answering, or `ask_wisp` is not available | The Runtime is stopped or restarting (every `wisp update` restarts it), or unreachable. Hermes reconnects by itself within about 10 seconds of it coming back. If `hermes mcp test wisp` passes and Hermes still says so, `hermes gateway restart`. |
+| Hermes says Wisp is not answering, or `ask_wisp` is not available | The Runtime is stopped or restarting (every `wisp update` restarts it), or unreachable. Hermes reconnects by itself within about 10 seconds of it coming back (a gateway's other profiles, within 5 minutes); an open Hermes Session gets `ask_wisp` back from its next message. If `hermes mcp test wisp` passes and Hermes still says so, `hermes gateway restart`. |
+| Every task fails with `Private Folder … was moved` or `… is unreadable` | Wisp refuses Hermes's tasks until it can tell the folder is in place. Do what the message says: `wisp private add <where it is now>`, or `wisp private remove <old path>`, or unlock its parent folder. |
 | Two machines: `hermes mcp test wisp` fails with `HTTP 400` | The Runtime does not answer to that name yet: make the credential with `--public-url https://<name>` (step 3), and restart the Runtime. |
 | Two machines: `tailscale serve` says `Serve is not enabled on your tailnet` | Open the link it prints and enable Serve and HTTPS certificates, then run it again. |
 | `hermes wisp connect` refuses the address | Use `https://…`, or `http://127.0.0.1:…` through a tunnel. Plain `http` to another machine would send the credential in clear. |
 | Telegram has no `/wisp` in the menu | Send `/restart`, then close and reopen the chat. Typed, `/wisp` works anyway; `/commands` lists every command. |
 | A Wisp confirmation was denied while you were away | Hermes denies what nobody answers within its 5 minutes (`approvals.timeout`). Ask again. See [Confirmations](./hermes.md#confirmations). |
 | A Hermes cron job's Wisp task fails on a denied tool | Nobody is there to answer. Allow that tool beforehand: `wisp permissions set <tool> allow`. |
-| Hermes stops starting after `wisp private add` | The folder holds code Hermes runs from (its venv, its install). `wisp private remove <folder>`, then restart Hermes. `wisp private add` warns when it sees this. |
+| `wisp private add` says `Hermes keeps reading …: the sandbox cannot close a folder Hermes starts from` | The folder holds code Hermes runs from (its venv, its install), so the sandbox leaves it open to Hermes; only Wisp's own tools refuse it. Keep private files outside it, and `wisp private remove <folder>`. |
+| A removed Private Folder is still closed to Hermes | A removal applies once `integrate` rewrites its record: `wisp integrate hermes`, then restart Hermes. |
 | On Linux, `sudo` fails inside Hermes | Expected: setuid programs cannot work inside the sandbox. Run commands that need root outside Hermes. |
 | A script using the `agentToken` from `runtime.json` gets `401` | On a machine with Wisp inside Hermes, that token changes at every Hermes start. Give the script a [named token](./remote-access.md#a-token-per-device). |
