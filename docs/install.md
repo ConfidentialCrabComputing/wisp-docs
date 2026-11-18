@@ -58,7 +58,7 @@ curl -fsSL https://usewisp.io/runtime/install.sh | WISP_HOME=/srv/wisp WISP_SERV
 
 | Variable | Effect |
 | --- | --- |
-| `WISP_HOME` | Install and keep data here instead of `~/.wisp`. |
+| `WISP_HOME` | Install and keep data here instead of `~/.wisp`. The `wisp` it installs uses this directory with nothing more to set. |
 | `WISP_SERVICE` | `1` installs the service without asking; `0` skips it without asking. |
 | `WISP_VERSION` | Install this release (for example `0.1.0`) instead of the latest. |
 | `WISP_REQUIRE_SIGNATURE` | `1` refuses to install without a verified signature, on any OS. |
@@ -119,9 +119,10 @@ The unit hands the Runtime its key file, `~/.config/wisp/master.key`. **Back tha
 without it nothing the Runtime stored can be read again. See
 [the encryption key on a server](./remote-access.md#the-encryption-key-on-a-server).
 
-The installer also warns when bubblewrap is not installed. You need it only once you turn
-the `bash_run` [sandbox](./sandbox.md) on, which is off by default:
-`sudo apt install bubblewrap`.
+The installer also warns when bubblewrap is not installed. You need it once you turn the
+`bash_run` [sandbox](./sandbox.md) on, which is off by default, and for
+[Wisp inside Hermes](./hermes-setup.md#one-machine), whose sandbox around Hermes is
+bubblewrap: `sudo apt install bubblewrap`.
 
 ### Without a service
 

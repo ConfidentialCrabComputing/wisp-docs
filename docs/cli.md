@@ -235,4 +235,5 @@ use the `https://` address of a TLS proxy in front of it, or an SSH tunnel to it
 port (`ssh -N -L 3008:127.0.0.1:3008 you@server`, then `--url http://127.0.0.1:3008`); see
 [Remote access](./remote-access.md#reaching-it-from-another-machine). A token for a script
 is a named one, `wisp tokens create --name <n> --capability full`, made on the Runtime's
-machine.
+machine. `$TOKEN` is that token, not the `agentToken` of `runtime.json`: on a machine with
+[Wisp inside Hermes](./hermes.md#the-credential), that one changes at every Hermes start.
