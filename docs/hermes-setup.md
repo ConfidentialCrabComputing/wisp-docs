@@ -35,11 +35,16 @@ prompt-injected Hermes can approve Wisp's Confirmations itself
 
 **Which to choose.** Two machines is the safer one: the files and the keys are simply not where
 Hermes runs, and no sandbox has to hold. Choose it when the data matters most (health, money, legal
-papers), and always when Hermes runs on a VPS. One machine is fine when you mainly want Hermes's
-model and its `.env` kept away from your accounts, and you trust the machine itself.
+papers). One machine is fine when you mainly want Hermes's model and its `.env` kept away from your
+accounts, and you trust the machine itself.
 
 Whichever you pick:
 
+- **Run Hermes as its own regular user, not root.** On one machine the sandbox cannot keep root
+  out. On a VPS, where you often log in as root, create a user for Hermes (`adduser hermes`) and
+  install and run Hermes as that user.
+- **Keep the machine that holds Wisp yours alone**: a computer at home, or a server only you log in
+  to. Your files and Wisp's keys are on it.
 - **Prefer Tailscale Serve** for two machines: no open port and no domain. With an SSH tunnel,
   [restrict its key](#an-ssh-tunnel), or Hermes gets a shell on Wisp's machine.
 - **Keep confirmations on for what moves data out**: sending mail or messages, writing files. Allow
@@ -48,8 +53,7 @@ Whichever you pick:
   holds them.
 - **Limit who talks to your Hermes.** Anyone Hermes lets in, in a group chat too, uses Wisp as you.
 - **Prefer `/wisp <task>`** when even the conclusion should not reach Hermes's model.
-- On one machine: **run Hermes as a regular user**, not root; check `wisp doctor` now and then; and
-  restart Hermes after `wisp private add`.
+- On one machine: **check `wisp doctor` now and then**, and restart Hermes after `wisp private add`.
 
 ## Before you start
 
