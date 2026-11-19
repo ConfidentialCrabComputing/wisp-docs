@@ -74,7 +74,8 @@ context; see [Connector tools](../tools.md#how-the-agent-reaches-them). See
 - Chat sessions: encrypted SQLite (`~/.wisp/data.db`), scoped per project
 - Agent memory: persistent across sessions and Projects, tagged (user, project, feedback,
   reference), saved by the agent or after a turn on its own, and recalled into each turn by
-  local embeddings or full-text search. See [Tools](../tools.md#memory-and-other-agent-tools)
+  local embeddings or full-text search. It can be kept to each chat or turned off. See
+  [Tools](../tools.md#memory-and-other-agent-tools)
 - Audit log: every tool call recorded with shortened, redacted arguments and result,
   timestamp and approval status
 
