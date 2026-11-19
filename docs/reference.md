@@ -281,6 +281,8 @@ Every Event carries `seq` and `kind`. In the order a Run makes them:
 | `POST` | `/v1/permissions/connector` | write a Rule for every tool of a Connector: `{ connector, decision, projectId? }`; `null` drops them |
 | `GET` | `/v1/settings/auto-mode` | whether [Auto Mode](permissions.md#auto-mode) is on: `{ enabled, available }`; `available` is `false` on a Runtime with no proxy, where every `ask` goes to a person. A `run` token reads it only with a `channel` |
 | `PUT` | `/v1/settings/auto-mode` | turn it on or off with `{ "enabled": true \| false }`, at once; answers as `GET`. The one token, a `full` token, or a `run` token with a `channel`, whose adapter lets only its owner change it |
+| `GET` | `/v1/settings/memory` | how [Memory](tools.md#memory-and-other-agent-tools) runs, for every Session: `{ mode }`, which is `shared` (the default), `chat` or `off`. The one token or a `full` token |
+| `PUT` | `/v1/settings/memory` | set it with `{ mode }`, at once: from the next memory read or write, in a turn already running too; answers as `GET`. The one token or a `full` token |
 | `GET` | `/v1/skills` | the Skills the Runtime can run |
 | `GET` | `/v1/audit` | the audit, newest first; filter with `sessionId` and `tool`, page with `limit` and `cursor` (the answer's `nextCursor`) |
 | `GET` | `/v1/sessions/{id}/audit` | one Session's audit, paged with `limit` and `offset` |

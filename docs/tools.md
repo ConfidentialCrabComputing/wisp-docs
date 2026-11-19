@@ -130,6 +130,18 @@ points the agent at recordings that do. A memory the agent marks `project` is no
 to the Project: it is offered everywhere, and it is deleted with the Session that stored it.
 A `global` one stays until it is deleted.
 
+The Memory setting, in the app's **Settings → General** or with `PUT /v1/settings/memory`,
+holds for every chat and applies at once, in a reply already under way too:
+
+| Mode | What happens |
+| --- | --- |
+| **Shared** (`shared`, the default) | as above: memory is saved and recalled across chats and Projects |
+| **Each chat only** (`chat`) | a chat saves and recalls only its own memories, which are deleted with it. It sees no shared memory and no preferences; the preference tools answer that they are unavailable |
+| **Off** (`off`) | nothing is recalled or saved, on its own or by a tool: each memory and preference tool answers that the user turned Memory off |
+
+Switching modes deletes nothing. Back on **Shared**, the memories a chat kept for itself stay
+its own and the shared ones are recalled again.
+
 A subagent can use every tool the agent has, writing files included, unless the agent
 narrows it to the read tools and `bash_run`. Its tool calls go through the same Rules as the
 agent's own. It has no step or time limit by default; `subagentTimeoutMs` in the
