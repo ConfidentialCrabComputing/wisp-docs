@@ -78,7 +78,7 @@ the sidebar.
 | Sandbox | **Sandbox terminal commands** and **Allow network in the sandbox**. See [Sandbox](../sandbox.md) |
 | Runtime | whether Wisp runs on this computer or on your server. See [Connect to a server](./connect-to-a-server.md) |
 | Keyboard | change the menu shortcuts |
-| General | **Start at login** (on by default), the light or dark theme, and **Memory**: shared across chats (the default), this folder only, or off. See [Memory](../tools.md#memory-and-other-agent-tools) |
+| General | **Start at login** (on by default), the light or dark theme, and **Memory**: shared across chats (the default), this project only, or off. See [Memory](../tools.md#memory-and-other-agent-tools) |
 
 **Keyboard Shortcuts** (<kbd>⌘</kbd> <kbd>/</kbd>) lists every shortcut.
 
