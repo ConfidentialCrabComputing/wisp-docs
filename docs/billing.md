@@ -1,5 +1,5 @@
 ---
-description: What your plan pays for, what the prepaid balance pays for, and how to top it up from the terminal.
+description: What your plan pays for, what the prepaid balance pays for, the token prices, and how to top it up from the terminal.
 ---
 
 # Plan and balance
@@ -46,6 +46,27 @@ A few cases that surprise people:
   `wisp serve` Runtime, so everything it does there is on the terminal side.
 - **A job made with `wisp schedules` on a Mac with Wisp Desktop open** fires in the app's
   Runtime, so it is on the desktop side, like a job made in the app.
+
+## Token prices
+
+The balance pays per token, at a fixed price for each model. Prices are in US dollars per
+1 million tokens:
+
+| Model | Input | Cached input | Output |
+| --- | --- | --- | --- |
+| `glm-5-3` | $1.67 | $0.32 | $5.15 |
+| `deepseek-v4-1-flash` | $0.41 | $0.008 | $1.40 |
+| `qwen3-8-uncensored` | $0.33 | $0.055 | $1.65 |
+| `glm-5-3-flash` | $0.165 | $0.033 | $0.55 |
+| `deepseek-v4-1-flash-uncensored` | $0.33 | $0.0066 | $1.32 |
+| `qwen3-8-27b` | $0.22 | $0.055 | $2.75 |
+| `kimi-k3-1-pro` | $2.20 | $0.22 | $11.00 |
+
+**Cached input** is context the model has already seen, such as the earlier part of a
+Session sent again on the next turn. It is billed at the lower rate.
+
+When you pick a tier (`advanced`, `balanced`) instead of a model id, you pay the price of the
+model the proxy picks. See [Choosing a model](./cli.md#choosing-a-model).
 
 ## Check where you stand
 
